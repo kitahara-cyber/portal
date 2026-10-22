@@ -20,12 +20,12 @@ def f(r, k):
 def num(x):
     try: return int(float(str(x).replace(',', '')))
     except: return 0
-days = collections.defaultdict(lambda: [0, 0, 0, 0, 0])
+days = collections.defaultdict(lambda: [0, 0, 0, 0, 0]); WHO = collections.defaultdict(set)
 for r in crm[1:]:
     if not r or N(r[0]) != SIS: continue
     try: d = datetime.date.fromisoformat(f(r, '日付')[:10])
     except: continue
-    v = days[d]
+    v = days[d]; WHO[d].add(N(f(r, '対応者'))[:3])
     for j, k in enumerate(['架電数', '通電数', 'ターゲット着電数', 'リード数', 'アポ獲得件数']): v[j] += num(f(r, k))
 D = sorted(days)
 def tot(ds): return [sum(days[d][j] for d in ds) for j in range(5)]
@@ -70,13 +70,34 @@ def ng_reason(memo):
     for k, rx in NG_RULES:
         if re.search(rx, t): return k
     return 'その他'
+CRMDAYS = set(D)
 def memo_date(memo):
     m = MEMO_HEAD.match(N(memo))
     if not m: return None
     mo, dd = int(m.group(1)), int(m.group(2))
-    y = YEAR if mo <= MEET.month else YEAR - 1
-    try: return datetime.date(y, mo, dd)
-    except: return None
+    cands = []
+    for y in (YEAR, YEAR - 1, YEAR - 2):
+        try:
+            c = datetime.date(y, mo, dd)
+            if c <= MEET: cands.append(c)
+        except: pass
+    if not cands: return None
+    who = (m.group(4) or '')
+    if not re.fullmatch(r'[一-龥ぁ-んァ-ヶー]{2,4}', who) or re.search(r'不|留守|営業|結構|担当|必要|間に|電話|忙|定休|本社|自社|別|予算|興味|終日|切電|コール|まだ|折返|折り|受付|代表|新規|資料|再|休|外出|会議|通話|番号', who): who = ''
+    who = who[:2]
+    match = lambda c: any(w and (w[:2] in who or who in w) for w in WHO[c])
+    named = lambda c: any(w for w in WHO[c])
+    if who:
+        for c in cands:
+            if c in CRMDAYS and match(c): return c
+    for c in cands:
+        if c in CRMDAYS and not (who and named(c) and not match(c)): return c
+    if any(c in CRMDAYS for c in cands): return cands[-1]
+    # 稼働日に無い日付は、日次報告の最初の日より後で一番新しいもの。それも無ければ一番新しいもの
+    first = min(CRMDAYS) if CRMDAYS else None
+    for c in cands:
+        if first is None or c >= first - datetime.timedelta(days=7): return c
+    return cands[-1]
 def size_b(v):
     s = N(v); m = re.search(r'(\d+)', s.replace(',', ''))
     if not m: return '(不明)'
@@ -86,9 +107,14 @@ PREF = re.compile(r'(北海道|東京都|京都府|大阪府|.{2,3}県)')
 co = []; ev = []
 for t in spec['tabs']:
     parts = [json.load(open(p))['values'] for p in t['files']]
-    hdr = [];
-    for p in parts: hdr += [N(h) for h in p[0]] + [''] * 0
-    widths = [len(p[0]) for p in parts]
+    def hrow_of(p):
+        for k in range(min(3, len(p))):
+            if any(N(c).startswith('架電履歴') or N(c) in ('企業名', '会社名', '法人名称', '取引先名') for c in p[k]): return k
+        return 0
+    hrow = max(hrow_of(p) for p in parts)
+    hdr = []
+    for p in parts: hdr += [N(h) for h in (p[hrow] if hrow < len(p) else p[0])] + [''] * (max((len(r) for r in p[:hrow + 1]), default=0) - len(p[hrow] if hrow < len(p) else p[0]))
+    widths = [max((len(r) for r in p[:hrow + 1]), default=0) for p in parts]
     n = max(len(p) for p in parts)
     def rowcat(i):
         out = []
@@ -96,20 +122,24 @@ for t in spec['tabs']:
             r = p[i] if i < len(p) else []
             out += [r[j] if j < len(r) else '' for j in range(w)]
         return out
+    g0 = lambda r, i: N(r[i]) if i is not None and i < len(r) else ''
     def col(*keys, ex=()):
         for k in keys:
             for i, h in enumerate(hdr):
                 if (h == k or k in h) and not any(e in h for e in ex): return i
         return None
-    HC = [i for i, h in enumerate(hdr) if h.startswith('架電履歴')]
+    HC = [i for i, h in enumerate(hdr) if h.startswith('架電履歴')] or [i for i, h in enumerate(hdr) if h in ('結果', '架電結果')]
     MC = []
     for i in HC:
         j = i + 1
         MC.append(j if j < len(hdr) and (hdr[j].startswith('架電メモ') or hdr[j] == '') else None)
-    nm = col('企業名', '会社名', '法人名', '組織名', ex=('メモ',)); sg = col('セグメント', 'リスト種別')
+    nm = col('企業名', '会社名', '法人名', '組織名', '取引先名', '店舗名', ex=('メモ',))
+    if nm is not None and not any(g0(r, nm) for r in [rowcat(i) for i in range(hrow + 1, min(n, hrow + 60))]):
+        alt = col('取引先名', '店舗名', '組織名', ex=('メモ',)); nm = alt if alt is not None else nm
+    sg = col('セグメント', 'リスト種別')
     ad = col('住所', '所在地'); sz = col('被保険者数', '従業員数'); ind = col('東証業種', '業種', ex=('NG',))
     g = lambda r, i: N(r[i]) if i is not None and i < len(r) else ''
-    for i in range(1, n):
+    for i in range(hrow + 1, n):
         r = rowcat(i); name = g(r, nm)
         if not name: continue
         best = None; rank = ['不通・番号不備', 'その他', '不在', '再度架電', '受付NG', '担当者NG', '資料送付', 'アポ']
@@ -136,8 +166,14 @@ def table(key, minn=20):
         if c['best']: v[1] += 1; v[2] += c['best'] in REACH; v[3] += c['best'] == 'アポ'
     rows = [dict(k=k, rows=v[0], called=v[1], reach=v[2], apo=v[3], reach_rate=round(v[2] / v[1], 4) if v[1] else 0, apo_rate=round(v[3] / v[1], 4) if v[1] else 0, left=v[0] - v[1]) for k, v in g.items()]
     return sorted([r for r in rows if r['called'] >= minn or r['left'] >= 50], key=lambda r: -r['called'])[:10]
+pc = collections.Counter(e['c'] for e in per)
+checks = []
+if per and abs(pc.get('アポ', 0) - crm_out['since'][4]) >= 2:
+    checks.append(f"アポ数が日次報告（{crm_out['since'][4]}件）と共有シート（{pc.get('アポ', 0)}件）で違います。日次報告で資料送付などをアポに数えていないか確認してください")
+if per and crm_out['since'][0] and len(per) > crm_out['since'][0] * 1.5:
+    checks.append(f"共有シートの記録（{len(per)}件）が日次報告の架電数（{crm_out['since'][0]}件）より大幅に多いです。日付の年の取り違えや、報告前の日の記録が入っていないか確認してください")
 first_ev = min((e['d'] for e in ev if e['d']), default=''); last_ev = max((e['d'] for e in ev if e['d']), default='')
-out = dict(sis=SIS, name=spec['name'], meeting=str(MEET), period_from=str(prev), crm=crm_out,
+out = dict(checks=checks, sheet_period=dict(pc), sis=SIS, name=spec['name'], meeting=str(MEET), period_from=str(prev), crm=crm_out,
            list=dict(companies=len(co), called=sum(1 for c in co if c['best']), left=sum(1 for c in co if not c['best']),
                      events=len(ev), events_period=len(use), period_basis='前回定例から' if use is per else '直近60日',
                      first=first_ev, last=last_ev, results=res.most_common(), ng=ng.most_common(), ng_gate=ng_r.most_common(), ng_talk=ng_t.most_common(),

@@ -19,6 +19,9 @@ def jd(s):
 name = D['name']; short = name.replace('株式会社', '').replace('有限会社', '').replace('合同会社', '').strip()
 meet = datetime.date.fromisoformat(D['meeting']); C = D['crm']; L = D['list']
 calls, conn, talk, lead, apo = C['since']; T = C['total']
+OV = S.get('override') or {}
+if 'apo' in OV: apo = OV['apo']
+if 'lead' in OV: lead = OV['lead']
 res = dict(L['results']); rtot = sum(res.values()) or 1
 ng = [(k, v) for k, v in L['ng']]; ngtot = sum(v for _, v in ng) or 1
 order = ['アポ', '資料送付', '担当者NG', '受付NG', '不在', '再度架電', '不通・番号不備', 'その他']
@@ -75,7 +78,7 @@ def sec(id, no, lab, title, body, sub=''):
 
 # ---------- 章 ----------
 months = C['months']
-mrows = [dict(m=f'{int(m[0][5:])}月', calls=m[1], talk=m[3], lead=m[4], apo=m[5]) for m in months]
+mrows = [dict(m=(f'{int(m[0][5:])}月' if m[0][:4] == str(meet.year) else f'{m[0][:4]}年{int(m[0][5:])}月'), calls=m[1], talk=m[3], lead=m[4], apo=m[5]) for m in months]
 slides = []
 slides.append(f'''<section class="slide cover" id="cover"><div class="inner">
 <span class="eyebrow">OUTBOUND CALL REPORT — {meet:%Y.%m.%d}</span><span class="client">{E(name)} 様　アウトバウンドコール支援</span>
@@ -84,9 +87,9 @@ slides.append(f'''<section class="slide cover" id="cover"><div class="inner">
 <a class="start" href="#summary">見る ↓</a><span class="hint">↓キー・スペースで次の章へ。右下のボタンで全画面にできます。</span></div></section>''')
 slides.append(sec('summary', '01', 'サマリー', S.get('summary') or dflt_summary(),
     '<div class="stats">' + stat('架電', f'{calls:,}', f'累計 {T[0]:,}') + stat('ご担当者と会話', f'{talk:,}', f'架電の{pct(talk/calls) if calls else "—"}') +
-    stat('資料送付など', f'{lead:,}', f'累計 {T[3]:,}') + stat('アポ', f'{apo:,}', f'累計 {T[4]:,}') + '</div>' +
+    stat('資料送付など', f'{lead:,}', f'累計 {T[3]:,}') + stat('アポ', f'{apo:,}', f'累計 {T[4]:,}' if 'apo' not in OV else '共有シートの記録') + '</div>' + (f'<p class="tip">{E(OV["note"])}</p>' if OV.get('note') else '') +
     f'<p class="tip">期間：{since_lbl}。カードをクリックすると詳しい内容が開きます。</p>' +
-    card('日ごとの記録', f'{C["work_days_since"]}日', tbl(C['recent_days'][::-1], [('日付', lambda r: jd(r[0]), 0), ('架電', lambda r: f'{r[1]:,}', 1), ('つながった', lambda r: f'{r[2]:,}', 1), ('ご担当者と会話', lambda r: r[3], 1), ('資料送付など', lambda r: r[4], 1), ('アポ', lambda r: r[5], 1)])) +
+    card('日ごとの記録', f'{C["work_days_since"]}日', tbl([r for r in C['recent_days'] if r[0] >= C['since_from']][::-1], [('日付', lambda r: jd(r[0]), 0), ('架電', lambda r: f'{r[1]:,}', 1), ('つながった', lambda r: f'{r[2]:,}', 1), ('ご担当者と会話', lambda r: r[3], 1), ('資料送付など', lambda r: r[4], 1), ('アポ', lambda r: r[5], 1)])) +
     card('数字の見方', '', '<p>「つながった」は受付を含めて電話がつながった件数、「ご担当者と会話」は採用・決裁のご担当者クラスと直接お話しできた件数です。出典：日次の架電報告。</p>')))
 slides.append(sec('trend', '02', '推移', S.get('trend') or f'月ごとの推移。直近の月は架電{mrows[-1]["calls"]:,}件・<em class="hl">アポ{mrows[-1]["apo"]}件</em>' if mrows else '月ごとの推移',
     '<div class="two">' + '<div class="panel"><h3 class="h3s">架電数</h3>' + bars([(r['m'], r['calls']) for r in mrows], 0, hi=mrows[-1]['m'] if mrows else None, fmt=lambda v, t: f'{v:,}') + '</div>' +
