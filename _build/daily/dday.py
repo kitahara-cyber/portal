@@ -19,7 +19,7 @@ def num(x):
     except: return 0
 cfg = json.load(open(cfg_p))['values']; CH = cfg[0]
 C = {N(r[0]): dict(zip(CH, r + [''] * (len(CH) - len(r)))) for r in cfg[1:] if r and N(r[0])}
-act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前') and c.get('契約状況（顧客情報）', '契約中') in ('', '契約中')}
+act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前') and (c.get('契約状況（顧客情報）', '契約中') in ('', '契約中', '請求停止') or c.get('扱い（手動の例外）', '').startswith('稼働中として扱う'))}
 YOMI = {s: c.get('継続ヨミ', '') for s, c in C.items()}
 days = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0, 0])); renew = {}
 for r in rows[1:]:
