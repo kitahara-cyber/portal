@@ -32,7 +32,14 @@ footer{padding:26px 0 40px;color:var(--mute);font-size:12px}
 .plan{display:grid;gap:10px}.pi{display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}.pi .tm{font-family:var(--mono);font-size:15px;font-weight:600;text-align:left;color:var(--ink)}.pi .tm .chip{display:block;width:max-content;margin-top:6px}
 .pi h3{margin:0 0 4px;font-size:15.5px}.pi p{margin:0;font-size:13.5px;line-height:1.7}.pi .why{color:var(--mute);font-size:12.5px;margin-top:4px}.pi a{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--accent-ink);text-decoration:none}.pi.done{opacity:.55}.pi label{font-size:12px;color:var(--mute);display:inline-flex;gap:6px;align-items:center;margin-top:8px;margin-left:12px;cursor:pointer}
 @media (max-width:640px){.pi{grid-template-columns:1fr}.boss{flex-direction:column}}
-
+.road .big{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:12px;margin:6px 0 16px}.road .big div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}.road .big b{display:block;font-family:var(--mono);font-size:1.6rem;line-height:1.25}.road .big small{color:var(--mute);font-size:12.5px}.road .big .neg b{color:var(--accent-ink)}
+.stk{display:flex;height:30px;border-radius:8px;overflow:hidden;background:repeating-linear-gradient(135deg,var(--line2) 0 6px,transparent 6px 12px);border:1px solid var(--line);position:relative}.stk i{display:block;height:100%}.stk .s0{background:var(--ink)}.stk .s1{background:var(--accent)}.stk .s2{background:#e89a7d}.stk .goal{position:absolute;top:0;bottom:0;width:3px;background:var(--good)}
+.stkl{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin:8px 0 16px}.stkl span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.lv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}.lv .card b.v{font-family:var(--mono);font-size:1.25rem;display:block;margin:2px 0 6px}.lv ul{margin:8px 0 0;padding-left:1.1em;font-size:13px}.lv li{margin:2px 0}.lv .card.warn{border-color:var(--accent)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:10px;align-items:stretch;counter-reset:f}.flow>div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;position:relative}.flow>div h4{margin:0 0 4px;font-size:13.5px}.flow>div h4:before{counter-increment:f;content:counter(f);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-family:var(--mono);font-size:11px;margin-right:6px}.flow p{margin:0;color:var(--mute)}.flow .ai{border-color:var(--blue);background:var(--blue-soft)}.flow .ai p{color:var(--ink)}
+.qa{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}.qa span{font-size:12.5px;border-radius:999px;padding:3px 12px;background:var(--line2)}.qa span.bad{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.rm{list-style:none;margin:0;padding:0;display:grid;gap:8px}.rm li{display:grid;grid-template-columns:120px 1fr auto;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px}.rm li b{font-size:14px}.rm li small{color:var(--mute);display:block}
+@media (max-width:640px){.rm li{grid-template-columns:1fr}}
 </style>
 <header class="bar"><div class="wrap"><span class="brand">INSIGHT SALES<small>ディレクターの1日（AI自動運用）</small></span><a href="../cs-internal/" target="_top">社内ポータルに戻る</a></div></header>
 <main>
@@ -48,25 +55,49 @@ footer{padding:26px 0 40px;color:var(--mute);font-size:12px}
  <div class="dsel" id="dsel" role="group" aria-label="ディレクターを選ぶ"></div>
  <div id="dplan"></div>
 </div></section>
+<section class="road" id="road"><div class="wrap">
+ <div class="sh"><span class="no">01 ／ ROAD TO 1億</span><h2>1人1億への道筋 <span id="rname" style="color:var(--accent-ink)"></span></h2><p>上で選んだディレクターの数字に切り替わります。<b>1億＝担当しているお客様の月額×12か月（ストック）</b>で数えています。初期費用は営業の獲得なので入れていません。1億＝50社×月16.7万円です。</p></div>
+ <div class="big" id="rbig"></div>
+ <div class="stk" id="rstk" role="img"></div>
+ <div class="stkl"><span style="--c:var(--ink)">いまの月額×12</span><span style="--c:var(--accent)">① 担当を50社に</span><span style="--c:#e89a7d">② 単価を上げる</span><span style="--c:var(--line)">残り（③の守りと、新しい打ち手が必要）</span><span style="--c:var(--good)">緑の線＝1億</span></div>
+ <div class="lv" id="rlv"></div>
+ <h3 style="margin:26px 0 8px;font-size:16px">いまの管理で抜けているところ（AIが毎朝数える）</h3>
+ <div class="qa" id="rqa"></div>
+</div></section>
 <section><div class="wrap">
- <div class="sh"><span class="no">01 ／ TIMELINE</span><h2>理想の1日（全員共通の型）</h2><p>青＝AIが自動でやる、オレンジ＝人がやる。右のラベルは今の状態です。</p></div>
+ <div class="sh"><span class="no">02 ／ HOW WE MANAGE</span><h2>いまどう管理しているか（データの流れ）</h2><p>これまでは「月額と更新」はキントーン、「架電とアポ」は日次報告、「お客様との話」は議事録に分かれていて、1億に対して自分がどこにいるかを1か所で見られませんでした。いまは下の流れで、AIが毎朝まとめています。</p></div>
+ <div class="flow">
+  <div><h4>キントーン</h4><p>App424：担当・月額・初期費用／App40：契約満了月・継続ヨミ・更新ステータス／顧客情報：契約中・請求停止・解約／CSタスク・月額の変更</p></div>
+  <div><h4>JD営業支援_アポ一覧</h4><p>キントーンを自動で写したスプレッドシート。商談の結果（約1万件）もここ。AIはキントーンに直接ログインせず、ここを読む</p></div>
+  <div><h4>日次報告・共有シート・議事録・カレンダー</h4><p>架電数・会話・アポ（日次報告）、お断り理由（共有シート）、お客様との話（Gemini議事録）、定例の予定</p></div>
+  <div><h4>設定シート（北原さんのみ）</h4><p>担当・月額・ポータルの場所とパスワード・手動の例外・実行ログ</p></div>
+  <div class="ai"><h4>AI（毎朝 8:50・12:20・17:20）</h4><p>全部を突き合わせて、1億までの差・今日やること・定例資料・フォローを作る</p></div>
+  <div><h4>届く場所</h4><p>このページ／社内ポータル／顧客ポータル146社／Slack のDM。ディレクターは見て、話して、決めるだけ</p></div>
+ </div>
+</div></section>
+<section><div class="wrap">
+ <div class="sh"><span class="no">03 ／ AI ROADMAP</span><h2>AIで1億を実現していく順番</h2><p>上から順に作っています。「済み」は今日すでに動いているもの。</p></div>
+ <ol class="rm" id="rmap"></ol>
+</div></section>
+<section><div class="wrap">
+ <div class="sh"><span class="no">04 ／ TIMELINE</span><h2>理想の1日（全員共通の型）</h2><p>青＝AIが自動でやる、オレンジ＝人がやる。右のラベルは今の状態です。</p></div>
  <p class="legend"><span><span class="chip c-ai">AI</span> 自動</span><span><span class="chip c-hu">人</span> 判断・会話</span><span><span class="chip s-on">動いています</span></span><span><span class="chip s-new">今日から自動</span></span><span><span class="chip s-todo">これから</span></span></p>
  <ol class="tl" id="tl"></ol>
 </div></section>
 
 <section><div class="wrap">
- <div class="sh"><span class="no">02 ／ CAPACITY</span><h2>1人50社を回せる計算</h2><p>定例を月2回・15分にすると、1日の定例は約5件・75分。残りの時間を「決める・つなぐ」に使えます。</p></div>
+ <div class="sh"><span class="no">05 ／ CAPACITY</span><h2>1人50社を回せる計算</h2><p>定例を月2回・15分にすると、1日の定例は約5件・75分。残りの時間を「決める・つなぐ」に使えます。</p></div>
  <div class="calc"><b>50</b><span>社 ×</span><b>2</b><span>回/月 ＝</span><b>100</b><span>回/月 ÷ 20営業日 ＝</span><b>5</b><span>回/日 × 15分 ＝</span><b>75</b><span>分/日</span></div>
  <div class="card"><h3>いまの担当社数（稼働中・稼働前）</h3><p style="margin-bottom:12px">縦線＝1人50社の目安。担当が未設定の会社が11社あります（設定シートの「顧客」タブで担当を入れると、朝のブリーフィングや定例資料の送り先が決まります）。</p><div class="bars" id="cap"></div></div>
 </div></section>
 
 <section><div class="wrap">
- <div class="sh"><span class="no">03 ／ AUTOMATION</span><h2>動いている自動の仕組み</h2><p>どれもクラウドで毎営業日に動き、Slack のDMで届きます。設定と記録は北原さんだけが見られる設定シートにあります。</p></div>
+ <div class="sh"><span class="no">06 ／ AUTOMATION</span><h2>動いている自動の仕組み</h2><p>どれもクラウドで毎営業日に動き、Slack のDMで届きます。設定と記録は北原さんだけが見られる設定シートにあります。</p></div>
  <div class="tw"><table><thead><tr><th>仕組み</th><th>動く時間</th><th>届くもの・届け先</th><th>元にするデータ</th><th>状態</th></tr></thead><tbody id="auto"></tbody></table></div>
 </div></section>
 
 <section><div class="wrap">
- <div class="sh"><span class="no">04 ／ HUMAN</span><h2>人がやるのは、この3つだけ</h2><p>AIは「材料」と「下書き」まで。お客様の前に立つこと、決めること、人と人をつなぐことは人がやります。</p></div>
+ <div class="sh"><span class="no">07 ／ HUMAN</span><h2>人がやるのは、この3つだけ</h2><p>AIは「材料」と「下書き」まで。お客様の前に立つこと、決めること、人と人をつなぐことは人がやります。</p></div>
  <div class="cards">
   <div class="card"><h3>1. 話す（定例）</h3><p>前日に届いた定例資料をポータルで画面共有。5分＝数字、10分＝課題、15分＝ご提案と次の一手。議事録は Gemini に任せて、話すことに集中。</p></div>
   <div class="card"><h3>2. 決める（打ち手・継続）</h3><p>朝のブリーフィングの「気にしておく案件」から1つ、リストかトークを変えると決める。更新が近い案件は、次の定例で成果のまとめと継続のご提案。</p></div>
@@ -75,7 +106,7 @@ footer{padding:26px 0 40px;color:var(--mute);font-size:12px}
 </div></section>
 
 <section><div class="wrap">
- <div class="sh"><span class="no">05 ／ NEXT</span><h2>まだ人の手が要るところ（次に作るもの）</h2><p>理想の1日に足りないものです。上から順に自動化を進めます。</p></div>
+ <div class="sh"><span class="no">08 ／ NEXT</span><h2>まだ人の手が要るところ（次に作るもの）</h2><p>理想の1日に足りないものです。上から順に自動化を進めます。</p></div>
  <div class="tw"><table><thead><tr><th>足りないもの</th><th>いま</th><th>どうするか</th></tr></thead><tbody id="gap"></tbody></table></div>
 </div></section>
 </main>
@@ -118,7 +149,23 @@ const names=Object.keys(P.plan||{}).sort((a,b)=>P.plan[b].n-P.plan[a].n);if(!nam
 document.getElementById('tdate').textContent=P.date||'';
 let cur=decodeURIComponent((location.hash.match(/d=([^&]+)/)||[])[1]||'');try{if(!cur)cur=localStorage.getItem('dday-d')||''}catch(_){}if(!P.plan[cur])cur=names[0];
 const dk=d=>'dday-done-'+P.date+'-'+d;
-function draw(){const p=P.plan[cur];let done={};try{done=JSON.parse(localStorage.getItem(dk(cur))||'{}')}catch(_){}
+
+const R=/*ROAD*/{};const man=v=>{const m=v/10000;return m>=10000?(m/10000).toFixed(2).replace(/\.?0+$/,'')+'億':(m<100&&m%1?m.toFixed(1):Math.round(m).toLocaleString())+'万'};
+const RM=[['見える化','済み','顧客ポータル146社・社内ポータル（ディレクター別・アップセル事例・企業マッチング）'],['指示','済み','毎朝8:50に、ディレクターごとの「今日の動き方」と朝のブリーフィング'],['下ごしらえ','済み','定例資料を前日に自動作成、定例後のまとめとお礼メールの下書き（12:20・17:20）'],['1億の道筋','今日から','このページの01。担当・月額・更新の山・管理の抜けを毎朝数え直す'],['更新の山を守る','次','満了3か月前に「成果のまとめ＋継続のご提案」資料を自動で作り、継続ヨミをAIが下書き→ディレクターが確定'],['単価を上げる','次','月額が16.7万円未満で、議事録で前向きな話が出ているお客様に、追加提案の下書きを自動で作る'],['数字の自動更新','次','ポータルの数字（週の動き・アポ・アラート）を毎週月曜に作り直す'],['到達予測','その先','月ごとに「このままだと年度末にいくら」を予測し、ずれたら朝の指示の優先順位を変える']];
+document.getElementById('rmap').innerHTML=RM.map(([a,st,b])=>`<li><b>${E(a)}</b><span>${E(b)}</span><span class="chip ${st==='済み'?'s-on':st==='今日から'?'s-new':'s-todo'}">${E(st)}</span></li>`).join('');
+function drawRoad(){const x=(R.dirs||{})[cur];const sec=document.getElementById('road');if(!x){sec.hidden=true;return}sec.hidden=false;
+ document.getElementById('rname').textContent='— '+cur+'さん';
+ const [L1,L2,L3]=x.levers;const reach=x.arr+L1.v+L2.v;const H=x.hist||{up:[0,0],down:[0,0],churn:[0,0]};
+ document.getElementById('rbig').innerHTML=[[`いま（担当${x.n}社・月額あり${x.paid}社）`,man(x.arr),`月額 ${man(x.mrr)}円 × 12`],['1億までの差',man(x.gap),`月額であと ${man(Math.ceil(x.gap/12))}円`,1],['平均月額',man(x.avg),`50社で1億には ${man(R.per)}円`],['過去1年に減った月額',man(H.churn[1]+H.down[1]),`解約${H.churn[0]}社・値下げ${H.down[0]}件／値上げは+${man(H.up[1])}（${H.up[0]}件）`,1]].map(([a,b,c,n])=>`<div class="${n?'neg':''}"><small>${E(a)}</small><b>${E(b)}円</b><small>${E(c)}</small></div>`).join('');
+ const tot=Math.max(R.goal,reach)*1.04,w=v=>Math.max(0,v/tot*100).toFixed(2)+'%';
+ document.getElementById('rstk').innerHTML=`<i class="s0" style="width:${w(x.arr)}" title="いま ${man(x.arr)}"></i><i class="s1" style="width:${w(L1.v)}" title="① ${man(L1.v)}"></i><i class="s2" style="width:${w(L2.v)}" title="② ${man(L2.v)}"></i><span class="goal" style="left:${w(R.goal)}"></span>`;
+ document.getElementById('rstk').setAttribute('aria-label',`いま${man(x.arr)}円、①②を足すと${man(reach)}円、目標1億円`);
+ const li=a=>a.length?`<ul>${a.join('')}</ul>`:'';
+ document.getElementById('rlv').innerHTML=`<div class="card"><h3>① 担当を50社にする</h3><b class="v">+${man(L1.v)}円</b><p>あと${L1.n}社 × いまの平均月額 ${man(x.avg)}円 × 12。新しいお客様の受け入れは、AIの下ごしらえで1人50社まで回せる前提です。${x.nofee.length?`<br>月額がまだ入っていないお客様が${x.q.nofee}社（稼働前・初期のみ・入力漏れ）。月額が決まれば①に足されます。`:''}</p>${li(x.nofee.slice(0,5).map(n=>`<li>${E(n)}</li>`))}</div>
+ <div class="card"><h3>② 単価を上げる（アップセル）</h3><b class="v">+${man(L2.v)}円</b><p>月額が${man(R.per)}円未満のお客様${L2.n}社が、これまでの値上げのふつうの幅（+${man(R.up_med)}円/月）で上がった場合。月額の低い順：</p>${li(x.small.slice(0,6).map(c=>`<li>${E(c.name)}　${man(c.fee)}円</li>`))}<p style="margin-top:6px">切り出し方は社内ポータル「アップセル事例」に、前向きに返ったものがあります。</p></div>
+ <div class="card warn"><h3>③ 更新の山を守る</h3><b class="v">${man(L3.v)}円分が6か月以内に満了</b><p>半年以内に満了するお客様が${x.nrenew}社。うちAヨミ・Bヨミ以外が${L3.n}社。ここを落とすと①②が消えます。過去1年の解約は${H.churn[0]}社（月額${man(H.churn[1])}円）。</p>${li(x.renew.slice(0,6).map(c=>`<li>${E(c.m)} ${E(c.name)}　${c.fee?man(c.fee)+'円':'月額未入力'}・${E(c.yomi)}</li>`))}</div>`;
+ const q=x.q;document.getElementById('rqa').innerHTML=[[`継続ヨミがA・B以外のまま ${q.yomi}/${x.n}社`,q.yomi>x.n/2],[`月額が未入力 ${q.nofee}社`,q.nofee>0],[`商談の結果が未入力 ${q.blank}件`,q.blank>20],[`CSタスクの期限切れ ${q.task}件`,q.task>0],[`キントーンと担当の食い違い ${q.mism}社`,q.mism>0]].map(([t,b])=>`<span class="${b?'bad':''}">${E(t)}</span>`).join('')+`<span>継続ヨミはほぼ全社が「Cヨミ」のままで、更新の見込みが管理されていません。まずここをAIの下書き→人の確定に変えます。</span>`}
+function draw(){drawRoad();const p=P.plan[cur];let done={};try{done=JSON.parse(localStorage.getItem(dk(cur))||'{}')}catch(_){}
  document.getElementById('dsel').innerHTML=names.map(n=>`<button type="button" data-d="${E(n)}" aria-pressed="${n===cur}">${E(n)}<small>${P.plan[n].n}社</small></button>`).join('');
  const al=p.alerts||{};const st=[`人の作業 約${p.human}分・12:30に終了`,`担当 ${p.n}社`,`今日の定例 ${p.meets}件`,p.pm?`午後の定例 ${p.pm}件 → 午前に寄せる`:'',al.zero?`アポ0の案件 ${al.zero}`:'',al.drop?`急落 ${al.drop}`:'',al.renew?`更新が近い ${al.renew}`:'',al.ups?`話が途中のアップセル ${al.ups}`:''].filter(Boolean);
  document.getElementById('dplan').innerHTML=`<div class="boss"><span class="av">AI</span><div><b>${E(cur)}さんへ、今日の動き方</b><p>${E(p.lead)}</p><div class="st">${st.map(x=>`<span>${E(x)}</span>`).join('')}</div></div></div><div class="plan">${p.items.map((it,i)=>`<div class="pi${done[i]?' done':''}"><div class="tm">${E(it.t)}<span class="chip ${it.who==='AI'?'c-ai':'c-hu'}">${it.who==='AI'?'AI':'人'}</span></div><div><h3>${E(it.title)}</h3><p>${E(it.do)}</p>${it.why?`<p class="why">${E(it.why)}</p>`:''}${it.link?`<a href="${E(it.link)}" target="_top">開く →</a>`:''}${it.who==='人'?`<label><input type="checkbox" data-i="${i}"${done[i]?' checked':''}> 済み</label>`:''}</div></div>`).join('')}</div>`}

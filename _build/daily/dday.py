@@ -1,5 +1,5 @@
 """「ディレクターの1日」ページを、今日のディレクターごとの指示つきで作る。
-使い方: python3 dday.py <crm.json> <cfg.json> <ev.json> <鍵> <YYYY-MM-DD 今日> <出力 body.html>
+使い方: python3 dday.py <crm.json> <cfg.json> <ev.json> <鍵> <YYYY-MM-DD 今日> <出力 body.html> [road.json]
   crm.json / cfg.json / ev.json は朝のブリーフィングと同じもの（RUNBOOK_morning.md）
   鍵 : 設定シート「担当」タブの「鍵」（knowledge.enc を開く）
 出力した body.html を lock.py で社内ポータルと同じパスワードにして director-day/index.html に置く。"""
@@ -7,6 +7,7 @@ import json, sys, os, base64, datetime, collections, unicodedata, re
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 N = lambda s: unicodedata.normalize('NFKC', str(s or '')).strip()
 crm_p, cfg_p, ev_p, key, today_s, out_p = sys.argv[1:7]
+road_p = sys.argv[7] if len(sys.argv) > 7 else '-'  # road.py の出力（1億への道筋）
 HERE = os.path.dirname(os.path.abspath(__file__))
 TODAY = datetime.date.fromisoformat(today_s)
 raw = base64.b64decode(open(os.path.join(HERE, 'knowledge.enc')).read())
@@ -117,5 +118,6 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
     PLAN[dname] = dict(n=len(mine), meets=len(meets), human=human, pm=len(pm), alerts={k: len(v) for k, v in A.items()}, lead=('今日は「' + '」「'.join(head) + '」に集中するのがいいと思います。') if head else '今日は大きな崩れはありません。アップセルと紹介に時間を使いましょう。', items=items)
 tpl = open(os.path.join(HERE, 'dday_template.html')).read()
 body = tpl.replace('/*PLAN*/{}', json.dumps(dict(date=f'{TODAY.month}/{TODAY.day}（{"月火水木金土日"[TODAY.weekday()]}）', plan=PLAN), ensure_ascii=False).replace('</', '<\\/'))
+body = body.replace('/*ROAD*/{}', (open(road_p).read().strip() if road_p != '-' else '{}').replace('</', '<\\/'))
 open(out_p, 'w').write(body)
 print('wrote', out_p, {k: len(v['items']) for k, v in PLAN.items()})
