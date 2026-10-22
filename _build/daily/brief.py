@@ -15,7 +15,8 @@ def num(x):
     except: return 0
 cfg = json.load(open(cfg_p))['values']; CH = cfg[0]
 C = {N(r[0]): dict(zip(CH, r + [''] * (len(CH) - len(r)))) for r in cfg[1:] if r and N(r[0])}
-act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前')}
+act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前') and c.get('契約状況（顧客情報）', '契約中') in ('', '契約中')}
+YOMI = {s: c.get('継続ヨミ', '') for s, c in C.items()}
 days = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0, 0]))  # sis -> date -> [架電, 会話, アポ]
 renew = {}
 for r in rows[1:]:
@@ -27,6 +28,8 @@ for r in rows[1:]:
     v = days[s][d]; v[0] += num(f(r, '架電数')); v[1] += num(f(r, 'ターゲット着電数')); v[2] += num(f(r, 'アポ獲得件数'))
     m = N(f(r, '1年目の契約満了月'))
     if m: renew[s] = m
+for _s, _c in C.items():
+    if _c.get('契約満了月（更新情報）'): renew[_s] = _c['契約満了月（更新情報）']
 def span(s, a, b):  # a <= d < b
     t = [0, 0, 0]
     for d, v in days[s].items():
@@ -56,7 +59,7 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
         rm = renew.get(s, '')
         try:
             rd = datetime.date.fromisoformat(rm.replace('/', '-')[:10])
-            if 0 <= (rd - TODAY).days <= 45: alerts.append((3, f'{nm}：契約満了 {rd.month}/{rd.day}（あと{(rd - TODAY).days}日）→ 次の定例で成果のまとめと継続のご提案'))
+            if 0 <= (rd - TODAY).days <= 45: alerts.append((3, f'{nm}：契約満了 {rd.month}/{rd.day}（あと{(rd - TODAY).days}日・継続ヨミ {YOMI.get(s) or "未入力"}）→ 次の定例で成果のまとめと継続のご提案'))
         except: pass
     alerts.sort()
     good = sorted([(v[2], C[s]['会社名']) for s, v in y.items() if v[2] > 0], reverse=True)[:3]

@@ -19,7 +19,8 @@ def num(x):
     except: return 0
 cfg = json.load(open(cfg_p))['values']; CH = cfg[0]
 C = {N(r[0]): dict(zip(CH, r + [''] * (len(CH) - len(r)))) for r in cfg[1:] if r and N(r[0])}
-act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前')}
+act = {s for s, c in C.items() if c.get('状態') in ('稼働中', '稼働前') and c.get('契約状況（顧客情報）', '契約中') in ('', '契約中')}
+YOMI = {s: c.get('継続ヨミ', '') for s, c in C.items()}
 days = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0, 0])); renew = {}
 for r in rows[1:]:
     if not r or N(r[0]) not in act: continue
@@ -27,6 +28,8 @@ for r in rows[1:]:
     except: continue
     v = days[N(r[0])][d]; v[0] += num(f(r, '架電数')); v[1] += num(f(r, 'ターゲット着電数')); v[2] += num(f(r, 'アポ獲得件数'))
     if N(f(r, '1年目の契約満了月')): renew[N(r[0])] = N(f(r, '1年目の契約満了月'))
+for _s, _c in C.items():
+    if _c.get('契約満了月（更新情報）'): renew[_s] = _c['契約満了月（更新情報）']
 def span(s, a, b):
     t = [0, 0, 0]
     for d, v in days[s].items():
@@ -88,7 +91,7 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
         tasks.append(dict(m=10, title=f'{nm(s)}：アップセルを打診', do=f'「{u["detail"]}」が{u["reaction"]}のまま（{u["date"]}）。メールか電話で次の一手を確認する。' + (f' 前向きに返った切り出し方の例：{ex}' if ex else ''), why='議事録から見つけた、話が途中の案件', link='../cs-internal/'))
     for _, s, rd in A['renew'][:1]:
         if any(e.get('sis') == s for e in meets): continue
-        tasks.append(dict(m=10, title=f'{nm(s)}：継続のご提案を準備', do=f'契約満了 {rd.month}/{rd.day}（あと{(rd - TODAY).days}日）。次の定例で、成果のまとめと次の3か月の打ち手を出せるようにする。', why='CSは運用営業。継続とアップセルはここで取る', link=portal(s)))
+        tasks.append(dict(m=10, title=f'{nm(s)}：継続のご提案を準備', do=f'契約満了 {rd.month}/{rd.day}（あと{(rd - TODAY).days}日・継続ヨミ {YOMI.get(s) or "未入力"}）。次の定例で、成果のまとめと次の3か月の打ち手を出せるようにする。', why='CSは運用営業。継続とアップセルはここで取る', link=portal(s)))
     for _, s, m in A['match'][:1]:
         od = C.get(m['sis'], {}).get('担当', '')
         tasks.append(dict(m=5, title=f'{nm(s)}様と{nm(m["sis"]) if m["sis"] in C else m["name"]}様の引き合わせを相談', do=f'どちらも相手の業種（{m["tag"]}）に電話しています。' + (f'相手の担当は{od}さん。' if od and od != dname else '') + '両社に紹介してよいか、まず片方に一言聞く。', why='お互いのお客様になりうる組み合わせ', link='../cs-internal/'))
