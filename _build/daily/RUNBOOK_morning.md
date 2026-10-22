@@ -9,9 +9,14 @@
 4. 担当タブの各ディレクターのカレンダーで「今日」の予定を list_events。定例資料の RUNBOOK（`_build/teirei/RUNBOOK.md` 手順1-4）と同じ条件で「お客様が出る会議」だけ拾い、顧客タブの会社に当てる。
    `work/ev.json` に `[{"director":"小山","time":"16:00","sis":"5473","name":"スクエアプランニング","deck":true}]` の形で書く。deck は設定シート「実行ログ」にその SIS・その日時の「作成済み」があれば true。
 5. `python3 _build/daily/brief.py work/crm.json work/cfg.json work/ev.json <今日 YYYY-MM-DD> > work/brief.json`
-6. brief.json のディレクターごとの本文を、担当タブの SlackユーザーID に DM で送る。ID が空のディレクターは送らない（最後に北原 U09T80ZAMT3 へ「送れなかった人」をまとめて1通）。本文は直さずにそのまま送る。
-7. 設定シート「実行ログ」に1行：実行日時／-／朝のブリーフィング／-／-／送った人数／結果／送信済み。
-8. `work/` を消す。
+6. 「今日の指示」ページを作る：
+   `python3 _build/daily/dday.py work/crm.json work/cfg.json work/ev.json <鍵> <今日 YYYY-MM-DD> work/dday_body.html`
+   （鍵＝担当タブの「鍵」。社内ポータルのパスワード＝担当タブの「社内ポータルのパスワード」）
+   `python3 _build/teirei/lock.py work/dday_body.html director-day/index.html --password <社内ポータルのパスワード> --title "ディレクターの1日（AI自動運用）" --eyebrow "INTERNAL ／ 社外秘" --head-file _build/daily/dday_head.html --standalone --storage-key cs-pw`
+   `git add director-day && git commit -m "今日の指示 <日付>" && git pull --rebase && git push`（コミットの最後に Co-Authored-By 行）
+7. brief.json のディレクターごとの本文の最後に「今日の時間割：https://kitahara-cyber.github.io/portal/director-day/#d=<担当名をURLエンコード>」の1行を足して、担当タブの SlackユーザーID に DM で送る。ID が空のディレクターは送らない（最後に北原 U09T80ZAMT3 へ「送れなかった人」をまとめて1通）。本文は直さずにそのまま送る。
+8. 設定シート「実行ログ」に1行：実行日時／-／朝のブリーフィング／-／-／送った人数／結果／送信済み。
+9. `work/` を消す。
 
 ## 注意
 - 日次報告・カレンダー・設定シートは読むだけ（実行ログへの追記を除く）。

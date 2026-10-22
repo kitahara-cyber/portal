@@ -1,0 +1,128 @@
+<style>
+:root{--bg:#f4f2ec;--card:#fbfaf6;--ink:#15171b;--mute:#6b6a65;--line:#dcd8cc;--line2:#ebe8df;--accent:#d9481f;--accent-ink:#b23a17;--accent-soft:#fbe7de;--good:#1f7a55;--good-soft:#e1f0e8;--blue:#2c5d9f;--blue-soft:#e3ebf6;--font:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17191d;--card:#202328;--ink:#eceae4;--mute:#a19f98;--line:#3a3d44;--line2:#2b2e34;--accent-ink:#ff8a63;--accent-soft:#3a2219;--good:#4fb98a;--good-soft:#1b3027;--blue:#86acdf;--blue-soft:#1d2738}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.7}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;gap:12px;align-items:center;min-height:56px;flex-wrap:wrap}.brand{font-weight:900;letter-spacing:.04em;font-size:14px}.brand small{font-weight:500;color:var(--mute);margin-left:8px}
+.bar a{margin-left:auto;font-size:13px;color:var(--accent-ink);font-weight:700;text-decoration:none}
+.hero{padding:44px 0 28px}.eb{font-family:var(--mono);font-size:12px;color:var(--accent-ink);letter-spacing:.06em}
+h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.3;margin:10px 0 14px;font-weight:900}h1 em{font-style:normal;color:var(--accent-ink)}
+.lead{color:var(--mute);max-width:760px;margin:0}
+.rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px;margin-top:22px}
+.rule div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}.rule b{display:block;font-family:var(--mono);font-size:1.7rem;line-height:1.2}.rule small{color:var(--mute);font-size:12.5px}
+section{padding:30px 0;border-top:1px solid var(--line)}.sh .no{font-family:var(--mono);font-size:12px;color:var(--accent-ink)}.sh h2{margin:4px 0 6px;font-size:clamp(1.3rem,3vw,1.9rem);font-weight:900;line-height:1.4}.sh p{margin:0 0 16px;color:var(--mute)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin:0 0 14px}.chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.c-ai{background:var(--blue-soft);color:var(--blue)}.c-hu{background:var(--accent-soft);color:var(--accent-ink)}.s-on{background:var(--good-soft);color:var(--good)}.s-new{background:var(--accent);color:#fff}.s-todo{background:var(--line2);color:var(--mute)}
+.tl{list-style:none;margin:0;padding:0;position:relative}.tl:before{content:"";position:absolute;left:66px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{position:relative}.tl details{margin:0 0 10px}.tl summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:58px 18px 1fr auto;gap:10px;align-items:center;padding:10px 12px 10px 0;border-radius:12px}
+.tl summary::-webkit-details-marker{display:none}.tl summary:hover{background:var(--card)}
+.tm{font-family:var(--mono);font-size:13px;text-align:right;color:var(--mute)}.dot{width:14px;height:14px;border-radius:50%;border:3px solid var(--bg);justify-self:center;z-index:1}
+.dot.ai{background:var(--blue)}.dot.hu{background:var(--accent)}.tt b{display:block;font-size:15px}.tt small{color:var(--mute);font-size:12.5px}.tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tl .body{margin:0 0 6px 86px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:13.5px}
+.tl .body dl{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;margin:0}.tl .body dt{color:var(--mute);font-size:12px;font-weight:700}.tl .body dd{margin:0}
+@media (max-width:640px){.tl:before{left:52px}.tl summary{grid-template-columns:44px 16px 1fr}.tags{grid-column:3;justify-content:flex-start}.tl .body{margin-left:0}.tl .body dl{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}.card h3{margin:0 0 6px;font-size:15px}.card p{margin:0;font-size:13.5px;color:var(--mute)}
+.bars{display:grid;gap:9px}.br{display:grid;grid-template-columns:84px 1fr 120px;gap:10px;align-items:center;font-size:13.5px}.bt{height:16px;background:var(--line2);border-radius:8px;position:relative;overflow:hidden}.bt i{display:block;height:100%;background:#9a978e;border-radius:8px}.bt i.over{background:var(--accent)}.bt .cap{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}.bv{font-family:var(--mono);font-size:12.5px}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top}th{font-size:12px;color:var(--mute)}td small{color:var(--mute)}
+.calc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:15px;margin:6px 0 16px}.calc b{font-family:var(--mono);font-size:1.4rem}.calc span{color:var(--mute)}
+footer{padding:26px 0 40px;color:var(--mute);font-size:12px}
+.today{padding:26px 0 30px;border-top:1px solid var(--line)}.dsel{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}.dsel button{font:inherit;font-size:13.5px;font-weight:700;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.dsel button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}.dsel button small{font-weight:500;opacity:.7;margin-left:4px}
+.boss{display:flex;gap:14px;align-items:flex-start;background:var(--ink);color:var(--bg);border-radius:16px;padding:16px 18px;margin-bottom:16px}.boss .av{flex:none;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:900;font-family:var(--mono)}.boss b{display:block;font-size:12px;opacity:.75;font-weight:700}.boss p{margin:2px 0 0;font-size:clamp(1rem,2.4vw,1.25rem);font-weight:800;line-height:1.5}.boss .st{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.boss .st span{font-size:12px;background:rgba(255,255,255,.12);border-radius:999px;padding:2px 10px}
+.plan{display:grid;gap:10px}.pi{display:grid;grid-template-columns:62px 1fr;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}.pi .tm{font-family:var(--mono);font-size:15px;font-weight:600;text-align:left;color:var(--ink)}.pi .tm .chip{display:block;width:max-content;margin-top:6px}
+.pi h3{margin:0 0 4px;font-size:15.5px}.pi p{margin:0;font-size:13.5px;line-height:1.7}.pi .why{color:var(--mute);font-size:12.5px;margin-top:4px}.pi a{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--accent-ink);text-decoration:none}.pi.done{opacity:.55}.pi label{font-size:12px;color:var(--mute);display:inline-flex;gap:6px;align-items:center;margin-top:8px;margin-left:12px;cursor:pointer}
+@media (max-width:640px){.pi{grid-template-columns:1fr}.boss{flex-direction:column}}
+
+</style>
+<header class="bar"><div class="wrap"><span class="brand">INSIGHT SALES<small>ディレクターの1日（AI自動運用）</small></span><a href="../cs-internal/" target="_top">社内ポータルに戻る</a></div></header>
+<main>
+<div class="wrap hero">
+ <span class="eb">IDEAL DAY ／ 社外秘 ／ 2026.10.22</span>
+ <h1>AIが下ごしらえ。<br>ディレクターは<em>午前中で</em>、話して・決めて・つなぐだけ。</h1>
+ <p class="lead">白石さんとのMTG（10/13・10/15）の方針「CSは運用営業。AIで全部自動化して、1人で50社を回す」を、このポータルと自動の仕組みで1日の動きに落としたものです。行を押すと、AIがやること・人がやること・見る場所が開きます。</p>
+ <div class="rule"><div><small>1人の担当</small><b>50社</b><small>今は最大45社</small></div><div><small>お客様との定例</small><b>月2回</b><small>5分・10分・15分の型</small></div><div><small>資料・報告・まとめ</small><b>AIが作る</b><small>人は読んで直すだけ</small></div><div><small>人の作業時間</small><b>午前で終了</b><small>9:00〜12:30。午後は新規・アップセル商談</small></div></div>
+</div>
+
+<section class="today" id="today"><div class="wrap">
+ <div class="sh"><span class="no">00 ／ TODAY</span><h2>今日のAIからの指示 <span id="tdate" style="font-family:var(--mono);font-size:.7em;color:var(--mute)"></span></h2><p>自分の名前を押すと、今日の動き方が出ます。毎朝 8:50 に、日次報告・カレンダー・議事録から作り直しています。</p></div>
+ <div class="dsel" id="dsel" role="group" aria-label="ディレクターを選ぶ"></div>
+ <div id="dplan"></div>
+</div></section>
+<section><div class="wrap">
+ <div class="sh"><span class="no">01 ／ TIMELINE</span><h2>理想の1日（全員共通の型）</h2><p>青＝AIが自動でやる、オレンジ＝人がやる。右のラベルは今の状態です。</p></div>
+ <p class="legend"><span><span class="chip c-ai">AI</span> 自動</span><span><span class="chip c-hu">人</span> 判断・会話</span><span><span class="chip s-on">動いています</span></span><span><span class="chip s-new">今日から自動</span></span><span><span class="chip s-todo">これから</span></span></p>
+ <ol class="tl" id="tl"></ol>
+</div></section>
+
+<section><div class="wrap">
+ <div class="sh"><span class="no">02 ／ CAPACITY</span><h2>1人50社を回せる計算</h2><p>定例を月2回・15分にすると、1日の定例は約5件・75分。残りの時間を「決める・つなぐ」に使えます。</p></div>
+ <div class="calc"><b>50</b><span>社 ×</span><b>2</b><span>回/月 ＝</span><b>100</b><span>回/月 ÷ 20営業日 ＝</span><b>5</b><span>回/日 × 15分 ＝</span><b>75</b><span>分/日</span></div>
+ <div class="card"><h3>いまの担当社数（稼働中・稼働前）</h3><p style="margin-bottom:12px">縦線＝1人50社の目安。担当が未設定の会社が11社あります（設定シートの「顧客」タブで担当を入れると、朝のブリーフィングや定例資料の送り先が決まります）。</p><div class="bars" id="cap"></div></div>
+</div></section>
+
+<section><div class="wrap">
+ <div class="sh"><span class="no">03 ／ AUTOMATION</span><h2>動いている自動の仕組み</h2><p>どれもクラウドで毎営業日に動き、Slack のDMで届きます。設定と記録は北原さんだけが見られる設定シートにあります。</p></div>
+ <div class="tw"><table><thead><tr><th>仕組み</th><th>動く時間</th><th>届くもの・届け先</th><th>元にするデータ</th><th>状態</th></tr></thead><tbody id="auto"></tbody></table></div>
+</div></section>
+
+<section><div class="wrap">
+ <div class="sh"><span class="no">04 ／ HUMAN</span><h2>人がやるのは、この3つだけ</h2><p>AIは「材料」と「下書き」まで。お客様の前に立つこと、決めること、人と人をつなぐことは人がやります。</p></div>
+ <div class="cards">
+  <div class="card"><h3>1. 話す（定例）</h3><p>前日に届いた定例資料をポータルで画面共有。5分＝数字、10分＝課題、15分＝ご提案と次の一手。議事録は Gemini に任せて、話すことに集中。</p></div>
+  <div class="card"><h3>2. 決める（打ち手・継続）</h3><p>朝のブリーフィングの「気にしておく案件」から1つ、リストかトークを変えると決める。更新が近い案件は、次の定例で成果のまとめと継続のご提案。</p></div>
+  <div class="card"><h3>3. つなぐ（アップセル・紹介）</h3><p>社内ポータルの「アップセル事例」で前向きに返ってきた切り出し方を真似し、「企業マッチング」でお客様どうしの紹介を1件打診。</p></div>
+ </div>
+</div></section>
+
+<section><div class="wrap">
+ <div class="sh"><span class="no">05 ／ NEXT</span><h2>まだ人の手が要るところ（次に作るもの）</h2><p>理想の1日に足りないものです。上から順に自動化を進めます。</p></div>
+ <div class="tw"><table><thead><tr><th>足りないもの</th><th>いま</th><th>どうするか</th></tr></thead><tbody id="gap"></tbody></table></div>
+</div></section>
+</main>
+<footer><div class="wrap">株式会社ライトアップ　インサイトセールス CSチーム／社外秘。自動の仕組みの手順書はリポジトリの _build/teirei/RUNBOOK.md と _build/daily/ にあります。</div></footer>
+<script>
+(()=>{const E=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ST={on:['s-on','動いています'],new:['s-new','今日から自動'],todo:['s-todo','これから']};
+const T=[
+ ['前日 8:50','ai','定例資料ができて、Slackに届く','翌営業日のお客様との定例を、全ディレクターのカレンダーから見つけて資料を作る','new',{AIがやること:'日次報告と共有シートの架電記録から、サマリー・月の推移・架電結果・お断りの理由・リスト別・課題・ご提案3つ・進め方を作り、顧客ポータルの「定例資料」タブに入れる。数字の食い違いは「確認してほしいこと」に書く',人がやること:'なし（翌朝に目を通すだけ）',見る場所:'顧客ポータル →「定例資料」タブ'}],
+ ['8:50','ai','朝のブリーフィングと「今日の指示」が届く','ディレクターごとに、今日やることを時間割にして出す','new',{AIがやること:'日次報告・カレンダー・議事録から、今日の定例・立て直す案件・アップセル・紹介・止まっている案件を拾い、午前中に収まる時間割にする（このページの00）',人がやること:'読むだけ',見る場所:'Slack のDM → このページの「今日のAIからの指示」'}],
+ ['9:00','hu','目を通す（10分）','定例資料の「確認してほしいこと」だけ見る','new',{AIがやること:'資料と数字は前日に作成済み',人がやること:'気になる所だけ直す',見る場所:'顧客ポータル「定例資料」'}],
+ ['9:15','hu','朝会（15分）','今日の打ち手を1つ宣言','on',{AIがやること:'ディレクターごとの課題と練り直したい戦略を作っておく',人がやること:'「◯◯を今日立て直します」と宣言',見る場所:'社内ポータル →「ディレクター別」'}],
+ ['9:30〜12:15','hu','定例（15分ずつ）と、AIが並べた打ち手','定例は午前に寄せ、空き時間にリスト変更・トーク修正・アップセル・紹介','new',{AIがやること:'定例資料、リスト条件の提案、前向きに返った切り出し方、紹介の組み合わせを用意',人がやること:'定例で話す／決める／打診する（1件5〜20分）',見る場所:'このページの「今日のAIからの指示」の各行の「開く」'}],
+ ['12:20','ai','午前の定例フォローが届く','決まったこと・次の一手・お礼メールの下書き','new',{AIがやること:'午前の定例の議事録（Gemini）を読み、まとめとお礼メールの下書きを作る',人がやること:'なし',見る場所:'Slack のDM'}],
+ ['12:30','hu','お礼メールを送って、終わり','人の作業はここまで','new',{AIがやること:'—',人がやること:'下書きを直して送る（10分）',見る場所:'Slack のDM'}],
+ ['午後','hu','空き時間','新しい商談・アップセルの商談・急ぎの対応だけ','new',{AIがやること:'17:20 に午後の定例があればフォロー、16:51 に日報の下書き',人がやること:'定例が午後に入っていたら、次回から午前に寄せる',見る場所:'—'}],
+ ['常時','ai','顧客ポータル（全146社）','お客様がいつでも数字と次の一手を見られる','on',{AIがやること:'週ごとの動き・ゴールまでの流れ・アポの状況・「今週お願いしたいこと」・定例資料をまとめて表示',人がやること:'URLとパスワードを別々のメールでお客様に送る',見る場所:'社内ポータル「顧客ポータル」タブ'}]];
+document.getElementById('tl').innerHTML=T.map(([tm,w,t,s,st,d])=>`<li><details><summary><span class="tm">${E(tm)}</span><span class="dot ${w}"></span><span class="tt"><b>${E(t)}</b><small>${E(s)}</small></span><span class="tags"><span class="chip ${w==='ai'?'c-ai':'c-hu'}">${w==='ai'?'AI':'人'}</span><span class="chip ${ST[st][0]}">${ST[st][1]}</span></span></summary><div class="body"><dl>${Object.entries(d).map(([k,v])=>`<dt>${E(k)}</dt><dd>${E(v)}</dd>`).join('')}</dl></div></details></li>`).join('');
+const CAP=[['小山',45],['林',43],['高橋',26],['佐山',9],['深田',6],['北原',3],['大石',2],['遠藤',1],['未設定',11]];
+document.getElementById('cap').innerHTML=CAP.map(([n,v])=>`<div class="br"><span>${E(n)}</span><span class="bt"><i class="${v>50?'over':''}" style="width:${Math.min(v,60)/60*100}%"></i><span class="cap" style="left:${50/60*100}%"></span></span><span class="bv">${v}社${n!=='未設定'?`（あと${Math.max(0,50-v)}社）`:''}</span></div>`).join('');
+const A=[['定例資料の前日作成','平日 8:50','定例資料（顧客ポータル）＋要点・確認事項 → 担当ディレクター','カレンダー・日次報告・共有シート・前回の議事録','new'],
+ ['朝のブリーフィング＋今日の指示','平日 8:50','午前中の時間割（このページの00）と要点 → 各ディレクター','日次報告・カレンダー・議事録・実行ログ','new'],
+ ['定例フォロー','平日 12:20・17:20','決まったこと・次の一手・お礼メールの下書き → 担当ディレクター','カレンダー・当日の議事録（Gemini）','new'],
+ ['日報ドラフト作成','平日 16:51','日報の下書き → 北原さん','Slack・Drive・カレンダー・リスト依頼管理','on'],
+ ['顧客ポータル・社内ポータル','常時','数字・指示・定例資料・アップセル事例・マッチング','日次報告・共有シート・議事録（10/22時点）','on']];
+document.getElementById('auto').innerHTML=A.map(r=>`<tr><td><b>${E(r[0])}</b></td><td>${E(r[1])}</td><td>${E(r[2])}</td><td><small>${E(r[3])}</small></td><td><span class="chip ${ST[r[4]][0]}">${ST[r[4]][1]}</span></td></tr>`).join('');
+const G=[['ポータルの数字の自動更新','社内ポータル・顧客ポータルの数字（週の動き・アポ・アラート）は10/22時点。更新は手作業','毎週月曜の朝に日次報告と共有シートを読み直して作り直す仕組みを追加する'],
+ ['キントーンの状態の取り込み','稼働中・稼働前の判定はキントーンのログインが必要で、手で取り込んでいる','担当を決める・案件が増えたときに設定シートの「顧客」タブへ1行足す運用にする（ログイン情報はAIに渡さない）'],
+ ['担当が未設定の11社','朝のブリーフィング・定例資料の送り先が決まらない','設定シート「顧客」タブの「担当」列を埋める（人の作業・5分）'],
+ ['読めない共有シート4社','5402・5456・5488・5486 は権限がなく、リスト分析と定例資料の「架電結果」が作れない','各社の共有シートを北原さんのアカウントに共有してもらう'],
+ ['日報の下書きを全ディレクターに','いまは北原さんのみ','同じ仕組みをディレクターごとに増やす（Slack ID は設定シートにあり）'],
+ ['アポ数のずれ','日次報告で資料送付をアポに数えている案件がある（例：PLUSLIKE）','日次報告の入力ルールをそろえる。それまでは定例資料が共有シートの数を使い、DMで知らせる']];
+document.getElementById('gap').innerHTML=G.map(r=>`<tr><td><b>${E(r[0])}</b></td><td><small>${E(r[1])}</small></td><td>${E(r[2])}</td></tr>`).join('');
+})();
+</script>
+
+<script>
+(()=>{const P=/*PLAN*/{};const E=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const names=Object.keys(P.plan||{}).sort((a,b)=>P.plan[b].n-P.plan[a].n);if(!names.length){document.getElementById('today').hidden=true;return}
+document.getElementById('tdate').textContent=P.date||'';
+let cur=decodeURIComponent((location.hash.match(/d=([^&]+)/)||[])[1]||'');try{if(!cur)cur=localStorage.getItem('dday-d')||''}catch(_){}if(!P.plan[cur])cur=names[0];
+const dk=d=>'dday-done-'+P.date+'-'+d;
+function draw(){const p=P.plan[cur];let done={};try{done=JSON.parse(localStorage.getItem(dk(cur))||'{}')}catch(_){}
+ document.getElementById('dsel').innerHTML=names.map(n=>`<button type="button" data-d="${E(n)}" aria-pressed="${n===cur}">${E(n)}<small>${P.plan[n].n}社</small></button>`).join('');
+ const al=p.alerts||{};const st=[`人の作業 約${p.human}分・12:30に終了`,`担当 ${p.n}社`,`今日の定例 ${p.meets}件`,p.pm?`午後の定例 ${p.pm}件 → 午前に寄せる`:'',al.zero?`アポ0の案件 ${al.zero}`:'',al.drop?`急落 ${al.drop}`:'',al.renew?`更新が近い ${al.renew}`:'',al.ups?`話が途中のアップセル ${al.ups}`:''].filter(Boolean);
+ document.getElementById('dplan').innerHTML=`<div class="boss"><span class="av">AI</span><div><b>${E(cur)}さんへ、今日の動き方</b><p>${E(p.lead)}</p><div class="st">${st.map(x=>`<span>${E(x)}</span>`).join('')}</div></div></div><div class="plan">${p.items.map((it,i)=>`<div class="pi${done[i]?' done':''}"><div class="tm">${E(it.t)}<span class="chip ${it.who==='AI'?'c-ai':'c-hu'}">${it.who==='AI'?'AI':'人'}</span></div><div><h3>${E(it.title)}</h3><p>${E(it.do)}</p>${it.why?`<p class="why">${E(it.why)}</p>`:''}${it.link?`<a href="${E(it.link)}" target="_top">開く →</a>`:''}${it.who==='人'?`<label><input type="checkbox" data-i="${i}"${done[i]?' checked':''}> 済み</label>`:''}</div></div>`).join('')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;cur=b.dataset.d;try{localStorage.setItem('dday-d',cur)}catch(_){}draw()});
+document.addEventListener('change',e=>{const c=e.target.closest('[data-i]');if(!c)return;let d={};try{d=JSON.parse(localStorage.getItem(dk(cur))||'{}')}catch(_){}d[c.dataset.i]=c.checked;try{localStorage.setItem(dk(cur),JSON.stringify(d))}catch(_){}draw()});
+draw()})();
+</script>
