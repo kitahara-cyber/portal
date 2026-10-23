@@ -1,5 +1,5 @@
 """「ディレクターの1日」ページを、今日のディレクターごとの指示つきで作る。
-使い方: python3 dday.py <crm.json> <cfg.json> <ev.json> <鍵> <YYYY-MM-DD 今日> <出力 body.html> [road.json]
+使い方: python3 dday.py <crm.json> <cfg.json> <ev.json> <鍵> <YYYY-MM-DD 今日> <出力 body.html> [road.json] [karte.json]
   crm.json / cfg.json / ev.json は朝のブリーフィングと同じもの（RUNBOOK_morning.md）
   鍵 : 設定シート「担当」タブの「鍵」（knowledge.enc を開く）
 出力した body.html を lock.py で社内ポータルと同じパスワードにして director-day/index.html に置く。"""
@@ -8,6 +8,13 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 N = lambda s: unicodedata.normalize('NFKC', str(s or '')).strip()
 crm_p, cfg_p, ev_p, key, today_s, out_p = sys.argv[1:7]
 road_p = sys.argv[7] if len(sys.argv) > 7 else '-'  # road.py の出力（1億への道筋）
+karte_p = sys.argv[8] if len(sys.argv) > 8 else '-'  # 商材カルテ（カルテ!A1:L300 を get_values した保存ファイル）
+KT = {}
+if karte_p != '-':
+    _v = json.load(open(karte_p))['values']; _h = _v[0]
+    for _r in _v[1:]:
+        _d = dict(zip(_h, [N(x) for x in _r] + [''] * len(_h)))
+        if _d.get('SIS'): KT[_d['SIS']] = dict(n=sum(1 for k in _h[3:8] if _d.get(k)), ask=[x for x in _d.get('次の定例で聞くこと', '').split('／') if x])
 HERE = os.path.dirname(os.path.abspath(__file__))
 TODAY = datetime.date.fromisoformat(today_s)
 raw = base64.b64decode(open(os.path.join(HERE, 'knowledge.enc')).read())
@@ -79,6 +86,8 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
         u = next((x[2] for x in A['ups'] if x[1] == s), None)
         if u: talk.append(f'前回「{u["detail"]}」の話が{u["reaction"]}で止まっている → 今日その先を確認')
         if any(x[1] == s for x in A['zero'] + A['drop']): talk.append('数字が落ちている案件。資料の「ご提案」を一緒に決めて、次回までの目標を握る')
+        kt = KT.get(s)
+        if kt and kt['n'] < 4 and kt['ask']: talk.append(f'商材カルテが{kt["n"]}/5。最後に「{kt["ask"][0]}」を聞いてカルテに書く')
         return dict(t=e['time'], m=15, who='人', title=f'{e["name"]}様 定例（5/10/15分）', do='資料を画面共有して15分で終える。' + ('／'.join(talk) if talk else '最後に次回までの宿題を1つ決める。') + ('　※午後の予定です。次回から午前（10:00〜12:00）に寄せるよう、今日の定例でご相談を。' if moved else ''), why='定例資料：' + ('作成済み（ポータルの定例資料タブ）' if e.get('deck') else 'まだ（共有シートと日次報告で口頭説明）'), link=portal(s) if s in C else '')
     items += [meet_item(e) for e in am]
     tasks = []
@@ -96,6 +105,9 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
     for _, s, m in A['match'][:1]:
         od = C.get(m['sis'], {}).get('担当', '')
         tasks.append(dict(m=5, title=f'{nm(s)}様と{nm(m["sis"]) if m["sis"] in C else m["name"]}様の引き合わせを相談', do=f'どちらも相手の業種（{m["tag"]}）に電話しています。' + (f'相手の担当は{od}さん。' if od and od != dname else '') + '両社に紹介してよいか、まず片方に一言聞く。', why='お互いのお客様になりうる組み合わせ', link='../cs-internal/'))
+    low = sorted([(KT[s]['n'], s) for s in mine if s in KT and KT[s]['n'] < 3 and not any(e.get('sis') == s for e in meets)])
+    for n_, s in low[:1]:
+        tasks.append(dict(m=5, title=f'{nm(s)}：商材カルテを埋める（{n_}/5）', do='次の定例かメールで聞くこと：' + '／'.join(KT[s]['ask'][:3]) + '。分かったら商材カルテのシートに書く。', why='商材（誰に・何を・いくらで）が細かいほど、AIの一言とリストの提案が当たる', link=''))
     for _, s, _ in A['stall'][:1]:
         tasks.append(dict(m=5, title=f'{nm(s)}：架電が止まっている理由を確認', do='10日間架電がありません。架電チームに状況を聞き、止めるなら定例でお客様に伝える。', why='止まっている期間はお客様の不満になりやすい', link='../cs-internal/'))
     # 午前の空き時間（9:30〜12:00）に、定例を避けて順に詰める
@@ -115,7 +127,7 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
     if first: head.append(f'{nm(first[1])}の立て直し')
     if A['ups']: head.append(f'{nm(A["ups"][0][1])}へのアップセル打診')
     elif A['renew']: head.append(f'{nm(A["renew"][0][1])}の継続準備')
-    PLAN[dname] = dict(n=len(mine), meets=len(meets), human=human, pm=len(pm), alerts={k: len(v) for k, v in A.items()}, lead=('今日は「' + '」「'.join(head) + '」に集中するのがいいと思います。') if head else '今日は大きな崩れはありません。アップセルと紹介に時間を使いましょう。', items=items)
+    PLAN[dname] = dict(karte_low=sum(1 for s in mine if s in KT and KT[s]['n'] < 3), n=len(mine), meets=len(meets), human=human, pm=len(pm), alerts={k: len(v) for k, v in A.items()}, lead=('今日は「' + '」「'.join(head) + '」に集中するのがいいと思います。') if head else '今日は大きな崩れはありません。アップセルと紹介に時間を使いましょう。', items=items)
 tpl = open(os.path.join(HERE, 'dday_template.html')).read()
 body = tpl.replace('/*PLAN*/{}', json.dumps(dict(date=f'{TODAY.month}/{TODAY.day}（{"月火水木金土日"[TODAY.weekday()]}）', plan=PLAN), ensure_ascii=False).replace('</', '<\\/'))
 body = body.replace('/*ROAD*/{}', (open(road_p).read().strip() if road_p != '-' else '{}').replace('</', '<\\/'))

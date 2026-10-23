@@ -15,8 +15,9 @@
    - `python3 _build/daily/jd.py work/v2_DH.json work/v2_RX.json work/cstask.json work/fee.json <今日> > work/jd.json`
    - `python3 _build/daily/road.py work/cfg.json work/pl.json work/cu.json work/fee.json work/jd.json <今日> > work/road.json`
    どれかが取れなかったら road.json の代わりに `-` を渡す（その日は 01 ROAD が出ないだけ）。
+   - 商材カルテ `1yRt2mnygBKmFoHRb3tu1SGj4fAfaWWbLel7rFIEFNtg` の `カルテ!A1:L300` → `work/karte.json`（取れなければ `-`）。埋まり度が低い会社に「商材カルテを埋める」指示と、定例で聞くことが入る。
 7. 「今日の指示」ページを作る：
-   `python3 _build/daily/dday.py work/crm.json work/cfg.json work/ev.json <鍵> <今日 YYYY-MM-DD> work/dday_body.html work/road.json`
+   `python3 _build/daily/dday.py work/crm.json work/cfg.json work/ev.json <鍵> <今日 YYYY-MM-DD> work/dday_body.html work/road.json work/karte.json`
    （鍵＝担当タブの「鍵」。社内ポータルのパスワード＝担当タブの「社内ポータルのパスワード」）
    `python3 _build/teirei/lock.py work/dday_body.html director-day/index.html --password <社内ポータルのパスワード> --title "ディレクターの1日（AI自動運用）" --eyebrow "INTERNAL ／ 社外秘" --head-file _build/daily/dday_head.html --standalone --storage-key cs-pw`
    `git add director-day && git commit -m "今日の指示 <日付>" && git pull --rebase && git push`（コミットの最後に Co-Authored-By 行）

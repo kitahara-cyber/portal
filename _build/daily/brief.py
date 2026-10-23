@@ -65,6 +65,8 @@ for dname in sorted({c['担当'] for c in C.values() if c.get('担当')}):
     good = sorted([(v[2], C[s]['会社名']) for s, v in y.items() if v[2] > 0], reverse=True)[:3]
     meets = [e for e in ev if e.get('director') == dname]
     L = [f'おはようございます。{TODAY.month}/{TODAY.day}（{"月火水木金土日"[TODAY.weekday()]}）の朝のブリーフィングです。']
+    bad = [a for k, a in alerts if k <= 2]
+    if bad: L.append(f'🚨 成績が落ちている案件 {len(bad)}件（AIが自動で検知）：' + '、'.join(a.split('：', 1)[0] for a in bad[:4]) + (' ほか' if len(bad) > 4 else '') + ' → 下の「気にしておく案件」と、ポータルの「今日の要点」へ')
     L.append(f'■ 今日の定例 {len(meets)}件')
     L += [f'・{e["time"]} {e["name"]}様　{"資料あり（ポータルの定例資料タブ）" if e.get("deck") else "資料なし"}' for e in meets] or ['・なし']
     L.append(f'■ {last.month}/{last.day} の動き（担当{len(mine)}社）：架電 {ytot[0]:,}件・ご担当者と会話 {ytot[1]:,}件・アポ {ytot[2]}件')

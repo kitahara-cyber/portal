@@ -1,5 +1,5 @@
 """定例資料（1章＝1画面のスクロール型）を作る。
-使い方: python3 deck.py data.json story.json out.html [--director 林] [--avatar avatar.txt(data URI)]
+使い方: python3 deck.py data.json story.json out.html [--director 林] [--avatar avatar.txt(data URI)] [--kn ../daily/knowledge.enc --key <鍵> --sis 5473]
 story.json は省略可（"-"）。省略時は数字からルールで文章を作る。
 story.json の形（すべて任意）:
 {"summary":"結論の1文（<em>強調</em>可）","trend":"…","result":"…","ng":"…","list":"…",
@@ -9,8 +9,15 @@ story.json の形（すべて任意）:
 import json, sys, html, datetime, argparse
 ap = argparse.ArgumentParser(); ap.add_argument('data'); ap.add_argument('story'); ap.add_argument('out')
 ap.add_argument('--director', default=''); ap.add_argument('--avatar', default='')
+ap.add_argument('--kn', default=''); ap.add_argument('--key', default=''); ap.add_argument('--sis', default='')  # knowledge.enc から「魔法の一言」と「商材で聞くこと」を入れる
 a = ap.parse_args()
 D = json.load(open(a.data)); S = json.load(open(a.story)) if a.story != '-' else {}
+MG = {}
+if a.kn and a.key and a.sis:
+    import base64
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    _raw = base64.b64decode(open(a.kn).read())
+    MG = json.loads(AESGCM(base64.urlsafe_b64decode(a.key)).decrypt(_raw[:12], _raw[12:], None))['clients'].get(a.sis, {})
 E = lambda s: html.escape(str(s))
 def pct(x, d=1): return f'{x*100:.{d}f}%'
 def jd(s):
@@ -114,7 +121,9 @@ slides.append(sec('list', '05', 'リスト別', S.get('list') or (f'ご担当者
 slides.append(sec('issue', '06', '課題', S.get('issue_title') or '数字から見えた課題',
     '<div class="cards">' + ''.join(card(E(x['t']), '', f'<p>{x["body"]}</p>') for x in issues) + '</div><p class="tip">カードをクリックすると中身が開きます。</p>'))
 slides.append(sec('proposal', '07', 'ご提案', S.get('proposal_title') or f'次回までに<em class="hl">{len(props)}つ</em>を変えます',
-    '<div class="cards">' + ''.join(card(f'{i+1}. {E(p["t"])}', '', f'<p><b>なぜ</b>{p.get("why","")}</p><p><b>目標</b>{p.get("kpi","")}</p>') for i, p in enumerate(props)) + '</div>'))
+    '<div class="cards">' + ''.join(card(f'{i+1}. {E(p["t"])}', '', f'<p><b>なぜ</b>{p.get("why","")}</p><p><b>目標</b>{p.get("kpi","")}</p>') for i, p in enumerate(props)) + '</div>' +
+    (card('明日から使える「魔法の一言」', f'{len(MG["magic"][:4])}つ', '<ol>' + ''.join(f'<li><b>「{E(x["line"])}」</b><br><small>使う場面：{E(x.get("when",""))}／根拠：{E(x.get("why",""))}</small></li>' for x in MG['magic'][:4]) + '</ol><p class="tip">当社のご支援先のアポの結果から、AIが選んだ候補です。</p>') if MG.get('magic') else '')))
+asks = list(asks) + ([f'商材について教えてください：{E(x)}' for x in MG.get('ask', [])[:2]] if MG.get('ask') else [])
 slides.append(sec('next', '08', '進め方', '次の定例までの進め方と、お願いしたいこと',
     '<div class="two"><div class="panel"><h3 class="h3s">ライトアップが進めること</h3><ol>' + ''.join(f'<li>{x}</li>' for x in plan) + '</ol></div>' +
     '<div class="panel"><h3 class="h3s">お願いしたいこと</h3><ol>' + ''.join(f'<li>{x}</li>' for x in asks) + '</ol></div></div>' +

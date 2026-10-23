@@ -61,7 +61,7 @@ data.json の `checks` に注意書きがあれば必ず読む。
 
 ## 4. 資料を作ってポータルに入れる
 1. 顔写真：`python3 _build/teirei/avatar.py <顔写真の鍵> <担当名> work/<SIS>/avatar.txt`
-2. `python3 _build/teirei/deck.py work/<SIS>/data.json work/<SIS>/story.json work/<SIS>/deck.html --director <担当名> --avatar work/<SIS>/avatar.txt`
+2. `python3 _build/teirei/deck.py work/<SIS>/data.json work/<SIS>/story.json work/<SIS>/deck.html --director <担当名> --avatar work/<SIS>/avatar.txt --kn _build/daily/knowledge.enc --key <鍵> --sis <SIS>`（ご提案の章に「魔法の一言」、お願い事項に「商材について教えてください」が入る）
 3. ポータルに入れる：
    - ふつうの会社（ポータルの場所が `c/<SIS>/`）：
      `python3 _build/teirei/embed.py c/<SIS>/index.html <パスワード> work/<SIS>/deck.html <定例日 YYYY-MM-DD>`
