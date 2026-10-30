@@ -308,6 +308,18 @@ a.cs:hover{border-color:var(--brand)}
   .badge:first-child{width:70%}
 }
 @media (max-width:420px){.cs-n .big{font-size:48px}}
+.finder{margin:0 auto 22px;display:grid;gap:10px}
+.fg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fl{font-size:13px;font-weight:700;color:var(--sub);min-width:5.5em}
+.fc{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 14px;border-radius:var(--rb);cursor:pointer;min-height:36px}
+.fc small{margin-left:6px;color:var(--sub);font-weight:500}
+.fc[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.fc[aria-pressed="true"] small{color:inherit;opacity:.85}
+.fc:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fcount{font-size:13px;color:var(--sub)}
+.fnone{padding:28px 0;text-align:center;color:var(--sub)}
+.attrs{display:block;font-size:12px;color:var(--sub);margin-top:4px;font-weight:500;line-height:1.5}
+@media (max-width:560px){.fl{min-width:100%}}
 </style>
 
 <div id="sk" data-skin="1"><div id="v"></div>
@@ -330,26 +342,43 @@ function num(x){return x.toLocaleString("ja-JP")}
 function man(x){return (x/10000).toFixed(x>=1000000?0:1).replace(/\.0$/,"")}
 var CONTACT='<span class="ph">[担当営業の氏名・連絡先・日程調整リンク]</span>';
 
+/* ===== 絞り込み(従業員数・売上高・都道府県) ===== */
+var PREFS="北海道,青森県,岩手県,宮城県,秋田県,山形県,福島県,茨城県,栃木県,群馬県,埼玉県,千葉県,東京都,神奈川県,新潟県,富山県,石川県,福井県,山梨県,長野県,岐阜県,静岡県,愛知県,三重県,滋賀県,京都府,大阪府,兵庫県,奈良県,和歌山県,鳥取県,島根県,岡山県,広島県,山口県,徳島県,香川県,愛媛県,高知県,福岡県,佐賀県,長崎県,熊本県,大分県,宮崎県,鹿児島県,沖縄県".split(",");
+var EMPS=["10名未満","10〜29名","30〜99名","100名以上"],REVS=["1億円未満","1〜10億円","10〜50億円","50億円以上"];
+var G4=[["cat","業種"],["emp","従業員数"],["rev","売上高"],["pref","都道府県"]],G3=[["emp","従業員数"],["rev","売上高"],["pref","都道府県"]];
+var FILT={cat:"",emp:"",rev:"",pref:""},FCTX=null;
+function attrHtml(c){var a=[c.pref,c.emp&&('従業員 '+c.emp),c.rev&&('売上 '+c.rev)].filter(Boolean);return a.length?'<span class="attrs">'+a.join(' ・ ')+'</span>':''}
+function fvals(base,key){var have={};base.forEach(function(c){if(c[key])have[c[key]]=1});var order=key==="cat"?CATKEYS:key==="emp"?EMPS:key==="rev"?REVS:PREFS;var out=order.filter(function(v){return have[v]});Object.keys(have).forEach(function(v){if(out.indexOf(v)<0)out.push(v)});return out}
+function fapply(base){return base.filter(function(c){return (!FILT.cat||c.cat===FILT.cat)&&(!FILT.emp||c.emp===FILT.emp)&&(!FILT.rev||c.rev===FILT.rev)&&(!FILT.pref||c.pref===FILT.pref)})}
+function fchip(key,v,label,n){return '<button type="button" class="fc" data-f="'+key+'" data-v="'+v+'" aria-pressed="'+(FILT[key]===v)+'">'+label+(n!=null?'<small>'+n+'</small>':'')+'</button>'}
+function listView(list){return [null,function(l){return '<div class="cases">'+l.map(function(c){return card(c)}).join('')+'</div>'},e2rows,ctable,function(l){return '<div class="s-cases">'+s4cases(l)+'</div>'}][SKIN](list)}
+function finderInner(){var base=FCTX.base,rows=FCTX.groups.map(function(g){var key=g[0],vals=fvals(base,key);if(!vals.length)return '';
+  return '<div class="fg" role="group" aria-label="'+g[1]+'"><span class="fl">'+g[1]+'</span>'+fchip(key,'','すべて',null)+vals.map(function(v){var n=base.filter(function(c){return c[key]===v}).length;return fchip(key,v,key==="cat"?CATS[v].n:v,n)}).join('')+'</div>'}).join('');
+  var list=fapply(base),any=FILT.cat||FILT.emp||FILT.rev||FILT.pref;
+  return (rows?'<div class="finder">'+rows+'<p class="fcount" aria-live="polite">'+(any?list.length+'件が該当(全'+base.length+'件)':'全'+base.length+'件')+'</p></div>':'')+(list.length?listView(list):'<p class="fnone">条件に合う事例はありません。条件をゆるめてみてください。</p>')}
+function fwrap(base,groups){FCTX={base:base,groups:groups};return '<div id="fwrap">'+finderInner()+'</div>'}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-f]");if(!b||!FCTX)return;var f=b.getAttribute("data-f"),v=b.getAttribute("data-v");FILT[f]=(FILT[f]===v)?"":v;var w=document.getElementById("fwrap");if(!w)return;w.innerHTML=finderInner();var nb=w.querySelector('[data-f="'+f+'"][aria-pressed="true"]');if(nb)nb.focus()});
+
 /* ===== 画面 ===== */
 function topbar(crumb){return '<div class="top"><div class="in"><a href="#/">新規開拓 事例ポータル</a><span class="crumb">'+(crumb||'')+'</span><span class="skins" role="group" aria-label="デザイン切り替え">デザイン '+[1,2,3,4].map(function(n){return '<button type="button" data-skin-btn="'+n+'" aria-pressed="'+(SKIN==n)+'">'+['ブルー','雑誌','データ','ストーリー'][n-1]+'</button>'}).join('')+'</span></div></div>'}
 function fin(){return '<section class="final" id="contact"><div class="in"><h2>まず30分、御社の場合をお話しします</h2><p>御社の業種に近い事例をもとに、リストの切り方と、最初の30秒のトークをご提案します。</p><div>'+CONTACT+'</div></div></section><div class="in fine">掲載の事例は、株式会社ライトアップが運用した案件の累計実績です。社名は伏せています。結果はお客様の製品・リスト・時期により異なります。アポ数がそのまま売上になるわけではありません。</div>'}
 function card(c,full){var vs=c.rate==null?'':(c.rate>=AVG?'<span class="vs up">平均より +'+r2(c.rate-AVG)+'pt</span>':'<span class="vs dn">平均より −'+r2(AVG-c.rate)+'pt</span>');
  return '<a class="cs" href="#/c/'+c.no+'"><div class="cs-h"><span class="tag">'+c.L+'</span><h3>'+c.t+'</h3></div>'+
  (c.rate!=null?'<div class="cs-n"><span class="big">'+r2(c.rate)+'<small>%</small></span><span class="lb">アポ獲得率(累計)</span>'+vs+'</div><div class="cs-m"><div>架電<b>'+num(c.tot[0])+'件</b></div><div>アポ獲得<b>'+num(c.tot[1])+'件</b></div></div>':'<div class="cs-n"><span class="big" style="font-size:30px">'+c.res.slice(0,22)+'</span></div>')+
- '<p class="cs-p"><b>効いた点:</b> '+c.st+'</p><div class="cs-go">この事例の詳細を見る →</div></a>'}
+ attrHtml(c)+'<p class="cs-p"><b>効いた点:</b> '+c.st+'</p><div class="cs-go">この事例の詳細を見る →</div></a>'}
 function home1(){var all=stats(CS);
  var tiles=CATKEYS.map(function(k){var l=CS.filter(function(c){return c.cat===k}),s=stats(l);
   return '<a class="tile" href="#/i/'+k+'"><span class="nm">'+CATS[k].n+'</span><span class="ex">'+CATS[k].ex+'</span><div class="st"><div><b>'+s.n+'</b><span>事例</span></div><div><b>'+r2(s.rate)+'%</b><span>累計アポ率</span></div></div><span class="go">この業種向けのページを見る →</span></a>'}).join('');
- return topbar()+'<header class="hero"><div class="in"><div><span class="kicker">新規開拓の事例ポータル</span><h1>御社の業種に近い<mark>事例</mark>から、進め方を見る。</h1><p class="lead">電話・フォームでの新規開拓を、27社の実績にもとづいてまとめました。業種を選ぶと、その業種向けの事例と進め方が開きます。</p><div class="btns"><a class="btn" href="#sel">業種を選ぶ</a></div><p class="src">※数字は株式会社ライトアップが運用した案件の累計実績です。</p></div>'+
- '<div class="badges"><div class="badge"><span class="t">掲載事例</span><span class="n">'+all.n+'<small>社</small></span><span class="u">7つの業種</span></div><div class="badge"><span class="t">累計架電</span><span class="n">'+Math.round(all.calls/10000)+'<small>万件</small></span><span class="u">掲載事例の合計</span></div><div class="badge"><span class="t">累計アポ率</span><span class="n">'+r2(all.rate)+'<small>%</small></span><span class="u">掲載事例の合計</span></div></div></div></header>'+
- '<section class="soft" id="sel"><div class="in"><h2 class="h2">御社の<em>業種</em>を選んでください</h2><p class="h2-sub">業種ごとに、事例・効いた打ち手・数字を見られます</p><div class="tiles">'+tiles+'</div><p class="note">累計アポ率は、架電数のデータがある事例の合計です(架電数ベース)。</p></div></section>'+fin()}
+ return topbar()+'<header class="hero"><div class="in"><div><span class="kicker">新規開拓の事例ポータル</span><h1>御社の業種に近い<mark>事例</mark>から、進め方を見る。</h1><p class="lead">電話・フォームでの新規開拓を、'+all.n+'社の実績にもとづいてまとめました。業種を選ぶと、その業種向けの事例と進め方が開きます。</p><div class="btns"><a class="btn" href="#sel">業種を選ぶ</a><a class="btn ghost" href="#find">規模・地域で探す</a></div><p class="src">※数字は株式会社ライトアップが運用した案件の累計実績です。</p></div>'+
+ '<div class="badges"><div class="badge"><span class="t">掲載事例</span><span class="n">'+all.n+'<small>社</small></span><span class="u">'+CATKEYS.length+'つの業種</span></div><div class="badge"><span class="t">累計架電</span><span class="n">'+Math.round(all.calls/10000)+'<small>万件</small></span><span class="u">掲載事例の合計</span></div><div class="badge"><span class="t">累計アポ率</span><span class="n">'+r2(all.rate)+'<small>%</small></span><span class="u">掲載事例の合計</span></div></div></div></header>'+
+ '<section class="soft" id="sel"><div class="in"><h2 class="h2">御社の<em>業種</em>を選んでください</h2><p class="h2-sub">業種ごとに、事例・効いた打ち手・数字を見られます</p><div class="tiles">'+tiles+'</div><p class="note">累計アポ率は、架電数のデータがある事例の合計です(架電数ベース)。</p></div></section>'+'<section id="find"><div class="in"><h2 class="h2">規模・地域から<em>探す</em></h2><p class="h2-sub">従業員数・売上高・都道府県で、近い会社の事例に絞り込めます</p>'+fwrap(CS,G4)+'</div></section>'+fin()}
 function industry1(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s=stats(l);
  var pts=C.pts.map(function(p,i){return '<div class="rs"><span class="no">'+(i+1)+'</span><h3>'+p[0]+'</h3><p>'+p[1]+'</p></div>'}).join('');
  return topbar('<a href="#/" style="font-weight:400">業種一覧</a> / '+C.n)+
  '<header class="hero"><div class="in"><div><span class="kicker">'+C.n+'のご担当者様へ</span><h1>'+C.hl+'</h1><p class="lead">'+C.lead+'</p><div class="btns"><a class="btn" href="#cs">事例を見る</a><a class="btn ghost" href="#/">他の業種を見る</a></div><p class="src">※数字は株式会社ライトアップが運用した案件の累計実績です。</p></div>'+
  '<div class="badges"><div class="badge"><span class="t">掲載事例</span><span class="n">'+s.n+'<small>社</small></span><span class="u">'+C.n+'</span></div><div class="badge"><span class="t">累計架電</span><span class="n">'+num(s.calls)+'<small>件</small></span><span class="u">'+s.nd+'社の合計</span></div><div class="badge"><span class="t">累計アポ率</span><span class="n">'+r2(s.rate)+'<small>%</small></span><span class="u">'+s.nd+'社の合計</span></div></div></div></header>'+
  '<section class="soft"><div class="in"><h2 class="h2">この業種で<em>効いた</em>3つのポイント</h2><p class="h2-sub">事例から見えた、進め方の共通点です</p><div class="grid3">'+pts+'</div></div></section>'+
- '<section id="cs"><div class="in"><h2 class="h2">'+C.n+'の<em>事例</em></h2><p class="h2-sub">お客様名は伏せています。カードを押すと、課題・打ち手・結果・月別の推移を見られます</p><div class="cases">'+l.map(function(c){return card(c)}).join('')+'</div><p class="note">アポ数がそのまま売上になるわけではなく、結果は製品・リスト・時期により異なります。</p></div></section>'+
+ '<section id="cs"><div class="in"><h2 class="h2">'+C.n+'の<em>事例</em></h2><p class="h2-sub">お客様名は伏せています。カードを押すと、課題・打ち手・結果・月別の推移を見られます</p>'+fwrap(l,G3)+'<p class="note">アポ数がそのまま売上になるわけではなく、結果は製品・リスト・時期により異なります。</p></div></section>'+
  '<section class="soft"><div class="in"><h2 class="h2">御社に置き換えると<em>どうなるか</em></h2><p class="h2-sub">この業種の事例の幅(アポ率 '+r2(s.lo)+'〜'+r2(s.hi)+'%)で計算した目安です。成果を保証するものではありません</p><div class="calc"><div class="cs"><div class="cs-n"><span class="lb">1,000件に架電</span></div><div class="cs-n" style="padding-top:0"><span class="big">'+Math.round(s.lo*10)+'〜'+Math.round(s.hi*10)+'<small>件</small></span><span class="lb">商談のアポ</span></div></div><div class="cs"><div class="cs-n"><span class="lb">5,000件に架電</span></div><div class="cs-n" style="padding-top:0"><span class="big">'+Math.round(s.lo*50)+'〜'+Math.round(s.hi*50)+'<small>件</small></span><span class="lb">商談のアポ</span></div></div></div></div></section>'+fin()}
 function rowl(label,items,cls){if(!items||!items.length)return '';return '<div class="sb '+(cls||'')+'"><div class="lab">'+label+'</div><ul'+(cls==='tl'?'':'')+'>'+items.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul></div>'}
 function playbook(c){var S=STORY[c.no];if(!S)return '<div class="sb"><div class="lab">具体的な施策</div><p>'+c.ap+'</p></div>';
@@ -377,7 +406,7 @@ function detail1(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)ret
   play='<section class="soft"><div class="in"><h2 class="h2">施策の<em>中身</em></h2><p class="h2-sub">'+c.ap+'</p><div class="pcs">'+pcard('リスト','誰に当てたか',S.list)+pcard('訴求・トーク','何をどう伝えたか',S.appeal)+pcard('よくある断り','反応の例',S.rebut,'chips')+pcard('使った資料・特典','',S.asset,'chips')+'</div>'+tl+deal+'</div></section>'}
  else play='<section class="soft"><div class="in"><h2 class="h2">施策の<em>あらまし</em></h2><p class="h2-sub">'+c.ap+'</p></div></section>';
  return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+
- '<header class="dh"><div class="in"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1><p>対象: '+c.tg+'</p></div></header>'+
+ '<header class="dh"><div class="in"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1>'+attrHtml(c)+'<p>対象: '+c.tg+'</p></div></header>'+
  '<div class="in"><div class="kpis">'+kp+'<div><b style="font-size:20px;line-height:1.5;padding-top:6px">'+c.res+'</b><span>成果</span></div></div></div>'+
  flow+play+chart(c)+
  '<section class="soft"><div class="in"><h2 class="h2">'+C.n+'の<em>ほかの事例</em></h2><p class="h2-sub">&nbsp;</p><div class="cases">'+rel.map(function(x){return card(x)}).join('')+'</div><p class="note"><a href="#/i/'+c.cat+'" style="color:var(--brand);font-weight:700">'+C.n+'の事例をすべて見る →</a></p></div></section>'+fin()}
@@ -394,17 +423,19 @@ function jn(a){return (a||[]).join('。')}
 /* ---- 2 雑誌 ---- */
 function home2(){var all=stats(CS);
  var idx=CATKEYS.map(function(k,i){var l=CS.filter(function(c){return c.cat===k}),s=stats(l);return '<li><a href="#/i/'+k+'"><span class="e-n">'+String(i+1).padStart(2,'0')+'</span><span class="e-t">'+CATS[k].n+'<small>'+CATS[k].ex+'</small></span><span class="e-r">'+r2(s.rate)+'<small>%</small><em>'+s.n+'事例・累計アポ率</em></span><span class="e-a">→</span></a></li>'}).join('');
- return topbar()+'<header class="in e-hero"><p class="e-k">新規開拓 事例ポータル</p><h1>御社の業種に近い事例から、進め方を見る。</h1><p class="e-lead">電話・フォームでの新規開拓を、27社の実績にもとづいてまとめました。業種を選ぶと、その業種の事例と進め方が読めます。</p><div class="e-nums"><div><b>'+all.n+'社</b><span>掲載事例</span></div><div><b>'+Math.round(all.calls/10000)+'万件</b><span>累計架電(掲載事例の合計)</span></div><div><b>'+r2(all.rate)+'%</b><span>累計アポ率(掲載事例の合計)</span></div></div></header>'+
- '<section class="in" id="sel"><h2 class="e-h">業種から探す</h2><ol class="e-idx">'+idx+'</ol></section><div style="height:48px"></div>'+fin()}
+ return topbar()+'<header class="in e-hero"><p class="e-k">新規開拓 事例ポータル</p><h1>御社の業種に近い事例から、進め方を見る。</h1><p class="e-lead">電話・フォームでの新規開拓を、'+all.n+'社の実績にもとづいてまとめました。業種を選ぶと、その業種の事例と進め方が読めます。</p><div class="e-nums"><div><b>'+all.n+'社</b><span>掲載事例</span></div><div><b>'+Math.round(all.calls/10000)+'万件</b><span>累計架電(掲載事例の合計)</span></div><div><b>'+r2(all.rate)+'%</b><span>累計アポ率(掲載事例の合計)</span></div></div></header>'+
+ '<section class="in" id="sel"><h2 class="e-h">業種から探す</h2><ol class="e-idx">'+idx+'</ol></section>'+'<section class="in" id="find"><h2 class="e-h">規模・地域から探す</h2>'+fwrap(CS,G4)+'</section><div style="height:48px"></div>'+fin()}
+function e2rows(l){return l.map(function(c){return '<a class="e-row" href="#/c/'+c.no+'"><span class="e-l">'+c.L+'</span><span class="e-m"><b>'+c.t+'</b><small>'+c.st+'</small>'+attrHtml(c)+'</span><span class="e-r">'+(c.rate!=null?r2(c.rate)+'<small>%</small><em>累計アポ率</em>':'<small style="font-size:12px">事例記録</small>')+'</span><span class="e-a">→</span></a>'}).join('')}
+function s4cases(l){return l.map(function(c){return '<a class="s-case" href="#/c/'+c.no+'"><span class="big">'+(c.rate!=null?r2(c.rate)+'<small>%</small>':'—')+'</span><h3>'+c.L+' '+c.t+'</h3><p>'+c.st+'</p>'+attrHtml(c)+'</a>'}).join('')}
 function industry2(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s=stats(l);
- var rows=l.map(function(c){return '<a class="e-row" href="#/c/'+c.no+'"><span class="e-l">'+c.L+'</span><span class="e-m"><b>'+c.t+'</b><small>'+c.st+'</small></span><span class="e-r">'+(c.rate!=null?r2(c.rate)+'<small>%</small><em>累計アポ率</em>':'<small style="font-size:12px">事例記録</small>')+'</span><span class="e-a">→</span></a>'}).join('');
+ 
  return topbar('<a href="#/" style="font-weight:400">業種一覧</a> / '+C.n)+'<header class="in e-hero"><p class="e-k">'+C.n+'のご担当者様へ</p><h1>'+plain(C.hl)+'</h1><p class="e-lead">'+C.lead+'</p><div class="e-nums"><div><b>'+s.n+'社</b><span>掲載事例</span></div><div><b>'+num(s.calls)+'件</b><span>累計架電('+s.nd+'社の合計)</span></div><div><b>'+r2(s.rate)+'%</b><span>累計アポ率('+s.nd+'社の合計)</span></div></div></header>'+
  '<section class="in"><h2 class="e-h">この業種で効いた3つのポイント</h2><div class="e-pts">'+C.pts.map(function(p){return '<div><h3>'+p[0]+'</h3><p>'+p[1]+'</p></div>'}).join('')+'</div></section>'+
- '<section class="in" id="cs"><h2 class="e-h">事例</h2>'+rows+'</section><div style="height:48px"></div>'+fin()}
+ '<section class="in" id="cs"><h2 class="e-h">事例</h2>'+fwrap(l,G3)+'</section><div style="height:48px"></div>'+fin()}
 function detail2(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home2();var C=CATS[c.cat],S=STORY[c.no]||{};
  var side='<aside class="e-side"><span class="tag">'+c.L+'</span>'+(c.tot?'<div class="k"><b>'+r2(c.rate)+'%</b><span>アポ獲得率(累計)</span></div><div class="k"><b>'+num(c.tot[0])+'</b><span>累計架電(件)</span></div><div class="k"><b>'+num(c.tot[1])+'</b><span>アポ獲得(件)</span></div>':'<div class="k"><b>'+c.sr.split('(')[0]+'</b><span>アポ獲得率(事例記録)</span></div>')+'</aside>';
  var imp=(S.imp||[]).map(function(x){return '<div class="dl"><b>'+x[0]+'</b><p>'+x[1]+'</p></div>'}).join('');
- var art='<article class="e-body"><h1>'+c.t+'</h1><p class="e-dek">対象: '+c.tg+'</p>'+
+ var art='<article class="e-body"><h1>'+c.t+'</h1>'+attrHtml(c)+'<p class="e-dek">対象: '+c.tg+'</p>'+
   '<h2>導入前の課題</h2><p>'+c.b.join('。')+'。</p>'+
   '<h2>打ち手</h2><p class="pull">'+c.st+'</p><p>'+c.ins+'。</p>'+
   '<h2>施策の中身</h2><p>'+c.ap+'。</p>'+
@@ -421,23 +452,23 @@ function detail2(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)ret
   '<section class="in"><h2 class="e-h">'+C.n+'のほかの事例</h2>'+crit(c).map(function(x){return '<a class="e-row" href="#/c/'+x.no+'"><span class="e-l">'+x.L+'</span><span class="e-m"><b>'+x.t+'</b><small>'+x.st+'</small></span><span class="e-r">'+(x.rate!=null?r2(x.rate)+'<small>%</small>':'')+'</span><span class="e-a">→</span></a>'}).join('')+'</section><div style="height:48px"></div>'+fin()}
 
 /* ---- 3 データ ---- */
-function ctable(list){return '<div class="d-tw"><table class="d-tbl"><thead><tr><th>事例</th><th>業種</th><th>アポ率(累計)</th><th class="n">架電</th><th class="n">アポ</th><th>月別の推移</th></tr></thead><tbody>'+list.map(function(c){var mxr=3;return '<tr onclick="location.hash=\'#/c/'+c.no+'\'"><td><a href="#/c/'+c.no+'">'+c.L+'</a> '+c.t+'</td><td>'+CATS[c.cat].n+'</td><td>'+(c.rate!=null?'<span class="d-bar" style="width:'+Math.min(100,c.rate/mxr*100)+'px"></span>'+r2(c.rate)+'%':'-')+'</td><td class="n">'+(c.tot?num(c.tot[0]):'-')+'</td><td class="n">'+(c.tot?num(c.tot[1]):'-')+'</td><td>'+spark(c)+'</td></tr>'}).join('')+'</tbody></table></div>'}
+function ctable(list){return '<div class="d-tw"><table class="d-tbl"><thead><tr><th>事例</th><th>業種</th><th>アポ率(累計)</th><th class="n">架電</th><th class="n">アポ</th><th>月別の推移</th></tr></thead><tbody>'+list.map(function(c){var mxr=3;return '<tr onclick="location.hash=\'#/c/'+c.no+'\'"><td><a href="#/c/'+c.no+'">'+c.L+'</a> '+c.t+attrHtml(c)+'</td><td>'+CATS[c.cat].n+'</td><td>'+(c.rate!=null?'<span class="d-bar" style="width:'+Math.min(100,c.rate/mxr*100)+'px"></span>'+r2(c.rate)+'%':'-')+'</td><td class="n">'+(c.tot?num(c.tot[0]):'-')+'</td><td class="n">'+(c.tot?num(c.tot[1]):'-')+'</td><td>'+spark(c)+'</td></tr>'}).join('')+'</tbody></table></div>'}
 function home3(){var all=stats(CS);
  var rows=CATKEYS.map(function(k){var l=CS.filter(function(c){return c.cat===k}),s=stats(l);return '<tr onclick="location.hash=\'#/i/'+k+'\'"><td><a href="#/i/'+k+'">'+CATS[k].n+'</a></td><td class="n">'+s.n+'</td><td class="n">'+num(s.calls)+'</td><td class="n">'+num(s.ap)+'</td><td><span class="d-bar" style="width:'+Math.min(100,s.rate/3*100)+'px"></span>'+r2(s.rate)+'%</td></tr>'}).join('');
- return topbar()+'<div class="in d-wrap"><div class="d-head"><h1>新規開拓 事例データ</h1><p>電話・フォームでの新規開拓、27社の累計実績。行を選ぶと、業種ごとのページと事例の詳細に進みます。</p></div>'+
- '<div class="d-t" style="margin-top:20px">全体</div><div class="d-kpis"><div class="d-k"><span>掲載事例</span><b>'+all.n+'</b><small>7つの業種</small></div><div class="d-k"><span>累計架電</span><b>'+num(all.calls)+'</b><small>件(データのある'+all.nd+'社)</small></div><div class="d-k"><span>累計アポ</span><b>'+num(all.ap)+'</b><small>件</small></div><div class="d-k"><span>累計アポ率</span><b>'+r2(all.rate)+'%</b><small>架電数ベース</small></div></div>'+
+ return topbar()+'<div class="in d-wrap"><div class="d-head"><h1>新規開拓 事例データ</h1><p>電話・フォームでの新規開拓、'+all.n+'社の累計実績。行を選ぶと、業種ごとのページと事例の詳細に進みます。</p></div>'+
+ '<div class="d-t" style="margin-top:20px">全体</div><div class="d-kpis"><div class="d-k"><span>掲載事例</span><b>'+all.n+'</b><small>'+CATKEYS.length+'つの業種</small></div><div class="d-k"><span>累計架電</span><b>'+num(all.calls)+'</b><small>件(データのある'+all.nd+'社)</small></div><div class="d-k"><span>累計アポ</span><b>'+num(all.ap)+'</b><small>件</small></div><div class="d-k"><span>累計アポ率</span><b>'+r2(all.rate)+'%</b><small>架電数ベース</small></div></div>'+
  '<div class="d-t" id="sel">業種別</div><div class="d-tw"><table class="d-tbl"><thead><tr><th>業種</th><th class="n">事例</th><th class="n">累計架電</th><th class="n">累計アポ</th><th>累計アポ率</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
- '<div class="d-t">全事例</div>'+ctable(CS)+'</div>'+fin()}
+ '<div class="d-t" id="find">全事例(条件で絞り込み)</div>'+fwrap(CS,G4)+'</div>'+fin()}
 function industry3(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s=stats(l);
  return topbar('<a href="#/" style="font-weight:400">業種一覧</a> / '+C.n)+'<div class="in d-wrap"><div class="d-head"><h1>'+C.n+'</h1><p>'+C.lead+'</p></div>'+
  '<div class="d-t" style="margin-top:20px">この業種の実績</div><div class="d-kpis"><div class="d-k"><span>掲載事例</span><b>'+s.n+'</b></div><div class="d-k"><span>累計架電</span><b>'+num(s.calls)+'</b><small>'+s.nd+'社の合計</small></div><div class="d-k"><span>累計アポ</span><b>'+num(s.ap)+'</b></div><div class="d-k"><span>累計アポ率</span><b>'+r2(s.rate)+'%</b><small>事例の幅 '+r2(s.lo)+'〜'+r2(s.hi)+'%</small></div></div>'+
  '<div class="d-t">効いた3つのポイント</div><div class="d-grid3">'+C.pts.map(function(p){return '<div class="d-pan"><h3>'+p[0]+'</h3><p>'+p[1]+'</p></div>'}).join('')+'</div>'+
- '<div class="d-t" id="cs">事例</div>'+ctable(l)+'</div>'+fin()}
+ '<div class="d-t" id="cs">事例</div>'+fwrap(l,G3)+'</div>'+fin()}
 function detail3(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home3();var C=CATS[c.cat],S=STORY[c.no]||{};
  var d=c.rate!=null?c.rate-AVG:null;
  var kp='<div class="d-kpis">'+(c.tot?'<div class="d-k"><span>アポ獲得率(累計)</span><b>'+r2(c.rate)+'%</b><small style="color:var(--'+(d>=0?'good':'warn')+')">平均より '+(d>=0?'+':'−')+r2(Math.abs(d))+'pt</small></div><div class="d-k"><span>累計架電</span><b>'+num(c.tot[0])+'</b><small>件</small></div><div class="d-k"><span>アポ獲得</span><b>'+num(c.tot[1])+'</b><small>件</small></div>':'<div class="d-k"><span>アポ獲得率(事例記録)</span><b>'+c.sr.split('(')[0]+'</b></div>')+'</div>';
  var tl=(S.imp||[]).length?'<div class="d-t">改善の経緯</div><div class="d-tw"><div class="d-tl">'+S.imp.map(function(x){return '<div>'+x[0]+'</div><div>'+x[1]+'</div>'}).join('')+'</div></div>':'';
- return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+'<div class="in d-wrap"><div class="d-head"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1><p>対象: '+c.tg+'</p></div><div class="d-t" style="margin-top:20px">実績</div>'+kp+
+ return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+'<div class="in d-wrap"><div class="d-head"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1>'+attrHtml(c)+'<p>対象: '+c.tg+'</p></div><div class="d-t" style="margin-top:20px">実績</div>'+kp+
  '<div class="d-t">課題 → 打ち手 → 結果</div><div class="d-grid3"><div class="d-pan"><h3>導入前の課題</h3>'+c.b.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div><div class="d-pan"><h3>打ち手</h3><p>'+c.st+'</p><p class="sub">見立て: '+c.ins+'</p></div><div class="d-pan" style="border-color:var(--brand)"><h3>結果</h3><p>'+c.res+'</p><p class="sub">理由: '+c.why+'</p></div></div>'+
  (c.mm?'<div class="d-t">月別のアポ獲得率</div>'+chartBox(c):'')+
  '<div class="d-t">施策の中身</div><div class="d-grid3">'+(S.list?'<div class="d-pan"><h3>リスト</h3>'+S.list.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'')+(S.appeal?'<div class="d-pan"><h3>訴求・トーク</h3>'+S.appeal.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'<div class="d-pan"><h3>施策</h3><p>'+c.ap+'</p></div>')+(S.rebut&&S.rebut.length?'<div class="d-pan"><h3>よくある断り</h3><p>'+S.rebut.join(' / ')+'</p></div>':'')+'</div>'+tl+
@@ -447,18 +478,18 @@ function detail3(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)ret
 /* ---- 4 ストーリー ---- */
 function home4(){var all=stats(CS);
  var tiles=CATKEYS.map(function(k){var l=CS.filter(function(c){return c.cat===k}),s=stats(l);return '<a class="s-tile" href="#/i/'+k+'"><span class="big">'+r2(s.rate)+'<small>%</small></span><h3>'+CATS[k].n+'</h3><p>'+CATS[k].ex+'<br>'+s.n+'社の事例・累計アポ率</p><span class="go">この業種の事例を見る →</span></a>'}).join('');
- return topbar()+'<header class="s-hero"><div class="in"><h1>御社に近い<em>業種</em>から、<br>進め方を見てみましょう</h1><p>電話・フォームでの新規開拓を、'+all.n+'社の実績でまとめました。業種を選ぶと、課題・打ち手・結果の流れがわかります。</p></div></header><div class="in" id="sel"><div class="s-tiles">'+tiles+'</div></div>'+fin()}
+ return topbar()+'<header class="s-hero"><div class="in"><h1>御社に近い<em>業種</em>から、<br>進め方を見てみましょう</h1><p>電話・フォームでの新規開拓を、'+all.n+'社の実績でまとめました。業種を選ぶと、課題・打ち手・結果の流れがわかります。</p></div></header><div class="in" id="sel"><div class="s-tiles">'+tiles+'</div></div>'+'<section class="s-sec" id="find"><h2 class="s-h">規模・地域から探す</h2>'+fwrap(CS,G4)+'</section>'+fin()}
 function industry4(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s=stats(l);
  return topbar('<a href="#/" style="font-weight:400">業種一覧</a> / '+C.n)+'<header class="s-top"><div class="in"><span class="tag">'+C.n+'</span><h1>'+plain(C.hl)+'</h1><p>'+C.lead+'</p><p style="margin-top:14px"><b style="font-size:28px;color:var(--brand)">'+r2(s.rate)+'%</b> 累計アポ率 ・ '+s.n+'社の事例</p></div></header>'+
  '<section class="s-sec"><h2 class="s-h">この業種で効いたこと</h2><div class="s-pt">'+C.pts.map(function(p){return '<div><h3>'+p[0]+'</h3><p>'+p[1]+'</p></div>'}).join('')+'</div></section>'+
- '<section class="s-sec" id="cs"><h2 class="s-h">事例を見る</h2><div class="s-cases">'+l.map(function(c){return '<a class="s-case" href="#/c/'+c.no+'"><span class="big">'+(c.rate!=null?r2(c.rate)+'<small>%</small>':'—')+'</span><h3>'+c.L+' '+c.t+'</h3><p>'+c.st+'</p></a>'}).join('')+'</div></section>'+fin()}
+ '<section class="s-sec" id="cs"><h2 class="s-h">事例を見る</h2>'+fwrap(l,G3)+'</section>'+fin()}
 function detail4(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home4();var C=CATS[c.cat],S=STORY[c.no]||{};
  function ch(label,title,body,last){return '<div class="s-ch"><div class="rail"><b>'+label+'</b>'+(last?'':'<i></i>')+'</div><div><h2>'+title+'</h2>'+body+'</div></div>'}
  var card=function(t,items){return items&&items.length?'<div class="card"><h3>'+t+'</h3>'+items.map(function(x){return '<p>'+x+'</p>'}).join('')+'</div>':''};
  var play=S.list?card('誰に当てたか',S.list)+card('何をどう伝えたか',S.appeal)+(S.rebut&&S.rebut.length?'<div class="card"><h3>よくある断り</h3><div class="qs">'+S.rebut.map(function(x){return '<span>'+x+'</span>'}).join('')+'</div></div>':''):'';
  var imp=(S.imp||[]).length?ch('改善','改善の経緯',S.imp.map(function(x){return '<p class="step"><b>'+x[0]+'</b>'+x[1]+'</p>'}).join('')):'';
  return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+
- '<header class="s-top"><div class="in"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1><p>対象: '+c.tg+'</p><div class="s-res"><span>この事例の成果</span><p>'+c.res+'</p></div></div></header><section class="s-sec">'+
+ '<header class="s-top"><div class="in"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1>'+attrHtml(c)+'<p>対象: '+c.tg+'</p><div class="s-res"><span>この事例の成果</span><p>'+c.res+'</p></div></div></header><section class="s-sec">'+
  ch('課題','はじめは、こんな悩みでした','<p>'+c.b.join('。')+'。</p>')+
  ch('打ち手','そこで、こう変えました','<p><b>'+c.st+'</b></p><p style="color:var(--sub);font-size:15.5px">見立て: '+c.ins+'</p>')+
  ch('施策','具体的にやったこと','<p>'+c.ap+'。</p>'+play)+imp+
@@ -469,9 +500,9 @@ function home(){return [null,home1,home2,home3,home4][SKIN]()}
 function industry(k){return [null,industry1,industry2,industry3,industry4][SKIN](k)}
 function detail(n){return [null,detail1,detail2,detail3,detail4][SKIN](n)}
 var CUR="#/";
-function route(keep){var h=location.hash||"#/";var m;var v=document.getElementById("v");
+function route(keep){if(!keep)FILT={cat:"",emp:"",rev:"",pref:""};var h=location.hash||"#/";var m;var v=document.getElementById("v");
  if(!/^#\/(i|c)\//.test(h)&&h!=="#/"&&h!=="#"&&h!==""){if(!keep)return;h=CUR}
- if(m=h.match(/^#\/i\/([A-G])$/))v.innerHTML=industry(m[1]);
+ if(m=h.match(/^#\/i\/([A-Z])$/))v.innerHTML=industry(m[1]);
  else if(m=h.match(/^#\/c\/(\d+)$/))v.innerHTML=detail(+m[1]);
  else v.innerHTML=home();
  CUR=h;applySkin();if(!keep)window.scrollTo(0,0)}
