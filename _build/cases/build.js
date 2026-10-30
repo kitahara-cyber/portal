@@ -1,5 +1,5 @@
 // スプシ → 暗号化したポータル(index.html)を作る
-//   環境変数: PORTAL_PASSWORD(必須) / SHEET_ID + GOOGLE_SA_JSON(本番) / SHEET_FIXTURE(テスト用のJSON)
+//   環境変数: PORTAL_PASSWORD(空ならパスワードなしで公開)  / SHEET_ID + GOOGLE_SA_JSON(本番) / SHEET_FIXTURE(テスト用のJSON)
 const fs=require('fs'),path=require('path'),crypto=require('crypto'),https=require('https');
 const {CASE_SHEET,CAT_SHEET,fromRows}=require('./schema');
 const OUT=process.argv[2]||path.join(__dirname,'../../cases/index.html');
@@ -32,7 +32,7 @@ function encrypt(src,pw){
   return fs.readFileSync(path.join(__dirname,'gate.html'),'utf8').replace('__PAYLOAD__',JSON.stringify(P));
 }
 (async()=>{
-  const pw=process.env.PORTAL_PASSWORD;if(!pw)throw new Error('PORTAL_PASSWORD がありません');
+  const pw=process.env.PORTAL_PASSWORD||'';
   const [cr,kr]=await load();
   const d=fromRows(cr,kr);
   if(d.CS.length<1)throw new Error('公開する事例が0件です。シートを確認してください(公開列がTRUEの行が必要です)');
@@ -40,17 +40,18 @@ function encrypt(src,pw){
   Object.keys(d.CATS).forEach(k=>{if(!usedCats.has(k))delete d.CATS[k]}); // 事例のない業種は出さない
   const tpl=fs.readFileSync(path.join(__dirname,'template.html'),'utf8');
   const data='var CATS='+JSON.stringify(d.CATS)+';\nvar CS='+JSON.stringify(d.CS)+';\nvar STORY='+JSON.stringify(d.STORY)+';';
-  const html=tpl.replace('/*__DATA__*/',()=>data);
+  let html=tpl.replace('/*__DATA__*/',()=>data);
+  if(!pw)html='<meta name="robots" content="noindex,nofollow">\n'+html; // パスワードなしでも検索には出さない
   if(html.includes('__DATA__'))throw new Error('テンプレートの差し込みに失敗');
   if(PLAIN)fs.writeFileSync(PLAIN,html);
   // 中身が前回と同じなら書き換えない(暗号化のたびに値が変わり、毎回コミットが増えるのを防ぐ)
-  const tag=crypto.createHmac('sha256',pw).update(html).digest('hex');
+  const tag=crypto.createHmac('sha256',pw||'public').update(html).digest('hex')+(pw?'':'-open');
   const tagFile=OUT+'.tag';
   const prev=fs.existsSync(tagFile)?fs.readFileSync(tagFile,'utf8').trim():'';
   const summary='事例 '+d.CS.length+' 件 / 業種 '+Object.keys(d.CATS).length+' / 非公開 '+d.skipped.length+' 件';
   if(prev===tag&&fs.existsSync(OUT)){console.log('変更なし ('+summary+')');return}
   fs.mkdirSync(path.dirname(OUT),{recursive:true});
-  fs.writeFileSync(OUT,encrypt(html,pw));
+  fs.writeFileSync(OUT,pw?encrypt(html,pw):html);
   fs.writeFileSync(tagFile,tag+'\n');
   console.log('更新しました ('+summary+') → '+OUT);
 })().catch(e=>{console.error('ERROR '+e.message);process.exit(1)});
