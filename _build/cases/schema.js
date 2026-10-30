@@ -1,5 +1,6 @@
 // スプシ「事例マスター」の列定義。シートの1行目の見出し名と一致させる
 exports.CASE_COLS=['No','業種コード','事業','ターゲット','課題1','課題2','課題3','戦略','インサイト','施策','成果','成功の理由','アポ率の表記','累計架電','累計アポ','月別の開始月','月別(架電/アポ,…)','公開','リストの作り方','訴求','切り返し','改善の経緯','受注の中身','使った資料'];
+exports.CASE_OPT=['都道府県','従業員数','売上高']; // 無くても動く(絞り込み用)
 exports.CAT_COLS=['コード','名称','例','見出し','リード','要点1の見出し','要点1の本文','要点2の見出し','要点2の本文','要点3の見出し','要点3の本文'];
 exports.CASE_SHEET='事例';
 exports.CAT_SHEET='業種';
@@ -18,6 +19,7 @@ exports.toRows=function(d){
 exports.fromRows=function(caseRows,catRows){
   const idx=(hdr,cols,name)=>cols.map(c=>{const i=hdr.indexOf(c);if(i<0)throw new Error(name+'シートに見出し「'+c+'」がありません');return i});
   const ch=caseRows[0].map(x=>String(x).trim()), ci=idx(ch,exports.CASE_COLS,exports.CASE_SHEET);
+  const oi=exports.CASE_OPT.map(c=>ch.indexOf(c));
   const kh=catRows[0].map(x=>String(x).trim()), ki=idx(kh,exports.CAT_COLS,exports.CAT_SHEET);
   const CATS={};
   catRows.slice(1).forEach(r=>{const g=i=>String(r[ki[i]]==null?'':r[ki[i]]);const k=g(0).trim();if(!k)return;
@@ -36,6 +38,8 @@ exports.fromRows=function(caseRows,catRows){
     if(c.m&&!/^\d\d-\d\d$/.test(c.m[0]))throw new Error('No'+no+'の「月別の開始月」は 24-11 のような形で入れてください(いまは「'+c.m[0]+'」)。列の書式を「書式なしテキスト」にすると日付に変わりません');
     if(c.tot&&!(isFinite(c.tot[0])&&isFinite(c.tot[1])&&c.tot[0]>0))throw new Error('No'+no+'の累計架電・累計アポが数字ではありません');
     if(!c.t||!c.st||!c.res)throw new Error('No'+no+'の「事業」「戦略」「成果」は必須です');
+    const og=j=>oi[j]<0?'':String(r[oi[j]]==null?'':r[oi[j]]).trim();
+    if(og(0))c.pref=og(0);if(og(1))c.emp=og(1);if(og(2))c.rev=og(2);
     CS.push(c);
     const lst=g(18),imp=g(21);
     if(lst.trim()||g(19).trim()||g(22).trim()){
