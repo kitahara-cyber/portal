@@ -16,18 +16,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      READY: ${{ secrets.GOOGLE_SA_JSON != '' && secrets.SHEET_ID != '' && secrets.PORTAL_PASSWORD != '' }}
+      READY: ${{ secrets.GOOGLE_SA_JSON != '' && secrets.SHEET_ID != '' }}
     steps:
       - name: 設定がまだなら何もしない
         if: env.READY != 'true'
-        run: echo "Secrets(SHEET_ID / GOOGLE_SA_JSON / PORTAL_PASSWORD)が未設定のため、スキップしました"
+        run: echo "Secrets(SHEET_ID / GOOGLE_SA_JSON)が未設定のため、スキップしました"
       - uses: actions/checkout@v4
         if: env.READY == 'true'
       - uses: actions/setup-node@v4
         if: env.READY == 'true'
         with:
           node-version: '20'
-      - name: スプシから読み込んで暗号化
+      - name: スプシから読み込んでページを作る(PORTAL_PASSWORDを入れた時だけ暗号化)
         if: env.READY == 'true'
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
