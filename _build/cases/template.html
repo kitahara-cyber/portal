@@ -308,14 +308,15 @@ a.cs:hover{border-color:var(--brand)}
   .badge:first-child{width:70%}
 }
 @media (max-width:420px){.cs-n .big{font-size:48px}}
+.rm{font-size:14.5px;line-height:1.8;margin-top:10px;opacity:.92}.rm.rn{font-size:12.5px;opacity:.8}
 .finder{margin:0 auto 22px;display:grid;gap:10px}
 .fg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fl{font-size:13px;font-weight:700;color:var(--sub);min-width:5.5em}
-.fc{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 14px;border-radius:var(--rb);cursor:pointer;min-height:36px}
-.fc small{margin-left:6px;color:var(--sub);font-weight:500}
-.fc[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
-.fc[aria-pressed="true"] small{color:inherit;opacity:.85}
-.fc:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fchip{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 14px;border-radius:var(--rb);cursor:pointer;min-height:36px}
+.fchip small{margin-left:6px;color:var(--sub);font-weight:500}
+.fchip[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.fchip[aria-pressed="true"] small{color:inherit;opacity:.85}
+.fchip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fcount{font-size:13px;color:var(--sub)}
 .fnone{padding:28px 0;text-align:center;color:var(--sub)}
 .attrs{display:block;font-size:12px;color:var(--sub);margin-top:4px;font-weight:500;line-height:1.5}
@@ -332,7 +333,7 @@ var SKIN=1;try{SKIN=+(localStorage.getItem("skin")||1)||1}catch(e){}
 function applySkin(){document.getElementById("sk").setAttribute("data-skin",SKIN)}
 document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-skin-btn]");if(!b)return;SKIN=+b.getAttribute("data-skin-btn");try{localStorage.setItem("skin",SKIN)}catch(x){}var y=window.scrollY;route(true);window.scrollTo(0,y)});
 var LET=function(no){return no<=26?String.fromCharCode(64+no):"AA"};
-CS.forEach(function(c){c.L=LET(c.no)+"社";c.rate=c.tot?c.tot[1]/c.tot[0]*100:null;
+CS.forEach(function(c){c.L=LET(c.no)+"社";(function(){var r=c.res||"",i=r.indexOf("※");c.note=i>=0?r.slice(i):"";if(i>=0)r=r.slice(0,i);r=r.trim();var j=r.indexOf("。");c.resx=(j>=0&&j<r.length-1)?r.slice(j+1).trim():"";c.res=(j>=0?r.slice(0,j):r).trim()})();c.rate=c.tot?c.tot[1]/c.tot[0]*100:null;
  if(c.m){var s=c.m[0].split("-"),y=+s[0],mo=+s[1];c.mm=c.m[1].split(",").map(function(x,i){var mm=((mo-1+i)%12)+1,yy=y+Math.floor((mo-1+i)/12);var p=x==="-"?null:x.split("/").map(Number);return {ym:yy+"-"+String(mm).padStart(2,"0"),p:p}})}});
 var CATKEYS=Object.keys(CATS);
 function stats(list){var cs=list.filter(function(c){return c.tot});var calls=0,ap=0;cs.forEach(function(c){calls+=c.tot[0];ap+=c.tot[1]});var rs=cs.map(function(c){return c.rate});return {n:list.length,nd:cs.length,calls:calls,ap:ap,rate:calls?ap/calls*100:0,lo:Math.min.apply(null,rs),hi:Math.max.apply(null,rs)}}
@@ -350,7 +351,7 @@ var FILT={cat:"",emp:"",rev:"",pref:""},FCTX=null;
 function attrHtml(c){var a=[c.pref,c.emp&&('従業員 '+c.emp),c.rev&&('売上 '+c.rev)].filter(Boolean);return a.length?'<span class="attrs">'+a.join(' ・ ')+'</span>':''}
 function fvals(base,key){var have={};base.forEach(function(c){if(c[key])have[c[key]]=1});var order=key==="cat"?CATKEYS:key==="emp"?EMPS:key==="rev"?REVS:PREFS;var out=order.filter(function(v){return have[v]});Object.keys(have).forEach(function(v){if(out.indexOf(v)<0)out.push(v)});return out}
 function fapply(base){return base.filter(function(c){return (!FILT.cat||c.cat===FILT.cat)&&(!FILT.emp||c.emp===FILT.emp)&&(!FILT.rev||c.rev===FILT.rev)&&(!FILT.pref||c.pref===FILT.pref)})}
-function fchip(key,v,label,n){return '<button type="button" class="fc" data-f="'+key+'" data-v="'+v+'" aria-pressed="'+(FILT[key]===v)+'">'+label+(n!=null?'<small>'+n+'</small>':'')+'</button>'}
+function fchip(key,v,label,n){return '<button type="button" class="fchip" data-f="'+key+'" data-v="'+v+'" aria-pressed="'+(FILT[key]===v)+'">'+label+(n!=null?'<small>'+n+'</small>':'')+'</button>'}
 function listView(list){return [null,function(l){return '<div class="cases">'+l.map(function(c){return card(c)}).join('')+'</div>'},e2rows,ctable,function(l){return '<div class="s-cases">'+s4cases(l)+'</div>'}][SKIN](list)}
 function finderInner(){var base=FCTX.base,rows=FCTX.groups.map(function(g){var key=g[0],vals=fvals(base,key);if(!vals.length)return '';
   return '<div class="fg" role="group" aria-label="'+g[1]+'"><span class="fl">'+g[1]+'</span>'+fchip(key,'','すべて',null)+vals.map(function(v){var n=base.filter(function(c){return c[key]===v}).length;return fchip(key,v,key==="cat"?CATS[v].n:v,n)}).join('')+'</div>'}).join('');
@@ -394,11 +395,11 @@ function pcard(tag,sub,items,mode){if(!items||!items.length)return '';
  return '<div class="pc"><div class="pc-h"><b>'+tag+'</b><span>'+sub+'</span></div>'+body+'</div>'}
 function detail1(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home();var C=CATS[c.cat],S=STORY[c.no];
  var rel=CS.filter(function(x){return x.cat===c.cat&&x.no!==c.no}).slice(0,2);
- var kp=c.tot?'<div><b>'+r2(c.rate)+'%</b><span>アポ獲得率(累計)</span></div><div><b>'+num(c.tot[0])+'</b><span>累計架電(件)</span></div><div><b>'+num(c.tot[1])+'</b><span>アポ獲得(件)</span></div>':'<div><b>'+c.sr.split('(')[0]+'</b><span>アポ獲得率(事例記録)</span></div>';
+ var kp=c.tot?'<div><b>'+r2(c.rate)+'%</b><span>アポ獲得率(累計)</span></div><div><b>'+num(c.tot[0])+'</b><span>累計架電(件)</span></div><div><b>'+num(c.tot[1])+'</b><span>アポ獲得(件)</span></div>':(c.sr&&c.sr!=='—'?'<div><b>'+c.sr.split('(')[0]+'</b><span>アポ獲得率(事例記録)</span></div>':'');
  var flow='<section><div class="in"><div class="flow3">'+
-  '<div class="fc"><span class="fk">導入前の課題</span>'+c.b.map(function(x){return '<p class="ln">'+x+'</p>'}).join('')+'</div><div class="fa" aria-hidden="true">→</div>'+
-  '<div class="fc em"><span class="fk">打ち手</span><p class="big2">'+c.st+'</p><p class="sm">見立て: '+c.ins+'</p></div><div class="fa" aria-hidden="true">→</div>'+
-  '<div class="fc res"><span class="fk">結果</span><p class="big2">'+c.res+'</p><p class="sm">うまくいった理由: '+c.why+'</p></div></div>'+
+  (c.b.length?'<div class="fc"><span class="fk">導入前の課題</span>'+c.b.map(function(x){return '<p class="ln">'+x+'</p>'}).join('')+'</div><div class="fa" aria-hidden="true">→</div>':'')+
+  '<div class="fc em"><span class="fk">打ち手</span><p class="big2">'+c.st+'</p>'+(c.ins?'<p class="sm">見立て: '+c.ins+'</p>':'')+'</div><div class="fa" aria-hidden="true">→</div>'+
+  '<div class="fc res"><span class="fk">結果</span><p class="big2">'+c.res+'</p>'+resMore(c)+(c.why?'<p class="sm">うまくいった理由: '+c.why+'</p>':'')+'</div></div>'+
   (c.sr&&c.sr!=='—'?'<p class="note">事例記録上のアポ率: '+c.sr+'(運用の一部期間の数字を含みます)</p>':'')+'</div></section>';
  var play='';
  if(S){var tl=S.imp&&S.imp.length?'<div class="tlw"><h3 class="h3">改善の経緯<span>何を変えて、どう動いたか</span></h3><ol class="tl2">'+S.imp.map(function(x){return '<li><span class="dot"></span><b>'+x[0]+'</b><p>'+x[1]+'</p></li>'}).join('')+'</ol></div>':'';
@@ -411,6 +412,7 @@ function detail1(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)ret
  flow+play+chart(c)+
  '<section class="soft"><div class="in"><h2 class="h2">'+C.n+'の<em>ほかの事例</em></h2><p class="h2-sub">&nbsp;</p><div class="cases">'+rel.map(function(x){return card(x)}).join('')+'</div><p class="note"><a href="#/i/'+c.cat+'" style="color:var(--brand);font-weight:700">'+C.n+'の事例をすべて見る →</a></p></div></section>'+fin()}
 
+function resMore(c){return (c.resx?'<p class="rm">'+c.resx+'</p>':'')+(c.note?'<p class="rm rn">'+c.note+'</p>':'')}
 function plain(h){return h.replace(/<\/?mark>/g,'')}
 function chartBox(c){if(!c.mm)return '';var pts=c.mm.filter(function(m){return m.p});var mx=Math.max.apply(null,pts.map(function(m){return m.p[0]?m.p[1]/m.p[0]*100:0}));mx=Math.max(mx,1);
  var cols=c.mm.map(function(m){if(!m.p)return '<div class="col"></div>';var r=m.p[0]?m.p[1]/m.p[0]*100:0;var h=Math.max(3,r/mx*130);return '<div class="col" title="'+m.ym+' 架電'+m.p[0]+'件 アポ'+m.p[1]+'件"><span class="v">'+(m.p[0]>=100?r.toFixed(1):'')+'</span><i class="'+(m.p[0]<150?'lo':'')+'" style="height:'+h+'px"></i></div>'}).join('');
@@ -433,17 +435,17 @@ function industry2(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s
  '<section class="in"><h2 class="e-h">この業種で効いた3つのポイント</h2><div class="e-pts">'+C.pts.map(function(p){return '<div><h3>'+p[0]+'</h3><p>'+p[1]+'</p></div>'}).join('')+'</div></section>'+
  '<section class="in" id="cs"><h2 class="e-h">事例</h2>'+fwrap(l,G3)+'</section><div style="height:48px"></div>'+fin()}
 function detail2(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home2();var C=CATS[c.cat],S=STORY[c.no]||{};
- var side='<aside class="e-side"><span class="tag">'+c.L+'</span>'+(c.tot?'<div class="k"><b>'+r2(c.rate)+'%</b><span>アポ獲得率(累計)</span></div><div class="k"><b>'+num(c.tot[0])+'</b><span>累計架電(件)</span></div><div class="k"><b>'+num(c.tot[1])+'</b><span>アポ獲得(件)</span></div>':'<div class="k"><b>'+c.sr.split('(')[0]+'</b><span>アポ獲得率(事例記録)</span></div>')+'</aside>';
+ var side='<aside class="e-side"><span class="tag">'+c.L+'</span>'+(c.tot?'<div class="k"><b>'+r2(c.rate)+'%</b><span>アポ獲得率(累計)</span></div><div class="k"><b>'+num(c.tot[0])+'</b><span>累計架電(件)</span></div><div class="k"><b>'+num(c.tot[1])+'</b><span>アポ獲得(件)</span></div>':(c.sr&&c.sr!=='—'?'<div class="k"><b>'+c.sr.split('(')[0]+'</b><span>アポ獲得率(事例記録)</span></div>':''))+'</aside>';
  var imp=(S.imp||[]).map(function(x){return '<div class="dl"><b>'+x[0]+'</b><p>'+x[1]+'</p></div>'}).join('');
  var art='<article class="e-body"><h1>'+c.t+'</h1>'+attrHtml(c)+'<p class="e-dek">対象: '+c.tg+'</p>'+
-  '<h2>導入前の課題</h2><p>'+c.b.join('。')+'。</p>'+
-  '<h2>打ち手</h2><p class="pull">'+c.st+'</p><p>'+c.ins+'。</p>'+
-  '<h2>施策の中身</h2><p>'+c.ap+'。</p>'+
+  (c.b.length?'<h2>導入前の課題</h2><p>'+c.b.join('。')+'。</p>':'')+
+  '<h2>打ち手</h2><p class="pull">'+c.st+'</p>'+(c.ins?'<p>'+c.ins+'。</p>':'')+
+  (c.ap?'<h2>施策の中身</h2><p>'+c.ap+'。</p>':'')+
   (S.list?'<div class="dl"><b>リスト</b><div>'+S.list.map(function(x){return '<p>'+x+'</p>'}).join('')+'</div></div>':'')+
   (S.appeal?'<div class="dl"><b>訴求・トーク</b><div>'+S.appeal.map(function(x){return '<p>'+x+'</p>'}).join('')+'</div></div>':'')+
   (S.rebut&&S.rebut.length?'<div class="dl"><b>よくある断り</b><div><p class="q">'+S.rebut.join(' / ')+'</p></div></div>':'')+
   (imp?'<h2>改善の経緯</h2>'+imp:'')+
-  '<h2>結果</h2><p class="pull">'+c.res+'</p><p>'+c.why+'。</p>'+
+  '<h2>結果</h2><p class="pull">'+c.res+'</p>'+resMore(c)+(c.why?'<p>'+c.why+'。</p>':'')+
   (S.deal&&S.deal.length?'<div class="dl"><b>受注の理由</b><div>'+S.deal.map(function(x){return '<p>'+x+'</p>'}).join('')+'</div></div>':'')+
   (S.asset&&S.asset.length?'<div class="dl"><b>使った資料</b><div><p class="q">'+S.asset.join(' / ')+'</p></div></div>':'')+
   (c.mm?'<h2>月別のアポ獲得率</h2>'+chartBox(c):'')+
@@ -466,10 +468,10 @@ function industry3(k){var C=CATS[k],l=CS.filter(function(c){return c.cat===k}),s
  '<div class="d-t" id="cs">事例</div>'+fwrap(l,G3)+'</div>'+fin()}
 function detail3(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)return home3();var C=CATS[c.cat],S=STORY[c.no]||{};
  var d=c.rate!=null?c.rate-AVG:null;
- var kp='<div class="d-kpis">'+(c.tot?'<div class="d-k"><span>アポ獲得率(累計)</span><b>'+r2(c.rate)+'%</b><small style="color:var(--'+(d>=0?'good':'warn')+')">平均より '+(d>=0?'+':'−')+r2(Math.abs(d))+'pt</small></div><div class="d-k"><span>累計架電</span><b>'+num(c.tot[0])+'</b><small>件</small></div><div class="d-k"><span>アポ獲得</span><b>'+num(c.tot[1])+'</b><small>件</small></div>':'<div class="d-k"><span>アポ獲得率(事例記録)</span><b>'+c.sr.split('(')[0]+'</b></div>')+'</div>';
+ var kp='<div class="d-kpis">'+(c.tot?'<div class="d-k"><span>アポ獲得率(累計)</span><b>'+r2(c.rate)+'%</b><small style="color:var(--'+(d>=0?'good':'warn')+')">平均より '+(d>=0?'+':'−')+r2(Math.abs(d))+'pt</small></div><div class="d-k"><span>累計架電</span><b>'+num(c.tot[0])+'</b><small>件</small></div><div class="d-k"><span>アポ獲得</span><b>'+num(c.tot[1])+'</b><small>件</small></div>':(c.sr&&c.sr!=='—'?'<div class="d-k"><span>アポ獲得率(事例記録)</span><b>'+c.sr.split('(')[0]+'</b></div>':''))+'</div>';
  var tl=(S.imp||[]).length?'<div class="d-t">改善の経緯</div><div class="d-tw"><div class="d-tl">'+S.imp.map(function(x){return '<div>'+x[0]+'</div><div>'+x[1]+'</div>'}).join('')+'</div></div>':'';
  return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+'<div class="in d-wrap"><div class="d-head"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1>'+attrHtml(c)+'<p>対象: '+c.tg+'</p></div><div class="d-t" style="margin-top:20px">実績</div>'+kp+
- '<div class="d-t">課題 → 打ち手 → 結果</div><div class="d-grid3"><div class="d-pan"><h3>導入前の課題</h3>'+c.b.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div><div class="d-pan"><h3>打ち手</h3><p>'+c.st+'</p><p class="sub">見立て: '+c.ins+'</p></div><div class="d-pan" style="border-color:var(--brand)"><h3>結果</h3><p>'+c.res+'</p><p class="sub">理由: '+c.why+'</p></div></div>'+
+ '<div class="d-t">課題 → 打ち手 → 結果</div><div class="d-grid3">'+(c.b.length?'<div class="d-pan"><h3>導入前の課題</h3>'+c.b.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'')+'<div class="d-pan"><h3>打ち手</h3><p>'+c.st+'</p>'+(c.ins?'<p class="sub">見立て: '+c.ins+'</p>':'')+'</div><div class="d-pan" style="border-color:var(--brand)"><h3>結果</h3><p>'+c.res+'</p>'+resMore(c)+(c.why?'<p class="sub">理由: '+c.why+'</p>':'')+'</div></div>'+
  (c.mm?'<div class="d-t">月別のアポ獲得率</div>'+chartBox(c):'')+
  '<div class="d-t">施策の中身</div><div class="d-grid3">'+(S.list?'<div class="d-pan"><h3>リスト</h3>'+S.list.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'')+(S.appeal?'<div class="d-pan"><h3>訴求・トーク</h3>'+S.appeal.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'<div class="d-pan"><h3>施策</h3><p>'+c.ap+'</p></div>')+(S.rebut&&S.rebut.length?'<div class="d-pan"><h3>よくある断り</h3><p>'+S.rebut.join(' / ')+'</p></div>':'')+'</div>'+tl+
  (S.deal&&S.deal.length?'<div class="d-t">商談・受注につながった理由</div><div class="d-pan" style="border-color:var(--brand)">'+S.deal.map(function(x){return '<p style="margin-bottom:6px">'+x+'</p>'}).join('')+'</div>':'')+
@@ -490,10 +492,10 @@ function detail4(no){var c=CS.filter(function(x){return x.no===no})[0];if(!c)ret
  var imp=(S.imp||[]).length?ch('改善','改善の経緯',S.imp.map(function(x){return '<p class="step"><b>'+x[0]+'</b>'+x[1]+'</p>'}).join('')):'';
  return topbar('<a href="#/i/'+c.cat+'" style="font-weight:400">'+C.n+'</a> / '+c.L)+
  '<header class="s-top"><div class="in"><span class="tag">'+c.L+'</span><h1>'+c.t+'</h1>'+attrHtml(c)+'<p>対象: '+c.tg+'</p><div class="s-res"><span>この事例の成果</span><p>'+c.res+'</p></div></div></header><section class="s-sec">'+
- ch('課題','はじめは、こんな悩みでした','<p>'+c.b.join('。')+'。</p>')+
- ch('打ち手','そこで、こう変えました','<p><b>'+c.st+'</b></p><p style="color:var(--sub);font-size:15.5px">見立て: '+c.ins+'</p>')+
- ch('施策','具体的にやったこと','<p>'+c.ap+'。</p>'+play)+imp+
- ch('結果','結果','<p><b>'+c.res+'</b></p><p>'+c.why+'。</p>'+(S.deal&&S.deal.length?card('受注につながった理由',S.deal):'')+(c.tot?'<p style="color:var(--sub);font-size:15px">累計: 架電 '+num(c.tot[0])+'件 / アポ '+num(c.tot[1])+'件 / アポ率 '+r2(c.rate)+'%</p>':'')+chartBox(c),true)+
+ (c.b.length?ch('課題','はじめは、こんな悩みでした','<p>'+c.b.join('。')+'。</p>'):'')+
+ ch('打ち手','そこで、こう変えました','<p><b>'+c.st+'</b></p>'+(c.ins?'<p style="color:var(--sub);font-size:15.5px">見立て: '+c.ins+'</p>':''))+
+ (c.ap||play?ch('施策','具体的にやったこと',(c.ap?'<p>'+c.ap+'。</p>':'')+play):'')+imp+
+ ch('結果','結果','<p><b>'+c.res+'</b></p>'+resMore(c)+(c.why?'<p>'+c.why+'。</p>':'')+(S.deal&&S.deal.length?card('受注につながった理由',S.deal):'')+(c.tot?'<p style="color:var(--sub);font-size:15px">累計: 架電 '+num(c.tot[0])+'件 / アポ '+num(c.tot[1])+'件 / アポ率 '+r2(c.rate)+'%</p>':'')+chartBox(c),true)+
  '</section><section class="s-sec"><h2 class="s-h">同じ業種の、ほかの事例</h2><div class="s-cases">'+crit(c).map(function(x){return '<a class="s-case" href="#/c/'+x.no+'"><span class="big">'+(x.rate!=null?r2(x.rate)+'<small>%</small>':'—')+'</span><h3>'+x.L+' '+x.t+'</h3><p>'+x.st+'</p></a>'}).join('')+'</div></section>'+fin()}
 
 function home(){return [null,home1,home2,home3,home4][SKIN]()}
