@@ -8,12 +8,14 @@ ap=argparse.ArgumentParser()
 ap.add_argument("src");ap.add_argument("out");ap.add_argument("--password",required=True)
 ap.add_argument("--title",required=True);ap.add_argument("--eyebrow",default="CLIENT PORTAL")
 ap.add_argument("--head-file");ap.add_argument("--standalone",action="store_true")
-ap.add_argument("--storage-key",default="portal-pw")
+ap.add_argument("--storage-key",default="portal-pw");ap.add_argument("--gzip",action="store_true")
 a=ap.parse_args()
 body=open(a.src,encoding="utf8").read()
 salt,iv,n=os.urandom(16),os.urandom(12),300000
 key=hashlib.pbkdf2_hmac("sha256",a.password.encode(),salt,n,32)
-ct=AESGCM(key).encrypt(iv,body.encode("utf8"),None)
+import gzip
+raw=body.encode("utf8")
+ct=AESGCM(key).encrypt(iv,gzip.compress(raw,9,mtime=0) if a.gzip else raw,None)
 b=lambda x:base64.b64encode(x).decode()
 P=json.dumps({"s":b(salt),"i":b(iv),"n":n,"c":b(ct)})
 head=open(a.head_file,encoding="utf8").read() if a.head_file else ""
@@ -44,11 +46,13 @@ body{{margin:0;background:var(--g-bg)}}
 </form></div>
 <div id="app"></div>
 <script>
-const P={P}, SK={json.dumps(a.storage_key)};
+{'const PZ=1;' if a.gzip else ''}const P={P}, SK={json.dumps(a.storage_key)};
 const u8=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function unlock(pw){{const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
  const key=await crypto.subtle.deriveKey({{name:"PBKDF2",salt:u8(P.s),iterations:P.n,hash:"SHA-256"}},base,{{name:"AES-GCM",length:256}},false,["decrypt"]);
- return new TextDecoder().decode(await crypto.subtle.decrypt({{name:"AES-GCM",iv:u8(P.i)}},key,u8(P.c)));}}
+ const buf=await crypto.subtle.decrypt({{name:"AES-GCM",iv:u8(P.i)}},key,u8(P.c));
+ if(typeof PZ!=="undefined")return await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+ return new TextDecoder().decode(buf);}}
 function mount(h){{const app=document.getElementById("app");app.innerHTML=h;
  app.querySelectorAll("script").forEach(o=>{{const s=document.createElement("script");s.textContent=o.textContent;o.replaceWith(s)}});
  document.getElementById("gate").remove();if(location.hash){{const t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}}}}

@@ -9,11 +9,10 @@ ap = argparse.ArgumentParser(); ap.add_argument('page'); ap.add_argument('pw'); 
 ap.add_argument('--label', default=''); ap.add_argument('--ui-only', action='store_true'); ap.add_argument('--keep', type=int, default=24)
 a = ap.parse_args()
 page = open(a.page, encoding='utf8').read()
-m = re.search(r'const P=(\{"s": "[^"]+", "i": "[^"]+", "n": \d+, "c": "[^"]+"\})', page)
-if not m: raise SystemExit('暗号データが見つかりません')
-P = json.loads(m.group(1)); d = lambda s: base64.b64decode(s)
-key = hashlib.pbkdf2_hmac('sha256', a.pw.encode(), d(P['s']), P['n'], 32)
-body = AESGCM(key).decrypt(d(P['i']), d(P['c']), None).decode('utf8')
+import sys as _s; _s.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pcrypt
+try: body, m, P, Z = pcrypt.open_page(page, a.pw)
+except Exception: raise SystemExit('暗号データが見つからないか、パスワードが違います')
 
 UI_MARK = '<!--TEIREI-UI-->'
 UI = UI_MARK + r'''
@@ -52,10 +51,6 @@ else: body = body + '\n' + blob
 if UI_MARK not in body: body = body + '\n' + UI
 else:
     i = body.index(UI_MARK); j = body.index('</script>', i) + 9; body = body[:i] + UI + body[j:]
-salt, iv = os.urandom(16), os.urandom(12)
-key = hashlib.pbkdf2_hmac('sha256', a.pw.encode(), salt, P['n'], 32)
-b = lambda x: base64.b64encode(x).decode()
-NP = json.dumps({"s": b(salt), "i": b(iv), "n": P['n'], "c": b(AESGCM(key).encrypt(iv, body.encode('utf8'), None))})
-page = page[:m.start(1)] + NP + page[m.end(1):]
+page = pcrypt.close_page(page, m, P, body, a.pw, Z)
 open(a.page, 'w', encoding='utf8').write(page)
 print('updated', a.page, 'decks', [x['date'] for x in decks], 'size', len(page))
