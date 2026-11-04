@@ -116,6 +116,7 @@ data.json の `checks` に注意書きがあれば必ず読む。
     `"themes":[["関心のテーマ",件数]]`（JD「商談管理表一覧v2」のその会社のヒアリング内容（P列）から、事例・費用・人手不足などのテーマを数える）、
     `"hooks":["ヒアリング内容の要約（新しい順に4つ）"]`、`"magic":[{"line":"…","why":"…"}]`（knowledge.enc の魔法の一言）、
     `"list_cond":{"ind1":[…],"size":[…]}`（knowledge.enc のリスト提案。無ければ省略）、
+    `"appts"` が JD に無い会社は、共有シートの「管理表_商談アポ」系タブ（今期のアポ取得日の行）から `{"total":行数,"done":実施の有無=実施,"res":{進捗ステータスの件数},"blank_past":商談日が過ぎて実施が空}` を作り、`"appts_label":"今期"` を付ける。
     `"improve":[{"d":"YYYY-MM-DD","what":"変えたもの","detail":"変えた内容","before":"…","after":"…"}]`（記録シート `1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI` の「現場の改善」タブで、その SIS の今期の行）、
     `"rules":{…}`（下の「継続の条件」）、
     `"plan_input":{"name":…,"price":…,"discount":…,"term":…,"renew":…,"unit_price":…}`（記録シートの「継続条件」タブで、その SIS の一番下の行。D〜I列。無ければ省略）
@@ -145,7 +146,7 @@ data.json の `checks` に注意書きがあれば必ず読む。
 1. `python3 _build/teirei/renew.py work/<SIS>/data.json work/<SIS>/facts.json work/<SIS>/renew_story.json work/<SIS>/renew.html --director <担当名> --avatar work/<SIS>/avatar.txt --sis <SIS>`
    （出力の `todo` が【担当が記入】の数）
 2. `mkdir -p renew/<SIS>/<定例日YYYYMMDD>` して、**社内ポータルのパスワード**（担当タブ）で鍵をかける（お客様のパスワードは使わない）：
-   `python3 _build/teirei/lock.py work/<SIS>/renew.html renew/<SIS>/<YYYYMMDD>/index.html --password <社内ポータルのパスワード> --title "<会社名> 様 継続のご提案（下書き）" --eyebrow "INTERNAL ／ 社外秘" --standalone --storage-key cs-pw`
+   `python3 _build/teirei/lock.py work/<SIS>/renew.html renew/<SIS>/<YYYYMMDD>/index.html --password <社内ポータルのパスワード> --title "<会社名> 様 継続のご提案（下書き）" --eyebrow "INTERNAL ／ 社外秘" --standalone --gzip --storage-key cs-pw`
 3. 平文に会社名・数字が残っていないことを確かめて、commit・push（4章 5. と同じ）。
 
 ### 7-5. Slack で担当ディレクターに送る

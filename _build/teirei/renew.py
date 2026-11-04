@@ -29,7 +29,7 @@ if _ps > start: start = _ps  # 今期＝満了日までの1年（契約開始が
 # ---------- 数字 ----------
 MA = [m for m in (C.get('months_all') or C['months']) if m[0] >= f'{start.year}-{start.month:02d}']
 calls = sum(m[1] for m in MA); conn = sum(m[2] for m in MA); talk = sum(m[3] for m in MA); lead = sum(m[4] for m in MA); apo = sum(m[5] for m in MA)
-A = F.get('appts') or {}; R = A.get('res') or {}
+A = F.get('appts') or {}; R = A.get('res') or {}; AL = F.get('appts_label') or '累計'
 meet_n = A.get('done', 0); won = R.get('受注', 0); apo_tbl = A.get('total', 0)
 meet_rate = meet_n / apo_tbl if apo_tbl else None
 win_rate = won / meet_n if meet_n else None
@@ -136,7 +136,7 @@ sl.append(f'''<section class="slide cover" id="cover"><div class="inner">
 <div class="meta"><span>今期<b>{ym(str(start))}〜{ym(str(end))}</b></span><span>実績<b>架電{calls:,}件・アポ{apo}件</b></span><span>作成<b>{datetime.date.today():%Y年%-m月%-d日}　株式会社ライトアップ</b></span></div>
 <a class="start" href="#review">見る ↓</a><span class="hint">↓キー・スペースで次の章へ。右下のボタンで全画面にできます。</span></div></section>''')
 hl = [stat('架電', f'{calls:,}'), stat('ご担当者と会話', f'{talk:,}', pct(talk / calls) if calls else ''), stat('アポ', f'{apo:,}', f'アポ率 {pct(apo / calls, 2)}' if calls else ''),
-      stat('商談', f'{meet_n:,}' if apo_tbl else '—', f'商談化率 {pct(meet_rate, 0)}（管理表の累計）' if meet_rate is not None else '記録待ち'), stat('受注', f'{won:,}' if apo_tbl else '—', f'受注率 {pct(win_rate, 0)}（管理表の累計）' if win_rate is not None else '')]
+      stat('商談', f'{meet_n:,}' if apo_tbl else '—', f'商談化率 {pct(meet_rate, 0)}（管理表の{AL}）' if meet_rate is not None else '記録待ち'), stat('受注', f'{won:,}' if apo_tbl else '—', f'受注率 {pct(win_rate, 0)}（管理表の{AL}）' if win_rate is not None else '')]
 sl.append(sec('review', '01', '振り返り', S.get('summary') or f'{ym(str(start))}からの{len(MA)}か月で、<em class="hl">アポ{apo}件</em>' + (f'。受注は累計{won}件' if won else ''),
     '<div class="stats">' + ''.join(hl) + '</div>' +
     card('契約期間と実施内容', '', f'<p><b>契約期間</b>{ym(str(start))}〜{end.year}年{end.month}月{end.day}日</p><p><b>実施内容</b>{E(F.get("measures") or "テレアポ")}・リスト作成・トーク作成・週次の報告・月1回の定例</p>' + (f'<p>{S["review_note"]}</p>' if S.get('review_note') else '')) +
@@ -148,7 +148,7 @@ sl.append(sec('numbers', '02', '実績（数字）', S.get('numbers_title') or (
     '<div class="two"><div class="panel"><h3 class="h3s">アポ（月ごと）</h3>' + bars([(r['m'][-3:] if r['m'][:4] == str(meet.year) else r['m'][2:], r['apo']) for r in mrows], lambda v: f'{v}件') + '</div>' +
     '<div class="panel"><h3 class="h3s">アポ（3か月ごと）</h3>' + bars([(q[0], q[3]) for q in qs], lambda v: f'{v}件', hi=best_q[0] if best_q else None) + '</div></div>' +
     card('ファネル（架電 → 会話 → アポ → 商談 → 受注）', '', bars([('架電', calls), ('つながった', conn), ('ご担当者と会話', talk), ('資料送付など', lead), ('アポ', apo)] ) +
-         f'<p>担当者接続率 {pct(talk / calls) if calls else "—"}／アポ化率（会話→アポ）{pct(apo / talk) if talk else "—"}</p><p>商談アポ管理表（累計）：アポ{apo_tbl}件 → 商談{meet_n}件（商談化率 {pct(meet_rate, 0)}）→ 受注{won}件（受注率 {pct(win_rate, 0)}）' + (f'／受注金額の目安 {yen(won * price)}（単価{yen(price)}×{won}件）' if price and won else '') + '</p>') +
+         f'<p>担当者接続率 {pct(talk / calls) if calls else "—"}／アポ化率（会話→アポ）{pct(apo / talk) if talk else "—"}</p><p>商談アポ管理表（{AL}）：アポ{apo_tbl}件 → 商談{meet_n}件（商談化率 {pct(meet_rate, 0)}）→ 受注{won}件（受注率 {pct(win_rate, 0)}）' + (f'／受注金額の目安 {yen(won * price)}（単価{yen(price)}×{won}件）' if price and won else '') + '</p>') +
     card('月ごとの表', f'{len(mrows)}か月', tbl(mrows, [('月', lambda r: r['m'], 0), ('架電', lambda r: f'{r["calls"]:,}', 1), ('会話', lambda r: r['talk'], 1), ('資料送付', lambda r: r['lead'], 1), ('アポ', lambda r: r['apo'], 1), ('アポ率', lambda r: pct(r['apo'] / r['calls'], 2) if r['calls'] else '—', 1)])) +
     card('反応の良かった層（リスト・規模・地域）', '', tbl(seg[:8], segcols) + tbl(L['size'][:6], [('規模', lambda r: E(r['k']), 0)] + segcols[1:]) + tbl(L['pref'][:6], [('地域', lambda r: E(r['k']), 0)] + segcols[1:]) + '<p class="tip">役職別は記録がないため出していません。</p>')))
 V = S.get('voices') or {}
