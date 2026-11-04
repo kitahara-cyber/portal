@@ -36,7 +36,7 @@ for d in D:
     k = f'{d.year}-{d.month:02d}'; months.setdefault(k, [0] * 5)
     for j in range(5): months[k][j] += days[d][j]
 crm_out = dict(first=str(D[0]) if D else '', last=str(D[-1]) if D else '', total=tot(D), since=tot(since), since_from=str(prev),
-               work_days_since=len(since), months=[[k, *v] for k, v in list(months.items())[-6:]],
+               work_days_since=len(since), months=[[k, *v] for k, v in list(months.items())[-6:]], months_all=[[k, *v] for k, v in months.items()],
                recent_days=[[str(d), *days[d]] for d in D[-12:]])
 
 # ---------- 共有シート（営業リスト） ----------
