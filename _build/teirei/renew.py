@@ -9,7 +9,7 @@
 料金・割引・特典は AI が決めない。story.json の plan が空なら「担当が記入」の欄にする（資料は下書き扱い）。"""
 import json, html, datetime, argparse, re, os, calendar
 ap = argparse.ArgumentParser(); ap.add_argument('data'); ap.add_argument('facts'); ap.add_argument('story'); ap.add_argument('out')
-ap.add_argument('--director', default=''); ap.add_argument('--avatar', default='')
+ap.add_argument('--director', default=''); ap.add_argument('--avatar', default=''); ap.add_argument('--sis', default=''); ap.add_argument('--no-edit', action='store_true')
 a = ap.parse_args()
 D = json.load(open(a.data)); F = json.load(open(a.facts)); S = json.load(open(a.story)) if a.story != '-' else {}
 E = lambda s: html.escape(str(s))
@@ -186,11 +186,43 @@ sl.append(sec('price', '08', '料金・契約条件', '次期のプランと料�
     f'<div class="panel"><h3 class="h3s">次期のご提案</h3>' + (f'<ul>{rows8}</ul>' if rows8 else '<p>次期のプランと料金は、担当よりご案内します。</p>') + '</div></div>' +
     '<p style="margin-top:18px"><button type="button" class="more-all" id="openall">すべての詳細を開く</button> <a class="back" id="toPortal" href="#">戻る</a></p>' +
     f'<p class="src">出典：日次の架電報告（{C["first"]}〜{C["last"]}）・共有シートの架電記録と商談アポ管理表。他のお客様の社名は記載していません。</p>'))
+HIDE = set(S.get('hide') or [])  # 変更指示で「この章を外す」と言われた章（data-title）
+sl = [x for x in sl if not any(f'data-title="{h}"' in x for h in HIDE)]
 NAVI = {'review': '今期の結果を1枚にまとめました。', 'numbers': '月ごとと3か月ごとで、どこで伸びたかが分かります。', 'voices': 'お断りの理由が分かると、次期に直すところが決まります。',
         'learn': 'うまくいかなかった点と、そこから変えたことです。', 'target': '目標は今期の実績から逆算しています。', 'proposal': '次の1年で変えることを4つに分けました。',
         'schedule': '架電を止めずに次期に入るための段取りです。', 'price': '次期のプランと料金です。'}
 NAVI.update(S.get('navi') or {})
 SAY = {k: [v, []] for k, v in NAVI.items()}
+
+EDIT_URL = 'https://docs.google.com/spreadsheets/d/1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI/edit#gid=1588267169'
+SRC = json.dumps(dict(data=D, facts=F, story=json.load(open(a.story)) if a.story != '-' else {}), ensure_ascii=False).replace('</', '<\\/')
+EDIT = '' if a.no_edit else f"""<button type="button" class="edbtn" id="edbtn">✎ 変更を頼む</button>
+<div class="edp" id="edp" hidden><div class="edin"><b>Claude に変更を頼む</b><p>直してほしいことを書いて「コピーしてシートを開く」を押し、開いたシート（変更指示タブ）の一番下の空いている行の A 列に貼り付けてください。数時間以内に Claude が資料を直し、Slack でお知らせします。</p>
+<label for="edch">章</label><select id="edch"></select>
+<label for="edtx">変更してほしいこと</label><textarea id="edtx" rows="4" placeholder="例：次期の施策はウェビナーを外して、メールフォローを1つ目に。目標の受注は5件に"></textarea>
+<div class="edchips"><button type="button">もっと簡潔に</button><button type="button">この章を外す</button><button type="button">数字の言い方を控えめに</button><button type="button">提案を2つに絞る</button><button type="button">お客様の業界の言葉に合わせる</button></div>
+<label for="edwho">書いた人</label><input id="edwho" value="{E(a.director)}">
+<div class="edact"><button type="button" id="edgo">コピーしてシートを開く</button><button type="button" id="edx">閉じる</button></div>
+<textarea id="edout" readonly rows="2" hidden></textarea></div></div>
+<script>(()=>{{const S={json.dumps(dict(sis=a.sis or F.get('sis', ''), name=name, meet=str(meet)), ensure_ascii=False)};const p=document.getElementById("edp"),ch=document.getElementById("edch"),tx=document.getElementById("edtx"),out=document.getElementById("edout");
+ch.innerHTML=[...document.querySelectorAll(".slide")].map(s=>`<option>${{s.dataset.title||"表紙"}}</option>`).join("")+"<option>全体</option>";
+document.getElementById("edbtn").onclick=()=>{{const i=typeof cur==="number"?cur:0;ch.selectedIndex=Math.max(0,i);p.hidden=false;tx.focus()}};
+document.getElementById("edx").onclick=()=>p.hidden=true;
+p.querySelectorAll(".edchips button").forEach(b=>b.onclick=()=>{{tx.value=(tx.value?tx.value+"／":"")+b.textContent;tx.focus()}});
+document.getElementById("edgo").onclick=async()=>{{if(!tx.value.trim()){{tx.focus();return}}const d=new Date(),z=n=>String(n).padStart(2,"0");
+ const row=[`${{d.getFullYear()}}/${{z(d.getMonth()+1)}}/${{z(d.getDate())}} ${{z(d.getHours())}}:${{z(d.getMinutes())}}`,S.sis,S.name,S.meet,ch.value,tx.value.replace(/[\\t\\n]+/g," "),document.getElementById("edwho").value].join("\\t");
+ let ok=false;try{{await navigator.clipboard.writeText(row);ok=true}}catch(_){{}}out.hidden=false;out.value=row;out.select();
+ document.getElementById("edgo").textContent=ok?"コピーしました（シートに貼り付けてください）":"下の文字を選んでコピーしてください";window.open("{EDIT_URL}","_blank","noopener")}};
+addEventListener("keydown",e=>{{if(e.key==="Escape")p.hidden=true}},true);
+}})()</script>"""
+CSS += """.edbtn{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;font:inherit;font-size:13px;font-weight:700;border:1px dashed var(--line);background:var(--card,#fff);color:var(--ink,#15171b);border-radius:999px;padding:8px 14px;cursor:pointer;opacity:.85}
+.edp{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px}.edp[hidden]{display:none}
+.edin{background:var(--card,#fff);color:var(--ink,#15171b);border-radius:14px;padding:18px;width:min(560px,100%);display:grid;gap:8px;max-height:90vh;overflow:auto}.edin p{margin:0;font-size:13px;opacity:.8}.edin label{font-size:12px;font-weight:700}
+.edin select,.edin textarea,.edin input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;width:100%}
+.edchips{display:flex;flex-wrap:wrap;gap:6px}.edchips button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;cursor:pointer;color:inherit}
+.edact{display:flex;gap:8px;flex-wrap:wrap}.edact button{font:inherit;font-weight:700;border:0;border-radius:999px;padding:8px 16px;cursor:pointer;background:var(--accent,#d9481f);color:#fff}.edact #edx{background:transparent;border:1px solid var(--line);color:inherit}
+:fullscreen .edbtn{display:none}@media print{.edbtn,.edp{display:none!important}}"""
+
 av = open(a.avatar).read().strip() if a.avatar else ''
 who = f'<img src="{av}" alt="" width="44" height="44">' if av else f'<span class="ini">{E((a.director or "担")[0])}</span>'
 page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
@@ -203,6 +235,8 @@ page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name
 <div class="ctl"><button id="prev" aria-label="前の章へ">↑</button><span class="pg" id="pg">1/{len(sl)}</span><button id="next" class="nx" aria-label="次の章へ">↓</button><button id="fs" aria-label="全画面で表示">⛶</button></div>
 <aside class="navi"><div class="nv panel" id="nv"><div class="who">{who}<div><b>担当ディレクター {E(a.director or "")}</b><small>章に合わせてご説明します</small></div><button class="tg" id="tg" aria-label="ナビを開く">…</button></div><p class="bubble" id="say" aria-live="polite"></p></div></aside>
 <script>const SAY={json.dumps(SAY, ensure_ascii=False)};const say=document.getElementById("say");{JS}</script>
+{EDIT}
+<script type="application/json" id="renew-src">{SRC}</script>
 </body></html>'''
 open(a.out, 'w').write(page)
 todo = page.count('class="todo"')
