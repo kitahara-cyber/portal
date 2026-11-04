@@ -67,7 +67,7 @@ def tbl(rows, cols):
         '<tr>' + ''.join(f'<td{" class=r" if r else ""}>{f(x)}</td>' for _, f, r in cols) + '</tr>' for x in rows) + '</tbody></table></div>'
 def sec(id, no, lab, title, body, sub=''):
     return f'<section class="slide" id="{id}" data-title="{E(lab)}"><div class="inner"><div class="sh"><span class="no">{no} ／ {id.upper()}</span><h2>{title}</h2>{f"<p>{sub}</p>" if sub else ""}</div>{body}</div></section>'
-def ul(xs, empty=''): return '<ul>' + ''.join(f'<li>{x}</li>' for x in xs) + '</ul>' if xs else (f'<p class="tip">{empty}</p>' if empty else f'<p>{TODO()}</p>')
+def ul(xs, empty=''): return '<ul>' + ''.join(f'<li>{x}</li>' for x in xs) + '</ul>' if xs else (f'<p class="tip">{empty}</p>' if empty else '')
 # ---------- 自動で埋める（story.json に無い欄を、データから作る。11/4） ----------
 AUTO = set()
 seg = [x for x in L['seg'] if x['called'] >= 20]; best = max(seg, key=lambda x: (x['apo_rate'], x['reach_rate'])) if seg else None
@@ -115,17 +115,19 @@ pr['team'] = [f'稼働量：月{cpm:,.0f}件の架電を続け、反応の良い
 for k, v in pr.items():
     if not (S.get('proposals') or {}).get(k) and v: S.setdefault('proposals', {})[k] = v; AUTO.add('proposals')
 RU = F.get('rules') or {}
-if not (S.get('plan') or {}).get('price') and fee:
-    S['plan'] = dict(S.get('plan') or {}); pl = S['plan']
-    pl.setdefault('name', RU.get('name') or '継続プラン（今期と同じ内容で継続）')
-    pl.setdefault('price', f'月額{fee:,}円（税抜・今期と同額）' + (f'　{RU["price_note"]}' if RU.get('price_note') else ''))
-    if RU.get('discount'): pl.setdefault('discount', RU['discount'])
-    if RU.get('term'): pl.setdefault('term', RU['term'])
-    if RU.get('renew'): pl.setdefault('renew', RU['renew'])
-    AUTO.add('plan')
+PI = {k: v for k, v in (F.get('plan_input') or {}).items() if str(v).strip()}  # 記録シート「継続条件」タブに担当が書いた内容
+S['plan'] = dict(S.get('plan') or {}); S['plan'].update({k: PI[k] for k in ('name', 'price', 'discount', 'term', 'renew') if k in PI})
+for k in ('discount', 'term', 'renew'):
+    if RU.get(k): S['plan'].setdefault(k, RU[k])
+if PI.get('unit_price'):
+    try: price = int(float(str(PI['unit_price']).replace(',', '').replace('円', '')))
+    except Exception: pass
+SUG = dict(name='継続プラン（今期と同じ内容で継続）', price=(f'月額{fee:,}円（税抜・今期と同額）' if fee else ''), term='12か月', discount='（会社の継続割引・長期特典があれば）', renew='（更新の条件）')
 P = S.get('proposals') or {}
 plan = S.get('plan') or {}
-draft = not all((S.get('plan') or {}).get(k) for k in ('name', 'price', 'discount', 'term', 'renew'))
+PL = S.get('plan') or {}
+MISSING = [k for k in ('name', 'price', 'discount', 'term', 'renew') if not PL.get(k)] + ([] if price else ['unit_price'])
+draft = False
 # ---------- 章 ----------
 sl = []
 sl.append(f'''<section class="slide cover" id="cover"><div class="inner">
@@ -154,13 +156,13 @@ ngl = [(k, v) for k, v in L['ng'] if k != 'その他'][:6]
 sl.append(sec('voices', '03', '実績（声）', S.get('voices_title') or 'お客様の声から分かったこと',
     '<div class="two"><div class="panel"><h3 class="h3s">関心を持たれたポイント</h3>' + ul([E(x) for x in V.get('interest', [])], '商談アポ管理表のヒアリング内容がまだ少ないため、定例で伺った内容をもとにお話しします。') + '</div>' +
     '<div class="panel"><h3 class="h3s">お断りの理由（多い順）</h3>' + (bars(ngl, lambda v: f'{v}件') if ngl else ul([E(x) for x in V.get('ng', [])], '架電メモにお断りの理由の記録が少ないため、集計していません。')) + '</div></div>' +
-    card('刺さったトーク・訴求', f'{len(S.get("talks") or [])}つ' if S.get('talks') else '', ''.join(f'<p><b>「{E(t["line"])}」</b><br><small>{E(t.get("why", ""))}</small></p>' for t in S.get('talks') or []) or f'<p>{TODO()}</p>') +
+    (card('刺さったトーク・訴求', f'{len(S["talks"])}つ', ''.join(f'<p><b>「{E(t["line"])}」</b><br><small>{E(t.get("why", ""))}</small></p>' for t in S['talks'])) if S.get('talks') else '') +
     card('営業現場からのフィードバック（アポの質・商談の手応え）', '', ul([E(x) for x in S.get('field') or []], '商談の結果がまだ記録されていません。'))))
 sl.append(sec('learn', '04', '課題と学び', S.get('learn_title') or '届かなかった点と、そこから変えたこと',
     '<div class="cards">' + ''.join(card(E(g['t']), '', f'<p><b>要因</b>{E(g.get("why", ""))}</p>') for g in S.get('gaps') or []) + '</div>' +
     card('実施した改善と、その効果', f'{len(S.get("done") or [])}件' if S.get('done') else '', tbl(S['done'], [('改善', lambda r: E(r['t']), 0), ('効果', lambda r: E(r.get('effect', '')), 0)]) if S.get('done') else '<p class="tip">記録シート「現場の改善」にまだ記録がありません。定例の議事録から自動で入ります。</p>') +
     card('リスト・トークの見直しの履歴', '', '<ul class="tl">' + ''.join(f'<li><b>{E(h["d"])}</b><span>{E(h["t"])}</span></li>' for h in S.get('history') or []) + '</ul>' if S.get('history') else '<p class="tip">見直しの記録がまだありません。記録シート「現場の改善」から自動で入ります。</p>')))
-T5 = lambda r: f'<div class="panel"><h3 class="h3s">{r[0]}</h3><div class="ld3">' + stat('アポ', f'{round(r[1]["apo"])}件') + stat('商談', f'{round(r[1]["meet"])}件') + stat('受注', f'{r[1]["won"]:.1f}件') + '</div>' + (f'<p>売上の目安 <b>{yen(r[1]["won"] * price)}</b>' + (f'（費用{yen(cost_next)}の{r[1]["won"] * price / cost_next:.1f}倍）' if cost_next else '') + '</p>' if price else f'<p>売上の目安：{TODO("単価を伺って記入")}</p>') + '</div>'
+T5 = lambda r: f'<div class="panel"><h3 class="h3s">{r[0]}</h3><div class="ld3">' + stat('アポ', f'{round(r[1]["apo"])}件') + stat('商談', f'{round(r[1]["meet"])}件') + stat('受注', f'{r[1]["won"]:.1f}件') + '</div>' + (f'<p>売上の目安 <b>{yen(r[1]["won"] * price)}</b>' + (f'（費用{yen(cost_next)}の{r[1]["won"] * price / cost_next:.1f}倍）' if cost_next else '') + '</p>' if price else '') + '</div>'
 sl.append(sec('target', '05', '次期の目標', S.get('target_title') or f'次の{NEXT_M}か月の目標は、<em class="hl">アポ{round(goal["apo"])}件・受注{goal["won"]:.0f}件</em>',
     '<div class="two">' + T5(('いまのペースのまま', keep)) + T5(('目標（今期のいちばん良い3か月の水準）', goal)) + '</div>' +
     card('目標の根拠', '', f'<ul><li>架電：直近3か月の平均 月{cpm:,.0f}件 × {NEXT_M}か月</li><li>アポ率：いまのペース {pct(rate_now, 2)} → 目標 {pct(max(rate_now, rate_best), 2)}（今期でいちばん良かった3か月：{E(best_q[0]) if best_q else "—"}）</li>'
@@ -178,9 +180,10 @@ O = S.get('ops') or {}
 sl.append(sec('schedule', '07', '運用とスケジュール', '切れ目なく、次期に入るための段取り',
     '<div class="two"><div class="panel"><h3 class="h3s">次期までの流れ</h3><ul class="tl">' + ''.join(f'<li><b>{E(d)}</b><span>{E(t)}</span></li>' for d, t in sch) + '</ul></div>' +
     f'<div class="panel"><h3 class="h3s">運用の進め方</h3><ul><li><b>定例</b>{E(O.get("meeting") or "月1回。このポータルの着地プランを一緒に開き、次の打ち手を決めます")}</li><li><b>報告</b>{E(O.get("report") or "毎週の数字はポータルで自動更新。定例資料は前日にポータルへ")}</li><li><b>担当</b>{E(O.get("team") or (a.director + "（担当ディレクター）" if a.director else ""))}</li></ul></div></div>'))
+rows8 = ''.join(f'<li><b>{lb}</b>{E(PL[k])}</li>' for k, lb in [('name', 'プラン'), ('price', '料金'), ('discount', '継続割引・長期特典'), ('term', '契約期間'), ('renew', '更新の条件')] if PL.get(k))
 sl.append(sec('price', '08', '料金・契約条件', '次期のプランと料金',
-    '<div class="two"><div class="panel"><h3 class="h3s">今期のご契約</h3><ul>' + f'<li><b>月額</b>{yen(fee) if fee else TODO("確認")}（税抜）</li><li><b>契約期間</b>{ym(str(start))}〜{end.year}年{end.month}月{end.day}日</li></ul></div>' +
-    f'<div class="panel"><h3 class="h3s">次期のご提案</h3><ul><li><b>プラン</b>{E(plan["name"]) if plan.get("name") else TODO()}</li><li><b>料金</b>{E(plan["price"]) if plan.get("price") else TODO()}</li><li><b>継続割引・長期特典</b>{E(plan["discount"]) if plan.get("discount") else TODO()}</li><li><b>契約期間</b>{E(plan["term"]) if plan.get("term") else TODO()}</li><li><b>更新の条件</b>{E(plan["renew"]) if plan.get("renew") else TODO()}</li></ul></div></div>' +
+    '<div class="two"><div class="panel"><h3 class="h3s">今期のご契約</h3><ul>' + (f'<li><b>月額</b>{yen(fee)}（税抜）</li>' if fee else '') + f'<li><b>契約期間</b>{ym(str(start))}〜{end.year}年{end.month}月{end.day}日</li></ul></div>' +
+    f'<div class="panel"><h3 class="h3s">次期のご提案</h3>' + (f'<ul>{rows8}</ul>' if rows8 else '<p>次期のプランと料金は、担当よりご案内します。</p>') + '</div></div>' +
     '<p style="margin-top:18px"><button type="button" class="more-all" id="openall">すべての詳細を開く</button> <a class="back" id="toPortal" href="#">戻る</a></p>' +
     f'<p class="src">出典：日次の架電報告（{C["first"]}〜{C["last"]}）・共有シートの架電記録と商談アポ管理表。他のお客様の社名は記載していません。</p>'))
 NAVI = {'review': '今期の結果を1枚にまとめました。', 'numbers': '月ごとと3か月ごとで、どこで伸びたかが分かります。', 'voices': 'お断りの理由が分かると、次期に直すところが決まります。',
@@ -195,7 +198,6 @@ page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>{CSS}</style></head><body class="cover-on">
-{'<div class="draft">下書き：【担当が記入】の欄を埋めてからお客様にお見せください</div>' if draft else ''}
 {"".join(sl)}
 <nav class="dots" id="dots" aria-label="章"></nav>
 <div class="ctl"><button id="prev" aria-label="前の章へ">↑</button><span class="pg" id="pg">1/{len(sl)}</span><button id="next" class="nx" aria-label="次の章へ">↓</button><button id="fs" aria-label="全画面で表示">⛶</button></div>
@@ -204,4 +206,4 @@ page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name
 </body></html>'''
 open(a.out, 'w').write(page)
 todo = page.count('class="todo"')
-print(json.dumps(dict(auto=sorted(AUTO), out=a.out, slides=len(sl), todo=todo, draft=draft, goal=dict(apo=round(goal['apo']), won=round(goal['won'], 1)), keep=dict(apo=round(keep['apo']), won=round(keep['won'], 1))), ensure_ascii=False))
+print(json.dumps(dict(missing=MISSING, suggest={k: SUG[k] for k in MISSING if k in SUG}, auto=sorted(AUTO), out=a.out, slides=len(sl), todo=todo, draft=draft, goal=dict(apo=round(goal['apo']), won=round(goal['won'], 1)), keep=dict(apo=round(keep['apo']), won=round(keep['won'], 1))), ensure_ascii=False))
