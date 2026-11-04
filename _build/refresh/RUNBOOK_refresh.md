@@ -15,7 +15,7 @@
 7. 確認：`git status --short | wc -l` で変わったファイル数を見る。`c/` のフォルダ数が前回から大きく減っていないこと（10社以上減ったら push せず北原さんに知らせる）。
 8. `git add -A c acronet aiclick && git commit -m "顧客ポータル：数字を更新（<今日>）" && git pull --rebase && git push`
    コミットの最後に `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` を付ける。
-   pull で `c/<SIS>/index.html` がぶつかったら（定例資料の自動作成と重なったとき）、その会社だけ相手側を採り（`git checkout --theirs`）、6. をもう一度実行してから続ける。
+   pull で `c/<SIS>/index.html` がぶつかったら（定例資料の自動作成と重なったとき）、その会社だけリモート側を採り（rebase 中は `git checkout --ours c/<SIS>/index.html`）、`GIT_EDITOR=true git rebase --continue` のあと 6. をもう一度実行して、もう一度コミット・push する。
 9. 設定シート「実行ログ」に1行：実行日時／（SIS空）／`顧客ポータルの数字更新`／（空）／（空）／（空）／結果（更新済み・失敗）／未送信
 10. `work/` と `/home/claude/` に広げた部品は消さなくてよい（セッションごと消える）。
 
