@@ -195,7 +195,7 @@ NAVI.update(S.get('navi') or {})
 SAY = {k: [v, []] for k, v in NAVI.items()}
 
 EDIT_URL = 'https://docs.google.com/spreadsheets/d/1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI/edit#gid=1588267169'
-SRC = json.dumps(dict(data=D, facts=F, story=json.load(open(a.story)) if a.story != '-' else {}), ensure_ascii=False).replace('</', '<\\/')
+SRC = html.escape(json.dumps(dict(data=D, facts=F, story=json.load(open(a.story)) if a.story != '-' else {}), ensure_ascii=False), quote=False)
 EDIT = '' if a.no_edit else f"""<button type="button" class="edbtn" id="edbtn">✎ 変更を頼む</button>
 <div class="edp" id="edp" hidden><div class="edin"><b>Claude に変更を頼む</b><p>直してほしいことを書いて「コピーしてシートを開く」を押し、開いたシート（変更指示タブ）の一番下の空いている行の A 列に貼り付けてください。数時間以内に Claude が資料を直し、Slack でお知らせします。</p>
 <label for="edch">章</label><select id="edch"></select>
@@ -236,7 +236,7 @@ page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name
 <aside class="navi"><div class="nv panel" id="nv"><div class="who">{who}<div><b>担当ディレクター {E(a.director or "")}</b><small>章に合わせてご説明します</small></div><button class="tg" id="tg" aria-label="ナビを開く">…</button></div><p class="bubble" id="say" aria-live="polite"></p></div></aside>
 <script>const SAY={json.dumps(SAY, ensure_ascii=False)};const say=document.getElementById("say");{JS}</script>
 {EDIT}
-<script type="application/json" id="renew-src">{SRC}</script>
+<textarea id="renew-src" hidden>{SRC}</textarea>
 </body></html>'''
 open(a.out, 'w').write(page)
 todo = page.count('class="todo"')
