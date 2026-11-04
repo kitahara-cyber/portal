@@ -67,10 +67,65 @@ def tbl(rows, cols):
         '<tr>' + ''.join(f'<td{" class=r" if r else ""}>{f(x)}</td>' for _, f, r in cols) + '</tr>' for x in rows) + '</tbody></table></div>'
 def sec(id, no, lab, title, body, sub=''):
     return f'<section class="slide" id="{id}" data-title="{E(lab)}"><div class="inner"><div class="sh"><span class="no">{no} ／ {id.upper()}</span><h2>{title}</h2>{f"<p>{sub}</p>" if sub else ""}</div>{body}</div></section>'
-def ul(xs): return '<ul>' + ''.join(f'<li>{x}</li>' for x in xs) + '</ul>' if xs else f'<p>{TODO()}</p>'
+def ul(xs, empty=''): return '<ul>' + ''.join(f'<li>{x}</li>' for x in xs) + '</ul>' if xs else (f'<p class="tip">{empty}</p>' if empty else f'<p>{TODO()}</p>')
+# ---------- 自動で埋める（story.json に無い欄を、データから作る。11/4） ----------
+AUTO = set()
+seg = [x for x in L['seg'] if x['called'] >= 20]; best = max(seg, key=lambda x: (x['apo_rate'], x['reach_rate'])) if seg else None
+def fill(k, v):
+    if not S.get(k) and v: S[k] = v; AUTO.add(k)
+th = F.get('themes') or []
+fill('voices', {'interest': [f'「{k}」（{n}件）' for k, n in th[:5]] or [h for h in (F.get('hooks') or [])[:4]]})
+fill('talks', [dict(line=m['line'], why=m.get('why', '')) for m in (F.get('magic') or [])[:3]])
+fb = []
+if apo_tbl: fb.append(f'商談アポ管理表のアポ{apo_tbl}件のうち、商談の実施は{meet_n}件（{pct(meet_rate, 0)}）。')
+rs = [(k, v) for k, v in R.items() if v and k != '受注']
+if rs: fb.append('商談の結果は ' + '・'.join(f'{k}{v}件' for k, v in sorted(rs, key=lambda x: -x[1])[:4]) + (f'、受注{won}件' if won else '') + '。')
+if A.get('blank_past'): fb.append(f'商談日が過ぎて結果が未記入のものが{A["blank_past"]}件あります。記入が進むと、アポの質を正しく評価できます。')
+if A.get('y90') is not None and A.get('y90'): fb.append(f'直近90日の見込み（ヨミ）は{A["y90"]}件です。')
+fill('field', fb)
+gp = []
+if best_q and qs:
+    low = min((q for q in qs if q[1] >= 300), key=lambda q: q[3] / q[1], default=None)
+    if low and low[0] != best_q[0]: gp.append(dict(t=f'{low[0]}のアポ率が{pct(low[3]/low[1], 2)}に下がった', why=f'いちばん良かった{best_q[0]}（{pct(best_q[3]/best_q[1], 2)}）と比べて低く、リストかトークが合っていなかった可能性があります'))
+res = dict(L['results']); rt = sum(res.values()) or 0
+if rt and res.get('受付NG', 0) / rt >= .25: gp.append(dict(t=f'受付でのお断りが架電の{pct(res["受付NG"]/rt, 0)}', why='ご担当者に届く前に止まっている電話が多い'))
+ng1 = next((k for k, _ in L['ng'] if k not in ('その他', '理由を伺えないまま／記録なし')), '')
+if ng1: gp.append(dict(t=f'お断りの理由でいちばん多いのは「{ng1}」', why='冒頭のひと言と切り返しで減らせる余地があります'))
+if meet_rate is not None and meet_rate < .27: gp.append(dict(t=f'アポから商談になる割合が{pct(meet_rate, 0)}', why='ご支援先全体の平均（27%）より低く、リスケ・キャンセルが多い'))
+fill('gaps', gp[:3])
+imp = F.get('improve') or []
+fill('done', [dict(t=f'{x.get("what","")}：{x.get("detail","")}', effect=(f'{x.get("before","")} → {x.get("after","")}' if x.get('after') else '効果は確認中')) for x in imp][:6])
+fill('history', [dict(d=str(x.get('d', ''))[:7], t=f'{x.get("what","")}：{x.get("detail","")}') for x in imp][:8])
+pr = {}
+tg = []
+if best: tg.append(f'反応の良かった「{best["k"][:18]}」の残り{best["left"]:,}社から先に電話する')
+cond = F.get('list_cond') or {}
+if cond.get('ind1'): tg.append('新しい層：似た商材の会社で成果が出た業種（' + '・'.join(cond['ind1'][:3]) + '）、規模（' + '・'.join(cond.get('size', [])[:2]) + '）')
+if R.get('失注') or R.get('見込み'): tg.append(f'見込み・失注になった先（{R.get("見込み", 0) + R.get("失注", 0)}件）に、時期を変えてもう一度ご案内する')
+pr['target'] = tg
+tk = [f'「{m["line"]}」を冒頭のひと言に使う' for m in (F.get('magic') or [])[:2]]
+if ng1: tk.append(f'「{ng1}」と言われたときの切り返しを用意し、全員で統一する')
+pr['talk'] = tk
+cb = []
+if lead >= 20: cb.append(f'資料送付先（今期{lead}件）へのメールフォローを組み合わせ、資料からの商談化を増やす')
+if rt and res.get('受付NG', 0) / rt >= .25: cb.append('受付で止まる先には、フォーム営業で決裁者に直接届ける')
+cb.append('アポ先の関心が高いテーマで共催ウェビナーを開き、電話で届かない層を集める')
+pr['combo'] = cb
+pr['team'] = [f'稼働量：月{cpm:,.0f}件の架電を続け、反応の良い層に寄せる' + ('（残りリストが多いため、増量も可能）' if L.get('left', 0) > cpm * 6 else ''), '報告：毎週の数字はポータルで自動更新、月1回の定例で着地と打ち手を確認']
+for k, v in pr.items():
+    if not (S.get('proposals') or {}).get(k) and v: S.setdefault('proposals', {})[k] = v; AUTO.add('proposals')
+RU = F.get('rules') or {}
+if not (S.get('plan') or {}).get('price') and fee:
+    S['plan'] = dict(S.get('plan') or {}); pl = S['plan']
+    pl.setdefault('name', RU.get('name') or '継続プラン（今期と同じ内容で継続）')
+    pl.setdefault('price', f'月額{fee:,}円（税抜・今期と同額）' + (f'　{RU["price_note"]}' if RU.get('price_note') else ''))
+    if RU.get('discount'): pl.setdefault('discount', RU['discount'])
+    if RU.get('term'): pl.setdefault('term', RU['term'])
+    if RU.get('renew'): pl.setdefault('renew', RU['renew'])
+    AUTO.add('plan')
 P = S.get('proposals') or {}
 plan = S.get('plan') or {}
-draft = not (plan.get('price') and plan.get('name'))
+draft = not all((S.get('plan') or {}).get(k) for k in ('name', 'price', 'discount', 'term', 'renew'))
 # ---------- 章 ----------
 sl = []
 sl.append(f'''<section class="slide cover" id="cover"><div class="inner">
@@ -97,14 +152,14 @@ sl.append(sec('numbers', '02', '実績（数字）', S.get('numbers_title') or (
 V = S.get('voices') or {}
 ngl = [(k, v) for k, v in L['ng'] if k != 'その他'][:6]
 sl.append(sec('voices', '03', '実績（声）', S.get('voices_title') or 'お客様の声から分かったこと',
-    '<div class="two"><div class="panel"><h3 class="h3s">関心を持たれたポイント</h3>' + ul([E(x) for x in V.get('interest', [])]) + '</div>' +
-    '<div class="panel"><h3 class="h3s">お断りの理由（多い順）</h3>' + (bars(ngl, lambda v: f'{v}件') if ngl else ul([E(x) for x in V.get('ng', [])])) + '</div></div>' +
+    '<div class="two"><div class="panel"><h3 class="h3s">関心を持たれたポイント</h3>' + ul([E(x) for x in V.get('interest', [])], '商談アポ管理表のヒアリング内容がまだ少ないため、定例で伺った内容をもとにお話しします。') + '</div>' +
+    '<div class="panel"><h3 class="h3s">お断りの理由（多い順）</h3>' + (bars(ngl, lambda v: f'{v}件') if ngl else ul([E(x) for x in V.get('ng', [])], '架電メモにお断りの理由の記録が少ないため、集計していません。')) + '</div></div>' +
     card('刺さったトーク・訴求', f'{len(S.get("talks") or [])}つ' if S.get('talks') else '', ''.join(f'<p><b>「{E(t["line"])}」</b><br><small>{E(t.get("why", ""))}</small></p>' for t in S.get('talks') or []) or f'<p>{TODO()}</p>') +
-    card('営業現場からのフィードバック（アポの質・商談の手応え）', '', ul([E(x) for x in S.get('field') or []]))))
+    card('営業現場からのフィードバック（アポの質・商談の手応え）', '', ul([E(x) for x in S.get('field') or []], '商談の結果がまだ記録されていません。'))))
 sl.append(sec('learn', '04', '課題と学び', S.get('learn_title') or '届かなかった点と、そこから変えたこと',
     '<div class="cards">' + ''.join(card(E(g['t']), '', f'<p><b>要因</b>{E(g.get("why", ""))}</p>') for g in S.get('gaps') or []) + '</div>' +
-    card('実施した改善と、その効果', f'{len(S.get("done") or [])}件' if S.get('done') else '', tbl(S['done'], [('改善', lambda r: E(r['t']), 0), ('効果', lambda r: E(r.get('effect', '')), 0)]) if S.get('done') else f'<p>{TODO()}</p>') +
-    card('リスト・トークの見直しの履歴', '', '<ul class="tl">' + ''.join(f'<li><b>{E(h["d"])}</b><span>{E(h["t"])}</span></li>' for h in S.get('history') or []) + '</ul>' if S.get('history') else f'<p>{TODO()}</p>')))
+    card('実施した改善と、その効果', f'{len(S.get("done") or [])}件' if S.get('done') else '', tbl(S['done'], [('改善', lambda r: E(r['t']), 0), ('効果', lambda r: E(r.get('effect', '')), 0)]) if S.get('done') else '<p class="tip">記録シート「現場の改善」にまだ記録がありません。定例の議事録から自動で入ります。</p>') +
+    card('リスト・トークの見直しの履歴', '', '<ul class="tl">' + ''.join(f'<li><b>{E(h["d"])}</b><span>{E(h["t"])}</span></li>' for h in S.get('history') or []) + '</ul>' if S.get('history') else '<p class="tip">見直しの記録がまだありません。記録シート「現場の改善」から自動で入ります。</p>')))
 T5 = lambda r: f'<div class="panel"><h3 class="h3s">{r[0]}</h3><div class="ld3">' + stat('アポ', f'{round(r[1]["apo"])}件') + stat('商談', f'{round(r[1]["meet"])}件') + stat('受注', f'{r[1]["won"]:.1f}件') + '</div>' + (f'<p>売上の目安 <b>{yen(r[1]["won"] * price)}</b>' + (f'（費用{yen(cost_next)}の{r[1]["won"] * price / cost_next:.1f}倍）' if cost_next else '') + '</p>' if price else f'<p>売上の目安：{TODO("単価を伺って記入")}</p>') + '</div>'
 sl.append(sec('target', '05', '次期の目標', S.get('target_title') or f'次の{NEXT_M}か月の目標は、<em class="hl">アポ{round(goal["apo"])}件・受注{goal["won"]:.0f}件</em>',
     '<div class="two">' + T5(('いまのペースのまま', keep)) + T5(('目標（今期のいちばん良い3か月の水準）', goal)) + '</div>' +
@@ -149,4 +204,4 @@ page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name
 </body></html>'''
 open(a.out, 'w').write(page)
 todo = page.count('class="todo"')
-print(json.dumps(dict(out=a.out, slides=len(sl), todo=todo, draft=draft, goal=dict(apo=round(goal['apo']), won=round(goal['won'], 1)), keep=dict(apo=round(keep['apo']), won=round(keep['won'], 1))), ensure_ascii=False))
+print(json.dumps(dict(auto=sorted(AUTO), out=a.out, slides=len(sl), todo=todo, draft=draft, goal=dict(apo=round(goal['apo']), won=round(goal['won'], 1)), keep=dict(apo=round(keep['apo']), won=round(keep['won'], 1))), ensure_ascii=False))

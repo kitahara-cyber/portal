@@ -112,7 +112,17 @@ data.json の `checks` に注意書きがあれば必ず読む。
 - `python3 _build/teirei/calc.py work/<SIS>/spec.json > work/<SIS>/data.json`
 - `work/<SIS>/facts.json` を書く：
   `{"start":"<契約開始月 YYYY-MM-01>","end":"<満了日 YYYY-MM-DD>","fee":<月額>,"init":<初期費用>,"status":"<契約状況>","measures":"<施策>","appts":<work/jd.json の appts（jd.py の出力。なければ空）>,"price":<単価>,"meeting":"<定例日>","stage":"<段階>"}`
+  - 自動で埋めるための材料（あれば入れる。無い欄は資料が自動で文章を作る）：
+    `"themes":[["関心のテーマ",件数]]`（JD「商談管理表一覧v2」のその会社のヒアリング内容（P列）から、事例・費用・人手不足などのテーマを数える）、
+    `"hooks":["ヒアリング内容の要約（新しい順に4つ）"]`、`"magic":[{"line":"…","why":"…"}]`（knowledge.enc の魔法の一言）、
+    `"list_cond":{"ind1":[…],"size":[…]}`（knowledge.enc のリスト提案。無ければ省略）、
+    `"improve":[{"d":"YYYY-MM-DD","what":"変えたもの","detail":"変えた内容","before":"…","after":"…"}]`（記録シート `1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI` の「現場の改善」タブで、その SIS の今期の行）、
+    `"rules":{…}`（下の「継続の条件」）
   - 単価：Drive の「運用中のお客様一覧（商材・単価・ターゲット）」（`1vqMuaqy6mT_8xVhrpZqK-asz-NokU7CtxmiSZQ37Jhs`）で③の確かさが「確認済み」のときだけ、③の金額（範囲なら下限）を円で入れる。それ以外は 0。
+
+### 継続の条件（会社のルール。決まったらここに書く）
+- rules = `{}`（未設定。設定されるまで、資料の「継続割引・長期特典」「契約期間」「更新の条件」は【担当が記入】のまま）
+- 料金は「今期と同額」を初期値として自動で入る。
 
 ### 7-3. 文章を書く（renew_story.json）
 読むもの：今期の議事録（Drive の Gemini メモ）、共有シートの「管理表_商談アポ」（相手の関心・商談の結果・失注の理由）・「スクリプト」タブ、商材ノート（Drive「商材情報（インサイトセールス・社外秘）」）、`_build/daily/knowledge.enc` の魔法の一言。
