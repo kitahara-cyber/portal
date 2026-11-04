@@ -142,7 +142,7 @@ data.json の `checks` に注意書きがあれば必ず読む。
 - 段階が `満了月` のときは、前月に作った資料からの変化（その後1か月の数字）を summary に入れる。
 
 ### 7-4. 資料を作って、担当にだけ見える場所に置く
-1. `python3 _build/teirei/renew.py work/<SIS>/data.json work/<SIS>/facts.json work/<SIS>/renew_story.json work/<SIS>/renew.html --director <担当名> --avatar work/<SIS>/avatar.txt`
+1. `python3 _build/teirei/renew.py work/<SIS>/data.json work/<SIS>/facts.json work/<SIS>/renew_story.json work/<SIS>/renew.html --director <担当名> --avatar work/<SIS>/avatar.txt --sis <SIS>`
    （出力の `todo` が【担当が記入】の数）
 2. `mkdir -p renew/<SIS>/<定例日YYYYMMDD>` して、**社内ポータルのパスワード**（担当タブ）で鍵をかける（お客様のパスワードは使わない）：
    `python3 _build/teirei/lock.py work/<SIS>/renew.html renew/<SIS>/<YYYYMMDD>/index.html --password <社内ポータルのパスワード> --title "<会社名> 様 継続のご提案（下書き）" --eyebrow "INTERNAL ／ 社外秘" --standalone --storage-key cs-pw`
