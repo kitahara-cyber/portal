@@ -157,12 +157,12 @@ data.json の `checks` に注意書きがあれば必ず読む。
    `python3 _build/teirei/lock.py work/<SIS>/renew.html renew/<SIS>/<YYYYMMDD>/index.html --password <社内ポータルのパスワード> --title "<会社名> 様 継続のご提案（下書き）" --eyebrow "INTERNAL ／ 社外秘" --standalone --gzip --storage-key cs-pw`
 3. 平文に会社名・数字が残っていないことを確かめて、commit・push（4章 5. と同じ）。
 
-### 7-5. Slack の案件スレに流す（5章と同じスレッド。パスワードと料金の案は書かない）
+### 7-5. Slack の案件スレに流す（5章と同じスレッド。パスワードは書かない。料金の案は書いてよい＝11/6 北原さん）
 ```
 <@担当のSlackユーザーID> 明日 <M/D(曜) HH:MM> の「<会社名>様」定例は、契約満了（<YYYY年M月>）の<前月／満了月>です。継続提案資料の下書きを作りました。
 ・資料：https://kitahara-cyber.github.io/portal/renew/<SIS>/<YYYYMMDD>/ （社内ポータルと同じパスワードで開きます）
 ・要点：<summary（タグなし）>／次期の目標 アポ<n>件・受注<n>件
-・資料にまだ入っていない条件（renew.py の出力 missing）。AI の案（suggest）は担当の DM に別に送る（料金の話をチャンネルに残さないため）：
+・資料にまだ入っていない条件（renew.py の出力 missing）と、AI の案（suggest。議事録に料金の話があればそれも添える）：
   　次期のプラン：<案>／料金：<案（今期と同額なら そう書く）>／契約期間：<案>
   　継続割引・特典と更新の条件：会社の決まりで決めてください
   　単価：<分かれば>（入れると売上と費用対効果まで出ます）
