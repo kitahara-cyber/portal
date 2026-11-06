@@ -76,19 +76,25 @@ data.json の `checks` に注意書きがあれば必ず読む。
 定例資料の「ご提案」（story.json の proposals）を、記録シート「AI提案と現場の改善の記録」（`1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI`）の「AI提案」タブの最後に1件1行で追記する（append_values）：
 日付（定例日）／SIS／会社名／担当／出どころ＝`定例資料`／提案内容（t）／根拠（why）／適用条件（kpi を「次回の定例で確かめる目標」として）／採否・理由・結果は空欄（担当が記入）。
 
-## 5. Slack で担当ディレクターに送る
-担当の SlackユーザーID（担当タブ）に DM。空なら北原（U09T80ZAMT3）に送る。文面：
+## 5. Slack の案件スレに流す（11/6〜）
+送り先は、**#c_jdネット案件管理（`C07LFRA6P36`）にある、その会社の案件スレ**（Zapier の「■名前：<会社名>…」の投稿にぶら下がるスレッド）。担当DCをメンションして、スレッドに返信として投稿する（`thread_ts` を指定。`reply_broadcast` はしない）。
+1. スレッドの探し方：
+   - まず記録シート（`1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI`）の「案件スレ」タブ（A SIS／B 会社名／C thread_ts／D 見つけた日）にその SIS があれば、その thread_ts を使う。
+   - 無ければ slack_search_public_and_private で `in:<#C07LFRA6P36>`、キーワードに会社名（「株式会社」などを除いた部分）を入れて探し、Zapier の「■名前：」で始まる投稿の Message_ts を使う。見つけたら「案件スレ」タブに1行追記する。
+   - 見つからないときだけ、これまでどおり担当の DM に送る（実行ログに「案件スレなし→DM」と書く）。
+2. 文面（**パスワードは書かない**。チャンネルに残るため）：
 ```
-明日 <M/D(曜) HH:MM> の「<会社名>様」定例の資料ができました。
-・ポータル：https://kitahara-cyber.github.io/portal/ （パスワード <パスワード>）→ 上の「定例資料」タブ
+<@担当のSlackユーザーID> 明日 <M/D(曜) HH:MM> の定例資料ができました（自動作成）。
+・ポータル：https://kitahara-cyber.github.io/portal/c/<SIS>/ → 上の「定例資料」タブ
 ・要点：
   1. <サマリーの1文（タグなし）>
   2. <課題の1つめ>
   3. <ご提案の1つめ>
 ・定例の前に確認してほしいこと：<数字で気になる点・お客様に出す前に人が決めること（なければ「特になし」）>
-（自動で作成しました。数字は日次報告と共有シートの記録から出しています）
+資料に問題がなければ ✅ を、直したい点があればこのスレに返信してください。
 ```
 アクロネット・アイクリックはURLを `https://kitahara-cyber.github.io/portal/<場所>teirei/<YYYYMMDD>/` にする。
+3. 担当の SlackユーザーIDが空のとき（遠藤など）は、メンションを北原（U09T80ZAMT3）にする。
 
 ## 6. 記録と後片付け
 - 「実行ログ」に1件1行：実行日時／SIS／会社名／定例の日時／カレンダーの予定名／担当／結果（作成済み・スキップ（理由）・失敗（理由））／Slack送信（送信済み・未送信）
@@ -149,12 +155,12 @@ data.json の `checks` に注意書きがあれば必ず読む。
    `python3 _build/teirei/lock.py work/<SIS>/renew.html renew/<SIS>/<YYYYMMDD>/index.html --password <社内ポータルのパスワード> --title "<会社名> 様 継続のご提案（下書き）" --eyebrow "INTERNAL ／ 社外秘" --standalone --gzip --storage-key cs-pw`
 3. 平文に会社名・数字が残っていないことを確かめて、commit・push（4章 5. と同じ）。
 
-### 7-5. Slack で担当ディレクターに送る
+### 7-5. Slack の案件スレに流す（5章と同じスレッド。パスワードと料金の案は書かない）
 ```
-明日 <M/D(曜) HH:MM> の「<会社名>様」定例は、契約満了（<YYYY年M月>）の<前月／満了月>です。継続提案資料の下書きを作りました。
-・資料：https://kitahara-cyber.github.io/portal/renew/<SIS>/<YYYYMMDD>/ （社内ポータルと同じパスワード）
+<@担当のSlackユーザーID> 明日 <M/D(曜) HH:MM> の「<会社名>様」定例は、契約満了（<YYYY年M月>）の<前月／満了月>です。継続提案資料の下書きを作りました。
+・資料：https://kitahara-cyber.github.io/portal/renew/<SIS>/<YYYYMMDD>/ （社内ポータルと同じパスワードで開きます）
 ・要点：<summary（タグなし）>／次期の目標 アポ<n>件・受注<n>件
-・資料にまだ入っていない条件（renew.py の出力 missing）と、AI の案（suggest）：
+・資料にまだ入っていない条件（renew.py の出力 missing）。AI の案（suggest）は担当の DM に別に送る（料金の話をチャンネルに残さないため）：
   　次期のプラン：<案>／料金：<案（今期と同額なら そう書く）>／契約期間：<案>
   　継続割引・特典と更新の条件：会社の決まりで決めてください
   　単価：<分かれば>（入れると売上と費用対効果まで出ます）
