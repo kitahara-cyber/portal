@@ -226,15 +226,29 @@ function mail_(email) {
 
 /* ---------- カレンダー ---------- */
 function calList_(calendarId, start, end) {
-  const cal = CalendarApp.getCalendarById(calendarId);
-  if (!cal) throw new Error('calendar_not_shared');
-  const evs = cal.getEvents(new Date(start + '+09:00'), new Date(end + '+09:00'));
-  return {items: evs.map(e => ({
-    summary: e.getTitle(),
-    start: e.isAllDayEvent() ? {date: Utilities.formatDate(e.getAllDayStartDate(), 'Asia/Tokyo', 'yyyy-MM-dd')} : {dateTime: Utilities.formatDate(e.getStartTime(), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX")},
-    end: e.isAllDayEvent() ? {date: Utilities.formatDate(e.getAllDayEndDate(), 'Asia/Tokyo', 'yyyy-MM-dd')} : {dateTime: Utilities.formatDate(e.getEndTime(), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX")},
-    status: 'confirmed'
-  }))};
+  // 開いた人の権限で読む。購読していない同僚のカレンダーも読めるよう、Calendar API を直接呼ぶ
+  const tz = '+09:00';
+  const tMin = new Date(start + tz).toISOString(), tMax = new Date(end + tz).toISOString();
+  const head = {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()};
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events?singleEvents=true&orderBy=startTime&maxResults=250&timeZone=Asia%2FTokyo&timeMin=' + encodeURIComponent(tMin) + '&timeMax=' + encodeURIComponent(tMax);
+  const r = UrlFetchApp.fetch(url, {headers: head, muteHttpExceptions: true});
+  if (r.getResponseCode() === 200) {
+    const j = JSON.parse(r.getContentText());
+    return {items: (j.items || []).filter(e => e.status !== 'cancelled').map(e => ({
+      summary: e.summary || (e.visibility === 'private' ? '予定あり' : '（タイトルなし）'),
+      start: e.start, end: e.end, status: e.status, htmlLink: e.htmlLink || '', location: e.location || ''
+    }))};
+  }
+  // 詳細が見られないときは、空き時間情報だけ（予定あり）
+  const fb = UrlFetchApp.fetch('https://www.googleapis.com/calendar/v3/freeBusy', {method: 'post', contentType: 'application/json', headers: head, muteHttpExceptions: true,
+    payload: JSON.stringify({timeMin: tMin, timeMax: tMax, timeZone: 'Asia/Tokyo', items: [{id: calendarId}]})});
+  if (fb.getResponseCode() === 200) {
+    const c = (JSON.parse(fb.getContentText()).calendars || {})[calendarId] || {};
+    if (c.errors && c.errors.length) throw new Error('calendar_not_shared');
+    const f = d => Utilities.formatDate(new Date(d), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX");
+    return {items: (c.busy || []).map(x => ({summary: '予定あり', start: {dateTime: f(x.start)}, end: {dateTime: f(x.end)}, status: 'confirmed', busyOnly: true}))};
+  }
+  throw new Error('calendar_not_shared');
 }
 function calCreate_(req) {
   const ev = CalendarApp.getDefaultCalendar().createEvent(String(req.summary || '').slice(0, 200), new Date(req.start + '+09:00'), new Date(req.end + '+09:00'), {
