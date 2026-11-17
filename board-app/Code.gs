@@ -5,7 +5,8 @@
  * - 通知：スクリプトプロパティ SLACK_BOT_TOKEN（各人にDM）または SLACK_WEBHOOK_URL（チャンネルにメンション付きで投稿）
  *
  * 公開設定：デプロイ → 新しいデプロイ → 種類「ウェブアプリ」
- *   次のユーザーとして実行：自分 ／ アクセスできるユーザー：株式会社ライトアップ（writeup.co.jp）内の全員
+ *   次のユーザーとして実行：ウェブアプリケーションにアクセスしているユーザー ／ アクセスできるユーザー：株式会社ライトアップ（writeup.co.jp）内の全員
+ *   （各メンバーが自分のGoogleアカウントで動かす。未返信メールは本人のGmailだけを読む。タスク管理表は社内全員が編集できる前提）
  */
 
 const SHEET_ID = '1GKcj5qfLoaUlhqxEMEicIxhPbCPCyLkUCJkELnK6wkg';   // タスク管理表
@@ -75,6 +76,7 @@ function api(req) {
     case 'calList': return calList_(req.calendarId, req.start, req.end);
     case 'calCreate': return calCreate_(req);
     case 'request': return request_(email, req);
+    case 'mail': return mail_(email);
     default: throw new Error('unknown_op');
   }
 }
@@ -199,6 +201,27 @@ function request_(email, r) {
     rng.setNumberFormat('@').setValues([row]);
   } finally { lock.releaseLock(); }
   return {ok: true};
+}
+
+/* ---------- 未返信メール（開いた本人のGmailだけを読む。保存はしない） ---------- */
+function mail_(email) {
+  const threads = GmailApp.search('in:inbox newer_than:14d -from:me -category:promotions -category:social -category:forums', 0, 60);
+  const out = [];
+  threads.forEach(th => {
+    const msgs = th.getMessages(), last = msgs[msgs.length - 1];
+    const from = String(last.getFrom() || '');
+    if (from.toLowerCase().indexOf(email) >= 0) return;                                  // 最後が自分＝返信済み
+    if (/no-?reply|notification|mailer-daemon|calendar-notification|noreply/i.test(from)) return;  // 自動送信は除く
+    out.push({
+      id: th.getId(),
+      subject: th.getFirstMessageSubject() || '（件名なし）',
+      from: from.replace(/<[^>]*>/, '').replace(/"/g, '').trim() || from,
+      date: Utilities.formatDate(last.getDate(), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX"),
+      snippet: String(last.getPlainBody() || '').replace(/\s+/g, ' ').slice(0, 140),
+      url: 'https://mail.google.com/mail/u/0/#all/' + th.getId()
+    });
+  });
+  return {items: out.slice(0, 50)};
 }
 
 /* ---------- カレンダー ---------- */
