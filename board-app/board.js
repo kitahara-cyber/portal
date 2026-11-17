@@ -1038,7 +1038,7 @@ function viewMail(){
   h+='<div class="tablewrap"><table><thead><tr><th>受信</th><th>差出人</th><th>件名・本文の冒頭</th><th>経過</th><th></th></tr></thead><tbody>';
   m.items.forEach(x=>{
     const t=S.tasks.find(tt=>tt.sourceKey==="mail|"+x.id);
-    h+='<tr><td>'+esc(fmtTime(x.date))+'</td><td>'+esc(x.from)+'</td><td><b>'+esc(x.subject)+'</b><div class="hint">'+esc(x.snippet)+'</div></td><td>'+esc(mailAge(x.date))+'</td>'+
+    h+='<tr><td>'+esc(fmtTime(x.date))+'</td><td>'+esc(x.from)+'</td><td><b>'+esc(x.subject)+'</b>'+(x.more?' <span class="chip">ほか同じ件名'+x.more+'件</span>':'')+'<div class="hint">'+esc(x.snippet)+'</div></td><td>'+esc(mailAge(x.date))+'</td>'+
       '<td style="white-space:nowrap"><a class="btn small" href="'+esc(x.url)+'" target="_blank" rel="noopener">Gmailで開く ↗</a> '+(t?'<button class="btn small" type="button" data-open="'+t.id+'">ボードで開く</button>':'<button class="btn small primary" type="button" data-act="mailTask" data-mid="'+esc(x.id)+'">タスクにする</button>')+'</td></tr>';
   });
   return h+'</tbody></table></div>';
