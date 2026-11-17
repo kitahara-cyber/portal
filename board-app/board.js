@@ -823,10 +823,29 @@ function drawRoster(){
   '<div class="body"><div class="tablewrap"><table><thead><tr><th>表示名</th><th>フルネーム</th><th>役割</th><th>Slack ID</th><th>メール（カレンダー用）</th><th></th></tr></thead><tbody>'+
   R.map((m,i)=>'<tr><td><input type="text" id="rn'+i+'" value="'+esc(m.name)+'" style="width:70px"></td><td><input type="text" id="rf'+i+'" value="'+esc(m.full)+'" style="width:110px"></td><td><select id="rr'+i+'">'+["管理職","開発者","メンバー"].map(r=>'<option'+(m.role===r?' selected':'')+'>'+r+'</option>').join("")+'</select></td><td><input type="text" id="rs'+i+'" value="'+esc(m.slack)+'" style="width:120px"></td><td><input type="text" id="re'+i+'" value="'+esc(m.email||"")+'" style="width:200px"></td><td><button class="btn small danger" type="button" data-rdel="'+i+'">削除</button></td></tr>').join("")+
   '</tbody></table></div><div><button class="btn small" type="button" data-act="rosterAdd">＋ メンバーを追加</button></div><div class="hint">表示名は苗字だけにしてください（claude.aiのプロフィール名の先頭と照らし合わせて、開いた人を自動で判別します）。</div>'+
-  '<div class="field"><label for="mk">議事録の自動取り込み：タイトルに含まれる言葉（「、」区切り）</label><input type="text" id="mk" value="'+esc(RK)+'"><div class="hint">この言葉がタイトルに入ったGeminiのメモから「次のステップ」を取り込み、振り分け待ちに入れます。例：CSMTG、週次MTG</div></div></div>'+
+  '<div class="field"><label for="mk">議事録の自動取り込み：タイトルに含まれる言葉（「、」区切り）</label><input type="text" id="mk" value="'+esc(RK)+'"><div class="hint">この言葉がタイトルに入ったGeminiのメモから「次のステップ」を取り込み、振り分け待ちに入れます。例：CSMTG、週次MTG</div></div>'+
+  (window.__GAS?'':'<div class="field"><span class="lab">Googleアカウント版のボードへ移す</span><div class="hint">タスク・コメント・プロジェクト・名簿・設定を、タスク管理表の「_board_db」シートに書き出します（上書き）。移したあとは、Googleアカウント版のボードを使ってください。</div><div><button class="btn small" type="button" data-act="migrateGas">Googleボードへデータを移す</button> <span id="migMsg" class="hint"></span></div></div>')+
+  '</div>'+
   '<footer><button class="btn" type="button" data-act="close">キャンセル</button><button class="btn primary" type="button" data-act="rosterSave">保存する</button></footer></div></div>';
 }
 function readRoster(){ if($("#mk")) RK=$("#mk").value; R=R.map((m,i)=>({...m, name:$("#rn"+i).value.trim(), full:$("#rf"+i).value.trim(), role:$("#rr"+i).value, slack:$("#rs"+i).value.trim(), email:($("#re"+i)?$("#re"+i).value.trim():(m.email||""))})); }
+function onceSnap(ref){ return new Promise((res,rej)=>{ let u=null, done=false; u=ref.onSnapshot(s=>{ if(done) return; done=true; setTimeout(()=>{ try{ u&&u(); }catch(e){} },0); res(s); }, e=>{ if(!done){ done=true; rej(e); } }); }); }
+async function migrateToGas(){
+  const msg=t=>{ const el=$("#migMsg"); if(el) el.textContent=t; };
+  if(!S.mcp){ toast("Google Sheetsにつなげられません"); return; }
+  try{
+    msg("読み込み中…");
+    const rows=[], now=nowIso(), push=(path,data)=>rows.push([path, JSON.stringify(data), now, "migrate"]);
+    for(const c of ["tasks","projects","minutes"]){ const snap=await onceSnap(S.db.collection(c)); snap.docs.forEach(d=>push(c+"/"+d.id, d.data())); }
+    for(const p of ["config/roster","config/minutes"]){ const snap=await onceSnap(S.db.doc(p)); if(snap.exists) push(p, snap.data()); }
+    let nc=0;
+    for(const t of S.tasks){ const snap=await onceSnap(S.db.collection("tasks/"+t.id+"/comments")); snap.docs.forEach(d=>{ push("tasks/"+t.id+"/comments/"+d.id, d.data()); nc++; }); }
+    msg("書き出し中…（"+rows.length+"件）");
+    await S.mcp.callTool("Google Sheets","update_values",{spreadsheetId:SHEET_ID, range:"'_board_db'!A1:D"+(rows.length+1), values:[["path","json","updatedAt","updatedBy"]].concat(rows)});
+    msg("移しました："+rows.length+"件（うちコメント"+nc+"件）");
+    toast("Googleボードへ移しました（"+rows.length+"件）");
+  }catch(e){ msg(""); toast("移せませんでした："+mcpErrText(e,"Google Sheets"),8000); }
+}
 async function saveRoster(){
   readRoster();
   const members=R.filter(m=>m.name).map(m=>({...m, key:m.key||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)), full:m.full||m.name}));
@@ -1060,6 +1079,7 @@ document.addEventListener("click", async e=>{
     case "who": openWhoModal(); break;
     case "roster": openRoster(); break;
     case "rosterAdd": readRoster(); R.push({key:"", name:"", full:"", role:"メンバー", slack:""}); drawRoster(); break;
+    case "migrateGas": migrateToGas(); break;
     case "rosterSave": saveRoster(); break;
     case "saveTask": saveTask(); break;
     case "edit": if(t){ const tt=t; closeLayer(); openForm(tt); } break;
