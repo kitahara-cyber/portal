@@ -1,0 +1,1113 @@
+/* CSチーム タスクボード（Apps Script版）— このファイルは build.py で作る。元：cs-board/index.html */
+(function(){
+  var f=document.createElement('link'); f.rel='stylesheet'; f.href='https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap'; document.head.appendChild(f);
+  var st=document.createElement('style'); st.textContent="\n/* 左にナビ、右に「要約 → 絞り込み → ボード」の順。状態は色付きチップで一目で分かるようにする */\n:root{\n  --bg:#f3f4f1; --surface:#ffffff; --sunken:#eceee9; --ink:#1b2220; --mute:#5c6863; --line:#dbe0db;\n  --accent:#1e5aa6; --accent-ink:#ffffff; --accent-bg:#e5edf9;\n  --danger:#b8332a; --danger-bg:#fbe8e5; --warn:#8f5c00; --warn-bg:#fcefd4; --ok:#1d7448; --ok-bg:#e1f2e8;\n  --info:#5546ad; --info-bg:#ece9fa; --muted-bg:#eef0ed;\n  --display:\"IBM Plex Sans JP\",\"Hiragino Sans\",\"Noto Sans JP\",system-ui,sans-serif;\n  --body:\"Zen Kaku Gothic New\",\"Hiragino Sans\",\"Noto Sans JP\",system-ui,sans-serif;\n  --r:10px; color-scheme:light;\n}\n@media (prefers-color-scheme:dark){:root:not([data-theme=\"light\"]){\n  --bg:#141917; --surface:#1c2320; --sunken:#171d1a; --ink:#e6ece9; --mute:#9aa8a2; --line:#2e3833;\n  --accent:#7fb0ff; --accent-ink:#0d1a2e; --accent-bg:#1c2b44;\n  --danger:#ff8a7d; --danger-bg:#3d1f1b; --warn:#f2bd5c; --warn-bg:#3a2d12; --ok:#6fd39c; --ok-bg:#16301f;\n  --info:#b3a8ff; --info-bg:#27234a; --muted-bg:#232b27; color-scheme:dark}}\n:root[data-theme=\"dark\"]{\n  --bg:#141917; --surface:#1c2320; --sunken:#171d1a; --ink:#e6ece9; --mute:#9aa8a2; --line:#2e3833;\n  --accent:#7fb0ff; --accent-ink:#0d1a2e; --accent-bg:#1c2b44;\n  --danger:#ff8a7d; --danger-bg:#3d1f1b; --warn:#f2bd5c; --warn-bg:#3a2d12; --ok:#6fd39c; --ok-bg:#16301f;\n  --info:#b3a8ff; --info-bg:#27234a; --muted-bg:#232b27; color-scheme:dark}\n*{box-sizing:border-box}\nhtml,body{height:100%;margin:0}\nbody{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.6}\nbutton,input,select,textarea{font:inherit;color:inherit}\na{color:var(--accent)}\n:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n.app{display:grid;grid-template-columns:232px 1fr;height:100%}\n/* sidebar */\n.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:auto}\n.brand{display:flex;align-items:center;gap:10px;padding:16px 16px 12px}\n.brand .logo{width:32px;height:32px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px}\n.brand b{font-family:var(--display);font-size:15px;display:block;line-height:1.2}\n.brand small{color:var(--mute);font-size:11px}\n.nav{display:flex;flex-direction:column;gap:2px;padding:4px 8px}\n.nav button{display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer}\n.nav button b{font-weight:700;font-size:14px}\n.nav button span{font-size:11px;color:var(--mute)}\n.nav button:hover{background:var(--sunken)}\n.nav button[aria-current=\"page\"]{background:var(--accent-bg)}\n.nav button[aria-current=\"page\"] b{color:var(--accent)}\n.side h4{font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.06em;margin:16px 18px 4px}\n.links{display:flex;flex-direction:column;gap:2px;padding:0 8px}\n.links a{display:flex;align-items:center;justify-content:space-between;gap:8px;text-decoration:none;color:var(--ink);padding:7px 10px;border-radius:8px;font-size:13px}\n.links a:hover{background:var(--sunken)}\n.links a::after{content:\"↗\";color:var(--mute);font-size:12px}\n.me{margin-top:auto;border-top:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;gap:10px}\n.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}\n.me b{display:block;font-size:13px}\n.me small{color:var(--mute);font-size:11px}\n.me button{margin-left:auto;border:1px solid var(--line);background:transparent;border-radius:6px;font-size:11px;padding:3px 8px;cursor:pointer}\n/* main */\n.main{min-width:0;overflow:auto;display:flex;flex-direction:column}\n.top{display:flex;align-items:center;gap:12px;padding:16px 24px 0;flex-wrap:wrap}\n.top h1{font-family:var(--display);font-size:22px;margin:0;text-wrap:balance}\n.top p{margin:0;color:var(--mute);font-size:13px;flex-basis:100%}\n.top .grow{flex:1}\n.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}\n.btn:hover{background:var(--sunken)}\n.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}\n.btn.primary:hover{filter:brightness(1.07)}\n.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}\n.btn.small{padding:4px 9px;font-size:12px}\n.btn:disabled{opacity:.5;cursor:not-allowed}\n.content{padding:16px 24px 32px;display:flex;flex-direction:column;gap:16px;min-width:0}\n.banner{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 14px;font-size:13px}\n.banner.warn{border-color:color-mix(in srgb,var(--warn) 45%,var(--line));background:var(--warn-bg)}\n.banner.err{border-color:color-mix(in srgb,var(--danger) 45%,var(--line));background:var(--danger-bg)}\n/* tiles */\n.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}\n.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left;cursor:pointer}\n.tile:hover{border-color:var(--accent)}\n.tile span{font-size:12px;color:var(--mute);display:block}\n.tile b{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.3}\n.tile.alert b{color:var(--danger)}\n.tile.waiting b{color:var(--warn)}\n/* filters */\n.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}\n.seg{display:inline-flex;background:var(--sunken);border-radius:999px;padding:3px;gap:2px}\n.seg button{border:0;background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;white-space:nowrap}\n.seg button[aria-pressed=\"true\"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:700;color:var(--accent)}\n.seg button i{font-style:normal;color:var(--mute);font-size:11px;margin-left:4px;font-variant-numeric:tabular-nums}\nselect,input[type=text],input[type=search],input[type=date],textarea{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0}\ntextarea{width:100%;resize:vertical}\n.bar .spacer{flex:1}\nlabel.check{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute);cursor:pointer}\n/* board */\n.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,1fr);gap:12px;overflow-x:auto;padding-bottom:6px;align-items:start}\n.col{background:var(--sunken);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}\n.col h3{margin:0 2px 2px;font-size:13px;display:flex;align-items:center;gap:6px}\n.col h3 i{font-style:normal;color:var(--mute);font-weight:500;font-variant-numeric:tabular-nums}\n.col h3 .dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}\n.col .empty{color:var(--mute);font-size:12px;padding:8px 4px}\n.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-width:0}\n.card:hover{border-color:var(--accent)}\n.card h4{margin:0;font-size:14px;line-height:1.45;overflow-wrap:anywhere}\n.card .meta{font-size:12px;color:var(--mute);overflow-wrap:anywhere}\n.card.is-overdue{box-shadow:inset 3px 0 0 var(--danger)}\n.chips{display:flex;flex-wrap:wrap;gap:4px}\n.chip{display:inline-flex;align-items:center;border-radius:5px;padding:0 7px;font-size:11px;font-weight:700;line-height:20px;background:var(--muted-bg);color:var(--mute);white-space:nowrap}\n.chip.danger{background:var(--danger-bg);color:var(--danger)}\n.chip.warn{background:var(--warn-bg);color:var(--warn)}\n.chip.ok{background:var(--ok-bg);color:var(--ok)}\n.chip.info{background:var(--info-bg);color:var(--info)}\n.chip.accent{background:var(--accent-bg);color:var(--accent)}\n.chip.draft{background:transparent;border:1px dashed var(--mute);color:var(--mute);line-height:18px}\n/* list */\n.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}\ntable{border-collapse:collapse;width:100%;font-size:13px}\nth,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}\nth{font-size:12px;color:var(--mute);font-weight:700;background:var(--sunken);white-space:nowrap}\ntbody tr:last-child td{border-bottom:0}\ntbody tr.click{cursor:pointer}\ntbody tr.click:hover td{background:var(--sunken)}\ntd.num{font-variant-numeric:tabular-nums;text-align:right}\ntd .sub{color:var(--mute);font-size:12px}\n/* team */\n.stack{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--muted-bg);min-width:120px}\n.stack span{display:block;height:100%}\n.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute)}\n.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}\n/* projects */\n.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}\n.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left}\n.pcard:hover{border-color:var(--accent)}\n.pcard h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}\n.pcard h3 .sw{width:10px;height:10px;border-radius:3px;flex:none}\n.pcard p{margin:0;color:var(--mute);font-size:13px}\n.pcard .nums{display:flex;gap:14px;font-size:12px;color:var(--mute)}\n.pcard .nums b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:2px}\n/* drawer & modal */\n.scrim{position:fixed;inset:0;background:rgba(10,14,12,.35);z-index:20;display:flex;justify-content:flex-end}\n.drawer{width:min(560px,100%);height:100%;background:var(--surface);display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(0,0,0,.15)}\n.drawer header{display:flex;align-items:flex-start;gap:10px;padding:16px 20px 12px;border-bottom:1px solid var(--line)}\n.drawer header h2{margin:0;font-family:var(--display);font-size:18px;flex:1;overflow-wrap:anywhere;text-wrap:balance}\n.drawer header small{display:block;color:var(--mute);font-size:12px;font-family:var(--body);font-weight:400}\n.x{border:0;background:transparent;font-size:20px;line-height:1;cursor:pointer;color:var(--mute);padding:4px}\n.drawer .body{flex:1;overflow:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}\n.drawer footer{border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}\n.kv{display:grid;grid-template-columns:88px 1fr;gap:6px 12px;font-size:13px}\n.kv dt{color:var(--mute)}\n.kv dd{margin:0;overflow-wrap:anywhere}\n.memo{background:var(--sunken);border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}\n.state{border-radius:8px;padding:10px 12px;font-size:13px;background:var(--accent-bg)}\n.state.warn{background:var(--warn-bg)}\n.state.ok{background:var(--ok-bg)}\n.actions{display:flex;flex-wrap:wrap;gap:8px}\n.decide{display:flex;flex-direction:column;gap:6px}\n.decide button{text-align:left}\n.field{display:flex;flex-direction:column;gap:5px}\n.field > label,.field > .lab{font-size:12px;font-weight:700;color:var(--mute)}\n.field .req{color:var(--danger);font-weight:700;margin-left:4px}\n.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n.pick{display:flex;flex-wrap:wrap;gap:6px}\n.pick button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:13px}\n.pick button[aria-pressed=\"true\"]{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);font-weight:700}\n.hint{font-size:12px;color:var(--mute)}\n.comments{display:flex;flex-direction:column;gap:8px}\n.cm{border:1px solid var(--line);border-radius:8px;padding:8px 10px}\n.cm .who{font-size:12px;color:var(--mute)}\n.cm .who b{color:var(--ink);margin-right:6px}\n.cm p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}\n.mention{color:var(--accent)}\n.mention-sug{position:absolute;left:0;top:100%;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12);display:flex;flex-direction:column;min-width:180px;padding:4px}\n.mention-sug[hidden]{display:none}\n.mention-sug button{border:0;background:transparent;text-align:left;padding:6px 10px;border-radius:6px;cursor:pointer}\n.mention-sug button:hover{background:var(--accent-bg)}\n.hist{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:2px}\ndetails summary{cursor:pointer;font-size:12px;color:var(--mute)}\n.modal{margin:auto;background:var(--surface);border-radius:12px;padding:20px;width:min(420px,calc(100% - 32px));display:flex;flex-direction:column;gap:12px}\n.modal h2{margin:0;font-family:var(--display);font-size:17px}\n.modal .who{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}\n.modal .who button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px;cursor:pointer;text-align:left}\n.modal .who button:hover{border-color:var(--accent)}\n.modal .who small{display:block;color:var(--mute);font-size:11px}\n.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:40;max-width:calc(100% - 32px);box-shadow:0 6px 18px rgba(0,0,0,.2)}\n.mobilebar{display:none}\n@media (max-width:820px){\n  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}\n  .side{display:none}\n  .side.open{display:flex;position:fixed;inset:0 25% 0 0;z-index:30;box-shadow:8px 0 24px rgba(0,0,0,.2)}\n  .mobilebar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}\n  .top{padding:14px 16px 0}.content{padding:12px 16px 24px}\n  .row2{grid-template-columns:1fr}\n  .board{grid-auto-columns:minmax(240px,86%)}\n}\n@media (prefers-reduced-motion:no-preference){.card,.tile,.pcard{transition:border-color .15s}}\n"; document.head.appendChild(st);
+  var l=document.getElementById('gas-loading'); if(l) l.remove();
+  var wrap=document.createElement('div'); wrap.innerHTML="\n<div class=\"app\" id=\"app\">\n  <div class=\"mobilebar\"><button class=\"btn small\" id=\"menuBtn\" type=\"button\">メニュー</button><b style=\"font-family:var(--display)\">CSチーム タスクボード</b></div>\n  <aside class=\"side\" id=\"side\"></aside>\n  <main class=\"main\" id=\"main\"><div class=\"content\"><div class=\"banner\">読み込み中です…</div></div></main>\n</div>\n<div id=\"layer\"></div>\n"; while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
+})();
+/* CSタスクボード：claude.ai の db / user / mcp と同じ形の窓口を、Apps Script（google.script.run）で用意する */
+(function(){
+  'use strict';
+  var G = window.__GAS || {};
+  var docs = {};          // path -> data
+  var loaded = false, email = (G.email || '').toLowerCase();
+  var listeners = [];     // {kind:'coll'|'doc', path, order, cb}
+
+  function call(req){
+    return new Promise(function(res, rej){
+      if(!window.google || !google.script || !google.script.run){ rej({code:'server_unavailable', message:'google.script.run がありません'}); return; }
+      google.script.run.withSuccessHandler(res).withFailureHandler(function(e){
+        var m = String((e && e.message) || e || '');
+        var code = /permission_denied/.test(m) ? 'invalid_argument' : /not_found/.test(m) ? 'not_found' : 'tool_error';
+        rej({code: code, message: m});
+      }).api(req);
+    });
+  }
+  function clone(o){ return o == null ? o : JSON.parse(JSON.stringify(o)); }
+  function idOf(path){ var i = path.lastIndexOf('/'); return path.slice(i + 1); }
+  function inColl(path, coll){ return path.indexOf(coll + '/') === 0 && path.slice(coll.length + 1).indexOf('/') < 0; }
+  function collSnap(coll, order){
+    var list = Object.keys(docs).filter(function(p){ return inColl(p, coll); }).map(function(p){ var d = docs[p]; return {id: idOf(p), data: function(){ return clone(d); }, _d: d}; });
+    if(order) list.sort(function(a, b){ return String(a._d[order] || '').localeCompare(String(b._d[order] || '')); });
+    return {docs: list, size: list.length, empty: !list.length, metadata: {fromCache: false}};
+  }
+  function docSnap(path){ var d = docs[path]; return {id: idOf(path), exists: d !== undefined, data: function(){ return clone(d); }}; }
+  function fire(){
+    if(!loaded) return;
+    listeners.slice().forEach(function(l){ try{ l.cb(l.kind === 'coll' ? collSnap(l.path, l.order) : docSnap(l.path)); }catch(e){ console.error(e); } });
+  }
+  var syncing = null;
+  function sync(){
+    if(syncing) return syncing;
+    syncing = call({op: 'all'}).then(function(r){ docs = r.docs || {}; if(r.email) email = String(r.email).toLowerCase(); loaded = true; fire(); })
+      .catch(function(e){ listeners.forEach(function(l){ if(l.err) try{ l.err(e); }catch(x){} }); })
+      .then(function(){ syncing = null; });
+    return syncing;
+  }
+  setInterval(function(){ if(!document.hidden) sync(); }, 20000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) sync(); });
+
+  function listen(kind, path, order, cb, err){
+    var l = {kind: kind, path: path, order: order, cb: cb, err: err};
+    listeners.push(l);
+    if(loaded) setTimeout(function(){ cb(kind === 'coll' ? collSnap(path, order) : docSnap(path)); }, 0); else sync();
+    return function(){ listeners = listeners.filter(function(x){ return x !== l; }); };
+  }
+  function docRef(path){
+    return {
+      id: idOf(path), path: path,
+      onSnapshot: function(cb, err){ return listen('doc', path, null, cb, err); },
+      get: function(){ return (loaded ? Promise.resolve() : sync()).then(function(){ return docSnap(path); }); },
+      set: function(data){ var prev = docs[path]; docs[path] = clone(data); fire(); return call({op: 'set', path: path, data: data}).catch(function(e){ if(prev === undefined) delete docs[path]; else docs[path] = prev; fire(); throw e; }); },
+      update: function(patch){ var prev = docs[path]; if(prev === undefined) return Promise.reject({code: 'not_found'}); var nx = clone(prev); Object.keys(patch).forEach(function(k){ nx[k] = patch[k]; }); docs[path] = nx; fire();
+        return call({op: 'update', path: path, data: patch}).catch(function(e){ docs[path] = prev; fire(); throw e; }); },
+      delete: function(){ var keep = {}; Object.keys(docs).forEach(function(p){ if(p === path || p.indexOf(path + '/') === 0){ keep[p] = docs[p]; delete docs[p]; } }); fire();
+        return call({op: 'delete', path: path}).catch(function(e){ Object.keys(keep).forEach(function(p){ docs[p] = keep[p]; }); fire(); throw e; }); }
+    };
+  }
+  function collRef(coll, order){
+    return {
+      orderBy: function(f){ return collRef(coll, f); },
+      limit: function(){ return collRef(coll, order); },
+      onSnapshot: function(cb, err){ return listen('coll', coll, order, cb, err); },
+      get: function(){ return (loaded ? Promise.resolve() : sync()).then(function(){ return collSnap(coll, order); }); },
+      doc: function(id){ return docRef(coll + '/' + id); },
+      add: function(data){ return call({op: 'add', coll: coll, data: data}).then(function(r){ docs[r.path] = r.data; fire(); return docRef(r.path); }); }
+    };
+  }
+  var db = { collection: function(p){ return collRef(p, null); }, doc: function(p){ return docRef(p); } };
+
+  function rosterMember(){
+    var r = docs['config/roster'];
+    return r && (r.members || []).find(function(m){ return String(m.email || '').toLowerCase() === email; });
+  }
+  var user = {
+    can: function(){ return Promise.resolve(true); },
+    id: function(){ return Promise.resolve(email || null); },
+    me: function(){ return (loaded ? Promise.resolve() : sync()).then(function(){ var m = rosterMember(); return {name: m ? (m.full || m.name) : '', email: email}; }); }
+  };
+
+  var mcp = {
+    callTool: function(server, tool, args){
+      args = args || {};
+      if(server === 'Slack' && tool === 'slack_send_message') return call({op: 'slack', user: args.channel_id, text: args.message}).then(function(r){ return {payload: r}; });
+      if(server === 'Google Sheets' && tool === 'get_values') return call({op: 'values', spreadsheetId: args.spreadsheetId, range: args.range}).then(function(r){ return {payload: r}; });
+      if(server === 'Google Calendar' && tool === 'list_events') return call({op: 'calList', calendarId: args.calendarId, start: args.startTime, end: args.endTime}).then(function(r){ return {payload: r}; });
+      if(server === 'Google Calendar' && tool === 'create_event') return call({op: 'calCreate', summary: args.summary, start: args.startTime, end: args.endTime, description: args.description, guests: (args.attendees || []).map(function(a){ return a.email; })}).then(function(r){ return {payload: r}; });
+      return Promise.reject({code: 'not_in_manifest', message: server + ' ' + tool});
+    }
+  };
+
+  window.claude = { use: function(name){ return Promise.resolve(name === 'db' ? db : name === 'user' ? user : name === 'mcp' ? mcp : null); } };
+  if(G.task) { try{ location.hash = '#t-' + G.task; }catch(e){} }
+  else if(G.view) { try{ location.hash = '#' + G.view; }catch(e){} }
+})();
+
+
+"use strict";
+/* ============ 固定設定 ============ */
+const PAGE_URL = (window.__GAS && window.__GAS.url) || "https://claude.ai/artifact/JNvCVQjjvQus16Za658V8P";
+function taskUrl(id){ return window.__GAS ? PAGE_URL+"?t="+id : PAGE_URL+"#t-"+id; }
+const SHEET_ID = "1GKcj5qfLoaUlhqxEMEicIxhPbCPCyLkUCJkELnK6wkg"; // タスク管理表
+const FORM_LIST_URL = "https://script.google.com/a/macros/writeup.co.jp/s/AKfycbwOV22wzMab-Tb-QyvYIKhq8A9x9iaVazZtg9iktTviseeilf7JnoLz2Ue42N3fqDhE/exec";
+const FORM_TASK_URL = FORM_LIST_URL + "?page=task";
+const LINKS = [
+  {label:"顧客ポータル", url:"https://kitahara-cyber.github.io/portal/"},
+  {label:"CRM（kintone）", url:"https://kintone-crm.onrender.com/login"},
+  {label:"営業戦略ルーム（戦略AI）", url:"https://claude.ai/artifact/N7xPCiS9NTh9ozjQ9PbB6i"},
+  {label:"アポ獲得トーク作成・採点", url:"https://claude.ai/artifact/DqNDRpTVq1vGhxhzqD15te"},
+  {label:"リスト作成依頼フォーム", url:FORM_LIST_URL},
+  {label:"タスク依頼フォーム", url:FORM_TASK_URL},
+  {label:"タスク管理表（シート）", url:"https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/edit"}
+];
+const DEFAULT_ROSTER = [
+  {key:"takahashi", name:"高橋", full:"高橋 遼馬", role:"管理職", slack:"U02F92HQS6B", email:"ryouma_takahashi@writeup.co.jp"},
+  {key:"sato",      name:"佐藤", full:"佐藤 太一", role:"管理職", slack:"U01CK4L66RH", email:"t_sato@writeup.co.jp"},
+  {key:"koguchi",   name:"小口", full:"小口 裕也", role:"管理職", slack:"U01750HA10U", email:"koguchi@writeup.co.jp"},
+  {key:"kitahara",  name:"北原", full:"北原 奈々", role:"開発者", slack:"U09T80ZAMT3", email:"kitahara@writeup.co.jp"},
+  {key:"hayashi",   name:"林",   full:"林 敬太郎", role:"メンバー", slack:"U02GX5DJ56U", email:"hayashi@writeup.co.jp"},
+  {key:"koyama",    name:"小山", full:"小山 雄介", role:"メンバー", slack:"U082VB407L5", email:"koyama@writeup.co.jp"},
+  {key:"kitami",    name:"北見", full:"北見 志織", role:"メンバー", slack:"U0C4PKWSK5Z", email:"kitami@writeup.co.jp"},
+  {key:"oishi",     name:"大石", full:"大石 翔太", role:"メンバー", slack:"U07N07C7Z6Y", email:""},
+  {key:"fukata",    name:"深田", full:"深田 怜佑", role:"メンバー", slack:"U0AGRRPL97Z", email:"ryosuke_fukata@writeup.co.jp"}
+];
+const KINDS = ["通常タスク","リスト作成","定例資料","継続提案資料","判断を仰ぐ","修正依頼","質問"];
+const STATUS = {
+  draft:{label:"振り分け待ち", cls:"draft", color:"#8a918d"},
+  todo:{label:"未着手", cls:"", color:"var(--mute)"},
+  reopen:{label:"再依頼", cls:"danger", color:"var(--danger)"},
+  doing:{label:"対応中", cls:"accent", color:"var(--accent)"},
+  blocked:{label:"ブロック", cls:"info", color:"var(--info)"},
+  review:{label:"確認待ち", cls:"warn", color:"var(--warn)"},
+  done:{label:"完了", cls:"ok", color:"var(--ok)"},
+  cancel:{label:"中止", cls:"", color:"var(--mute)"}
+};
+const OPEN = ["todo","reopen","doing","blocked","review"];
+const PRIO = {high:"高", normal:"通常", low:"低"};
+const PCOLORS = ["#1e5aa6","#1d7448","#b8332a","#8f5c00","#5546ad","#0f7b85","#a2457a"];
+
+/* ============ 状態 ============ */
+const S = {
+  db:null, user:null, mcp:null, uid:null, me:null, roster:DEFAULT_ROSTER,
+  tasks:[], projects:[], loaded:{tasks:false, projects:false}, loadErr:"", slow:false,
+  view:"tasks", scope:"mine", person:"", group:"status", layout:"board", q:"", showDone:false, project:"",
+  canWrite:null, readOnly:false,
+  forms:{state:"idle", list:[], task:[], err:"", at:0},
+  openId:null, unsubComments:null, comments:[], minutesCfg:{keywords:["CSMTG"]}
+};
+let LS = null; try { LS = window.localStorage; } catch(e) { LS = null; }
+function lsGet(k){ try { return LS ? LS.getItem(k) : null; } catch(e){ return null; } }
+function lsSet(k,v){ try { if (LS) LS.setItem(k,v); } catch(e){} }
+
+/* ============ ユーティリティ ============ */
+const $ = (s, r=document) => r.querySelector(s);
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function pad(n){ return String(n).padStart(2,"0"); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function dayDiff(due){ if(!due) return null; return Math.round((Date.parse(due+"T00:00:00")-Date.parse(todayStr()+"T00:00:00"))/86400000); }
+const WD = ["日","月","火","水","木","金","土"];
+function fmtDate(s){ if(!s) return ""; const d=new Date(s+"T00:00:00"); if(isNaN(d)) return s; return (d.getMonth()+1)+"/"+d.getDate()+"("+WD[d.getDay()]+")"; }
+function fmtTime(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; return (d.getMonth()+1)+"/"+d.getDate()+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function endOfWeek(){ const d=new Date(); const add = (7 - d.getDay()) % 7; return addDays(add); } // 日曜まで
+function nowIso(){ return new Date().toISOString(); }
+function member(key){ return S.roster.find(m=>m.key===key) || {key, name:key||"未設定", full:key||"未設定", role:"", slack:""}; }
+function nm(key){ return member(key).name; }
+function names(keys){ return (keys||[]).map(nm).join("・") || "未設定"; }
+function isLead(key){ const r=member(key).role; return r==="管理職"||r==="開発者"; }
+function proj(id){ return S.projects.find(p=>p.id===id); }
+function isOpen(t){ return OPEN.includes(t.status); }
+function isOverdue(t){ const d=dayDiff(t.due); return isOpen(t) && d!==null && d<0; }
+function toast(msg, ms=3800){ const el=document.createElement("div"); el.className="toast"; el.setAttribute("role","status"); el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(), ms); }
+function normName(s){ return String(s||"").replace(/[\s　]/g,""); }
+function matchMember(raw){ const n=normName(raw); if(!n) return null; const hit=S.roster.find(m=>n.startsWith(normName(m.name))); return hit?hit.key:null; }
+function dueChip(t){
+  if(!t.due) return '<span class="chip">期限なし</span>';
+  const d=dayDiff(t.due);
+  if(t.status==="done"||t.status==="cancel") return '<span class="chip">'+esc(fmtDate(t.due))+'</span>';
+  if(d<0) return '<span class="chip danger">'+(-d)+'日超過</span>';
+  if(d===0) return '<span class="chip danger">今日</span>';
+  if(d===1) return '<span class="chip warn">明日</span>';
+  return '<span class="chip">'+esc(fmtDate(t.due))+'</span>';
+}
+function statusChip(t){ const s=STATUS[t.status]||STATUS.todo; return '<span class="chip '+s.cls+'">'+s.label+'</span>'; }
+
+/* ============ 起動 ============ */
+async function boot(){
+  renderSide(); routeFromHash(); render();
+  if(!window.claude || typeof window.claude.use!=="function"){
+    S.loadErr="このページはclaude.aiで開いたときにデータを保存・共有できます。"; render(); return;
+  }
+  const [db,user,mcp] = await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("mcp")]);
+  S.db=db; S.user=user; S.mcp=mcp;
+  if(!db){ S.loadErr="データに接続できませんでした。claude.aiにサインインした状態で開き直してください。"; render(); return; }
+  try { const c = user && user.can ? await user.can("data.write") : null; S.canWrite = c; if(c===false) S.readOnly=true; } catch(e){}
+  try { S.uid = user ? await user.id() : null; } catch(e){ S.uid=null; }
+  // 名簿（管理画面で変更されていれば上書き）
+  db.doc("config/roster").onSnapshot(snap=>{
+    const d=snap.exists?snap.data():null;
+    if(d && Array.isArray(d.members) && d.members.length){ S.roster=d.members.map(m=>({...m})); }
+    renderSide(); render();
+  }, ()=>{});
+  db.doc("config/minutes").onSnapshot(snap=>{ const d=snap.exists?snap.data():null; S.minutesCfg=(d&&Array.isArray(d.keywords))?d:{keywords:["CSMTG"]}; }, ()=>{});
+  await resolveMe();
+  const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
+  db.collection("tasks").onSnapshot(snap=>{
+    S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); } }
+    else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
+    render(); refreshDrawer();
+    if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
+  }, e=>{ clearTimeout(timer); S.loadErr=dbErrText(e); render(); });
+  db.collection("projects").onSnapshot(snap=>{
+    S.projects=snap.docs.map(d=>({id:d.id, ...d.data()})).filter(p=>!p.archived).sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+    S.loaded.projects=true; render();
+  }, ()=>{});
+  window.addEventListener("hashchange", ()=>{ routeFromHash(); render(); });
+}
+function dbErrText(e){
+  const c=e&&e.code;
+  if(c==="revoked") return "このページへのアクセス権が変わりました。";
+  if(c==="resource_exhausted") return "一時的にアクセスが集中しています。少し待ってから開き直してください。";
+  return "データを読み込めませんでした（"+(c||"不明")+"）。";
+}
+async function resolveMe(){
+  // 1) 自分で選んだ名前  2) claude.aiのプロフィール名から推定
+  if(S.uid){
+    try { const s=await S.db.doc("data/users/"+S.uid+"/profile").get(); if(s.exists && s.data().member){ S.me=s.data().member; } } catch(e){}
+  }
+  if(!S.me){ const k=lsGet("csboard.me"); if(k && S.roster.some(m=>m.key===k)) S.me=k; }
+  if(!S.me && S.user && S.user.me){
+    try { const p=await S.user.me(); const k=matchMember(p && p.name); if(k) S.me=k; } catch(e){}
+  }
+  if(S.me){ if(isLead(S.me) && !location.hash) S.view="team"; renderSide(); render(); }
+  else openWhoModal();
+}
+async function setMe(key){
+  S.me=key; lsSet("csboard.me", key);
+  if(S.uid && S.db){ try { await S.db.doc("data/users/"+S.uid+"/profile").set({member:key}); } catch(e){} }
+  closeLayer(); renderSide(); render();
+}
+
+/* ============ ルーティング ============ */
+function routeFromHash(){
+  const h=(location.hash||"").slice(1);
+  if(["tasks","team","projects","forms","kouryu","calendar"].includes(h)) S.view=h;
+  else if(h.startsWith("t-")){ S.view="tasks"; const id=h.slice(2); setTimeout(()=>openTask(id),0); }
+}
+function go(view){ S.view=view; try{ history.replaceState(null,"","#"+view); }catch(e){} closeSideMobile(); render(); renderSide(); if(view==="forms" && S.forms.state==="idle") loadForms(false); if(view==="kouryu" && S.kr.state==="idle") loadKouryu(false); }
+
+/* ============ サイドバー ============ */
+function renderSide(){
+  const me=S.me?member(S.me):null;
+  const nav=[["tasks","タスク","依頼・対応・確認"],["team","メンバー状況","全員の状況を一覧で"],["projects","プロジェクト","案件・施策ごとのまとまり"],["forms","フォームからの依頼","リスト・タスク依頼フォーム"],["kouryu","交流会","参加状況とフォロー"],["calendar","カレンダー","DCさんの1週間の予定"]];
+  $("#side").innerHTML =
+    '<div class="brand"><div class="logo">CS</div><div><b>CSタスクボード</b><small>ライトアップ CSチーム</small></div></div>'+
+    '<nav class="nav" aria-label="メイン">'+nav.map(n=>'<button type="button" data-go="'+n[0]+'"'+(S.view===n[0]?' aria-current="page"':'')+'><b>'+n[1]+'</b><span>'+n[2]+'</span></button>').join("")+'</nav>'+
+    '<h4>ツール</h4><div class="links">'+LINKS.map(l=>'<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join("")+'</div>'+
+    (isLead(S.me)?'<h4>管理</h4><div class="nav"><button type="button" data-act="roster"><b>メンバー設定</b><span>役割・SlackのID</span></button></div>':'')+
+    '<div class="me">'+(me?'<div class="avatar">'+esc(me.name.slice(0,2))+'</div><div><b>'+esc(me.full)+'</b></div>':'<div><b>未選択</b></div>')+'<button type="button" data-act="who">切替</button></div>';
+}
+function closeSideMobile(){ $("#side").classList.remove("open"); }
+
+/* ============ 絞り込み ============ */
+function scopedTasks(){
+  let list=S.tasks.slice();
+  if(S.scope==="mine") list=list.filter(t=>(t.assignees||[]).includes(S.me));
+  else if(S.scope==="asked") list=list.filter(t=>t.requester===S.me && !((t.assignees||[]).length===1 && t.assignees[0]===S.me));
+  if(S.person) list=list.filter(t=>(t.assignees||[]).includes(S.person) || t.requester===S.person);
+  if(S.project) list=list.filter(t=>t.projectId===S.project);
+  if(S.q){ const q=S.q.toLowerCase(); list=list.filter(t=>[t.title,t.memo,t.client,t.kind].some(v=>String(v||"").toLowerCase().includes(q))); }
+  if(!S.showDone) list=list.filter(t=>t.status!=="cancel" && !(t.status==="done" && daysSince(t.doneAt)>7));
+  return list;
+}
+function daysSince(iso){ if(!iso) return 999; return (Date.now()-Date.parse(iso))/86400000; }
+function sortTasks(list){
+  const pr={high:0,normal:1,low:2};
+  return list.sort((a,b)=>{
+    const da=a.due||"9999", dbb=b.due||"9999";
+    if(da!==dbb) return da<dbb?-1:1;
+    if((pr[a.priority]??1)!==(pr[b.priority]??1)) return (pr[a.priority]??1)-(pr[b.priority]??1);
+    return String(b.createdAt||"").localeCompare(String(a.createdAt||""));
+  });
+}
+function columns(list){
+  if(S.group==="due"){
+    const today=todayStr(), eow=endOfWeek();
+    const open=list.filter(isOpen), closed=list.filter(t=>!isOpen(t));
+    return [
+      {title:"期限切れ", dot:"var(--danger)", items:open.filter(t=>t.due && t.due<today)},
+      {title:"今日", dot:"var(--warn)", items:open.filter(t=>t.due===today)},
+      {title:"今週中", dot:"var(--accent)", items:open.filter(t=>t.due>today && t.due<=eow)},
+      {title:"来週以降", dot:"var(--mute)", items:open.filter(t=>t.due>eow)},
+      {title:"期限なし", dot:"var(--mute)", items:open.filter(t=>!t.due)},
+      {title:"完了・中止", dot:"var(--ok)", items:closed}
+    ];
+  }
+  if(S.group==="project"){
+    const cols=S.projects.map(p=>({title:p.name, dot:p.color||"var(--accent)", items:list.filter(t=>t.projectId===p.id)}));
+    cols.push({title:"プロジェクトなし", dot:"var(--mute)", items:list.filter(t=>!t.projectId||!proj(t.projectId))});
+    return cols;
+  }
+  const order=(list.some(t=>t.status==="draft")?["draft"]:[]).concat(["todo","reopen","doing","blocked","review","done"]).concat(S.showDone?["cancel"]:[]);
+  return order.map(k=>({title:STATUS[k].label, dot:STATUS[k].color, items:list.filter(t=>t.status===k)}));
+}
+
+/* ============ 描画 ============ */
+function render(){
+  const main=$("#main");
+  const sx=main.querySelector(".board")?.scrollLeft||0;
+  let html="";
+  if(S.view==="team") html=viewTeam();
+  else if(S.view==="projects") html=viewProjects();
+  else if(S.view==="forms") html=viewForms();
+  else if(S.view==="kouryu") html=viewKouryu();
+  else if(S.view==="calendar") html=viewCalendar();
+  else html=viewTasks();
+  const keepFocus=document.activeElement && document.activeElement.id==="q";
+  const caret=keepFocus?document.activeElement.selectionStart:null;
+  main.innerHTML=html;
+  const b=main.querySelector(".board"); if(b) b.scrollLeft=sx;
+  if(keepFocus){ const q=$("#q"); if(q){ q.focus(); try{ q.setSelectionRange(caret,caret); }catch(e){} } }
+}
+function topBar(title, desc, right=""){
+  return '<div class="top"><h1>'+esc(title)+'</h1><div class="grow"></div>'+right+'<p>'+desc+'</p></div>';
+}
+function banners(){
+  let h="";
+  if(S.loadErr) h+='<div class="banner err">'+esc(S.loadErr)+'</div>';
+  else if(S.slow) h+='<div class="banner warn">データにまだつながっていません。表示が古い可能性があります。</div>';
+  if(S.readOnly) h+='<div class="banner warn">閲覧のみの権限で開いています。タスクの作成・更新には、共有で「コントリビューター」以上が必要です。</div>';
+  return h;
+}
+function newBtn(){ return '<button class="btn primary" type="button" data-act="new"'+(S.readOnly?' disabled':'')+'>＋ 新しいタスク</button>'; }
+
+function viewTasks(){
+  const me=S.me;
+  const mine=S.tasks.filter(t=>(t.assignees||[]).includes(me) && ["todo","reopen","doing","blocked"].includes(t.status));
+  const toCheck=S.tasks.filter(t=>t.requester===me && t.status==="review");
+  const decide=S.tasks.filter(t=>t.kind==="判断を仰ぐ" && (t.assignees||[]).includes(me) && isOpen(t) && t.status!=="review");
+  const overdue=S.tasks.filter(t=>isOverdue(t) && ((t.assignees||[]).includes(me)||t.requester===me));
+  const cnt={mine:S.tasks.filter(t=>(t.assignees||[]).includes(me)&&isOpen(t)).length, asked:S.tasks.filter(t=>t.requester===me&&isOpen(t)&&!((t.assignees||[]).length===1&&t.assignees[0]===me)).length, all:S.tasks.filter(isOpen).length};
+  const list=sortTasks(scopedTasks());
+  const desc = S.scope==="mine"?"あなたが担当しているタスクです。":S.scope==="asked"?"あなたが人にお願いして、相手が対応しているタスクです。":"チーム全員のタスクです。";
+  let h=topBar("タスク", desc, newBtn());
+  h+='<div class="content">'+banners();
+  h+='<div class="tiles">'+
+    tile("あなたがやること", mine.length, "", "mine")+
+    tile("あなたの確認待ち", toCheck.length, "waiting", "check")+
+    tile("判断をお願いされている", decide.length, "waiting", "decide")+
+    tile("期限切れ（自分が関わる）", overdue.length, "alert", "overdue")+
+    (isLead(me)?tile("振り分け待ち", S.tasks.filter(t=>t.status==="draft").length, "waiting", "drafts"):"")+
+  '</div>';
+  h+='<div class="bar">'+
+    '<div class="seg" role="group" aria-label="範囲">'+
+      segBtn("scope","mine","自分がやる",cnt.mine)+segBtn("scope","asked","人に頼んだ",cnt.asked)+segBtn("scope","all","全員",cnt.all)+
+    '</div>'+
+    '<select id="person" aria-label="人で見る"><option value="">人で見る：全員</option>'+S.roster.map(m=>'<option value="'+m.key+'"'+(S.person===m.key?' selected':'')+'>'+esc(m.full)+'</option>').join("")+'</select>'+
+    '<select id="projectSel" aria-label="プロジェクト"><option value="">プロジェクト：すべて</option>'+S.projects.map(p=>'<option value="'+p.id+'"'+(S.project===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join("")+'</select>'+
+    '<input type="search" id="q" placeholder="タイトル・案件名で検索" value="'+esc(S.q)+'" aria-label="検索">'+
+    '<span class="spacer"></span>'+
+    '<select id="group" aria-label="分け方"><option value="status"'+(S.group==="status"?" selected":"")+'>ステータスで分ける</option><option value="due"'+(S.group==="due"?" selected":"")+'>期限で分ける</option><option value="project"'+(S.group==="project"?" selected":"")+'>プロジェクトで分ける</option></select>'+
+    '<div class="seg" role="group" aria-label="表示">'+segBtn("layout","board","ボード")+segBtn("layout","list","リスト")+'</div>'+
+    '<label class="check"><input type="checkbox" id="showDone"'+(S.showDone?" checked":"")+'>古い完了・中止も表示</label>'+
+  '</div>';
+  if(!S.loaded.tasks && !S.loadErr){ h+='<div class="banner">タスクを読み込み中です…</div></div>'; return h; }
+  if(S.layout==="list") h+=listTable(list);
+  else h+='<div class="board">'+columns(list).map(c=>'<section class="col" aria-label="'+esc(c.title)+'"><h3><span class="dot" style="background:'+c.dot+'"></span>'+esc(c.title)+'<i>'+c.items.length+'</i></h3>'+(c.items.length?c.items.map(card).join(""):'<div class="empty">なし</div>')+'</section>').join("")+'</div>';
+  if(S.tasks.length===0) h+='<div class="banner">まだタスクがありません。「＋ 新しいタスク」から最初の依頼を作れます。</div>';
+  h+='</div>';
+  return h;
+}
+function tile(label, n, cls, act){ return '<button type="button" class="tile '+cls+'" data-tile="'+act+'"><span>'+label+'</span><b>'+n+'</b></button>'; }
+function segBtn(kind,val,label,n){ const on=S[kind]===val; return '<button type="button" data-seg="'+kind+'" data-val="'+val+'" aria-pressed="'+on+'">'+label+(n!==undefined?'<i>'+n+'</i>':'')+'</button>'; }
+function card(t){
+  const p=proj(t.projectId);
+  return '<article class="card'+(isOverdue(t)?' is-overdue':'')+'" tabindex="0" data-open="'+t.id+'">'+
+    '<div class="chips">'+dueChip(t)+statusChip(t)+(t.priority==="high"?'<span class="chip danger">優先度：高</span>':'')+(t.kind&&t.kind!=="通常タスク"?'<span class="chip info">'+esc(t.kind)+'</span>':'')+'</div>'+
+    '<h4>'+esc(t.title)+'</h4>'+
+    (t.status==="draft"?'<div class="meta">'+esc(t.sourceLabel||"議事録")+'から｜担当未定'+((t.suggest||[]).length?'（候補：'+esc(names(t.suggest))+'）':'')+'</div>':'<div class="meta">'+esc(nm(t.requester))+' → '+esc(names(t.assignees))+'</div>')+
+    ((t.client||p)?'<div class="meta">'+esc([t.client,p&&p.name].filter(Boolean).join("｜"))+'</div>':'')+
+    (t.kind==="判断を仰ぐ" && t.answer?'<div class="meta">回答：<b>'+esc(t.answer)+'</b></div>':'')+
+  '</article>';
+}
+function listTable(list){
+  if(!list.length) return '<div class="banner">該当するタスクはありません。</div>';
+  return '<div class="tablewrap"><table><thead><tr><th>期限</th><th>ステータス</th><th>タイトル</th><th>依頼者</th><th>担当</th><th>案件・プロジェクト</th><th>種別</th></tr></thead><tbody>'+
+    list.map(t=>{ const p=proj(t.projectId); return '<tr class="click" data-open="'+t.id+'" tabindex="0"><td>'+dueChip(t)+'</td><td>'+statusChip(t)+'</td><td><b>'+esc(t.title)+'</b></td><td>'+esc(nm(t.requester))+'</td><td>'+esc(names(t.assignees))+'</td><td>'+esc([t.client,p&&p.name].filter(Boolean).join("｜"))+'</td><td>'+esc(t.kind||"")+'</td></tr>'; }).join("")+
+  '</tbody></table></div>';
+}
+
+function viewTeam(){
+  let h=topBar("メンバー状況","全員の担当タスクを一度に見られます。名前を押すと、その人のタスクを開きます。", newBtn());
+  h+='<div class="content">'+banners();
+  const drafts=S.tasks.filter(t=>t.status==="draft").length;
+  if(drafts) h+='<div class="banner warn">議事録や依頼フォームから入った「振り分け待ち」が '+drafts+' 件あります。担当と期限を決めて登録してください。 <button class="btn small" type="button" data-tile="drafts">振り分ける</button></div>';
+  const all=S.tasks;
+  const totals={open:all.filter(isOpen).length, overdue:all.filter(isOverdue).length, review:all.filter(t=>t.status==="review").length, blocked:all.filter(t=>t.status==="blocked").length};
+  h+='<div class="tiles">'+
+    '<div class="tile" style="cursor:default"><span>進行中のタスク（全員）</span><b>'+totals.open+'</b></div>'+
+    '<div class="tile alert" style="cursor:default"><span>期限切れ</span><b>'+totals.overdue+'</b></div>'+
+    '<div class="tile waiting" style="cursor:default"><span>確認待ち</span><b>'+totals.review+'</b></div>'+
+    '<div class="tile" style="cursor:default"><span>ブロック中</span><b>'+totals.blocked+'</b></div>'+
+  '</div>';
+  const keys=["todo","reopen","doing","blocked","review"];
+  h+='<div class="legend">'+keys.map(k=>'<span><i style="background:'+STATUS[k].color+'"></i>'+STATUS[k].label+'</span>').join("")+'</div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>メンバー</th><th>担当中の内訳</th><th class="num">担当中</th><th class="num">期限切れ</th><th class="num">確認待ち<br><span style="font-weight:400">（自分が確認する）</span></th><th class="num">頼んでいる</th><th class="num">直近7日の完了</th><th>いちばん近い期限</th></tr></thead><tbody>';
+  for(const m of S.roster){
+    const mine=all.filter(t=>(t.assignees||[]).includes(m.key));
+    const open=mine.filter(isOpen);
+    const counts=Object.fromEntries(keys.map(k=>[k,open.filter(t=>t.status===k).length]));
+    const od=open.filter(isOverdue).length;
+    const toCheck=all.filter(t=>t.requester===m.key && t.status==="review").length;
+    const asked=all.filter(t=>t.requester===m.key && isOpen(t) && !((t.assignees||[]).length===1&&t.assignees[0]===m.key)).length;
+    const done7=mine.filter(t=>t.status==="done" && daysSince(t.doneAt)<=7).length;
+    const next=sortTasks(open.filter(t=>t.due && t.status!=="review"))[0];
+    const total=open.length||1;
+    h+='<tr class="click" data-person="'+m.key+'" tabindex="0"><td><b>'+esc(m.full)+'</b></td>'+
+      '<td><div class="stack" title="'+keys.map(k=>STATUS[k].label+' '+counts[k]).join(' / ')+'">'+keys.map(k=>counts[k]?'<span style="width:'+(counts[k]/total*100)+'%;background:'+STATUS[k].color+'"></span>':'').join("")+'</div></td>'+
+      '<td class="num"><b>'+open.length+'</b></td><td class="num" style="'+(od?'color:var(--danger);font-weight:700':'')+'">'+od+'</td><td class="num">'+toCheck+'</td><td class="num">'+asked+'</td><td class="num">'+done7+'</td>'+
+      '<td>'+(next?dueChip(next)+' <span class="sub">'+esc(next.title)+'</span>':'<span class="sub">なし</span>')+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  // 期限切れ一覧
+  const od=sortTasks(all.filter(isOverdue));
+  h+='<h2 style="font-family:var(--display);font-size:16px;margin:8px 0 0">期限切れのタスク</h2>';
+  h+= od.length?listTable(od):'<div class="banner">期限切れのタスクはありません。</div>';
+  h+='</div>';
+  return h;
+}
+
+function viewProjects(){
+  const canMake=isLead(S.me) && !S.readOnly;
+  let h=topBar("プロジェクト","案件や施策ごとにタスクをまとめます。作成・編集は管理職と開発者だけができます。", canMake?'<button class="btn primary" type="button" data-act="newProject">＋ 新しいプロジェクト</button>':'');
+  h+='<div class="content">'+banners();
+  if(!S.projects.length) h+='<div class="banner">まだプロジェクトがありません。'+(canMake?'「＋ 新しいプロジェクト」から作れます。':'管理職か開発者が作成すると、ここに表示されます。')+'</div>';
+  h+='<div class="pgrid">'+S.projects.map(p=>{
+    const ts=S.tasks.filter(t=>t.projectId===p.id);
+    const open=ts.filter(isOpen).length, od=ts.filter(isOverdue).length, done=ts.filter(t=>t.status==="done").length;
+    return '<div class="pcard" role="button" tabindex="0" data-proj="'+p.id+'"><h3><span class="sw" style="background:'+esc(p.color||"#1e5aa6")+'"></span>'+esc(p.name)+'</h3>'+
+      (p.desc?'<p>'+esc(p.desc)+'</p>':'')+
+      '<div class="nums"><span><b>'+open+'</b>進行中</span><span'+(od?' style="color:var(--danger)"':'')+'><b'+(od?' style="color:var(--danger)"':'')+'>'+od+'</b>期限切れ</span><span><b>'+done+'</b>完了</span></div>'+
+      '<div class="hint">責任者：'+esc(nm(p.owner))+'</div>'+
+      (canMake?'<div><button class="btn small" type="button" data-editproj="'+p.id+'">編集</button></div>':'')+
+    '</div>'; }).join("")+'</div>';
+  h+='</div>';
+  return h;
+}
+
+function viewForms(){
+  const f=S.forms;
+  let h=topBar("フォームからの依頼","リスト作成依頼フォーム・タスク依頼フォームから届いた、まだ終わっていない依頼です（タスク管理表から読み込み）。",
+    '<a class="btn" href="'+esc(FORM_LIST_URL)+'" target="_blank" rel="noopener">リスト作成依頼フォーム ↗</a><a class="btn" href="'+esc(FORM_TASK_URL)+'" target="_blank" rel="noopener">タスク依頼フォーム ↗</a><button class="btn" type="button" data-act="reloadForms">再読み込み</button>');
+  h+='<div class="content">'+banners();
+  if(f.state==="loading") h+='<div class="banner">タスク管理表を読み込み中です…（初回はGoogle Sheetsの利用許可を確認する画面が出ます）</div>';
+  if(f.state==="error") h+='<div class="banner err">'+esc(f.err)+' <button class="btn small" type="button" data-act="reloadForms">もう一度読み込む</button></div>';
+  if(f.state==="idle") h+='<div class="banner">まだ読み込んでいません。<button class="btn small" type="button" data-act="reloadForms">タスク管理表から読み込む</button></div>';
+  if(f.state==="ok"){
+    h+='<div class="hint">最終読み込み：'+esc(fmtTime(new Date(f.at).toISOString()))+'　／　「ボードに載せる」を押すと、このボードのタスクになり担当者にSlackで知らせます（シート側のステータスは変わりません）。</div>';
+    h+=formTable("リスト作成依頼（リスト依頼一覧）", f.list, "list");
+    h+=formTable("タスク依頼（タスク依頼一覧）", f.task, "task");
+  }
+  h+='</div>';
+  return h;
+}
+function formTable(title, rows, type){
+  let h='<h2 style="font-family:var(--display);font-size:16px;margin:8px 0 0">'+esc(title)+'　<span class="hint">'+rows.length+'件</span></h2>';
+  if(!rows.length) return h+'<div class="banner">未完了の依頼はありません。</div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>納品希望日</th><th>ステータス</th><th>依頼者</th><th>'+(type==="list"?"企業名／抽出先":"依頼種類")+'</th><th>内容</th><th>担当</th><th></th></tr></thead><tbody>';
+  for(const r of rows){
+    const imported=S.tasks.find(t=>t.sourceKey===r.key);
+    const d=dayDiff(r.due);
+    const dueTxt=r.due?(d<0?'<span class="chip danger">'+(-d)+'日超過</span> ':'')+esc(fmtDate(r.due)):'<span class="sub">なし</span>';
+    h+='<tr><td>'+dueTxt+'</td><td><span class="chip'+(r.status==="対応中"?" accent":r.status==="保留"?" info":"")+'">'+esc(r.status||"未着手")+'</span></td><td>'+esc(r.requester)+'<div class="sub">'+esc(r.tsLabel)+'</div></td>'+
+      '<td>'+(type==="list"?'<b>'+esc(r.company||"（企業名なし）")+'</b><div class="sub">'+esc(r.source)+'</div>':esc(r.kind))+'</td>'+
+      '<td style="max-width:360px"><div style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:6.5em;overflow:hidden">'+esc(r.detail)+'</div>'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" rel="noopener" class="sub">共有シートを開く ↗</a>':'')+'</td>'+
+      '<td>'+esc(r.assignee||"")+'</td>'+
+      '<td>'+(imported?'<button class="btn small" type="button" data-open="'+imported.id+'">ボードで開く</button>':'<button class="btn small" type="button" data-import="'+esc(r.key)+'"'+(S.readOnly?' disabled':'')+'>ボードに載せる</button>')+'</td></tr>';
+  }
+  return h+'</tbody></table></div>';
+}
+
+/* ============ フォーム依頼の読み込み（Google Sheets） ============ */
+function normDue(s){ const m=String(s||"").match(/(\d{2,4})\/(\d{1,2})\/(\d{1,2})/); if(!m) return ""; let y=+m[1]; if(y<100) y+=2000; return y+"-"+pad(+m[2])+"-"+pad(+m[3]); }
+function tsLabel(s){ const m=String(s||"").match(/\d{4}\/(\d{1,2})\/(\d{1,2})/); return m?(+m[1])+"/"+(+m[2])+" 依頼":""; }
+function valuesOf(res){ const p=res && res.payload; if(p && Array.isArray(p.values)) return p.values; if(p && p.content && Array.isArray(p.content.values)) return p.content.values; if(typeof p==="string"){ try{ const j=JSON.parse(p); return j.values||[]; }catch(e){} } return []; }
+async function loadForms(refresh, auto){
+  if(!S.mcp){ if(auto) return; S.forms={...S.forms,state:"error",err:"このページからGoogle Sheetsにつなげられません（claude.aiで開いてください）。"}; render(); return; }
+  if(S.forms.state==="loading") return;
+  S.forms={...S.forms,state:"loading"}; render();
+  const opt={cache:{staleTime:60000,gcTime:600000, refresh:!!refresh}};
+  try{
+    const [a,b]=await Promise.all([
+      S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'リスト依頼一覧'!A1:P1500"},opt),
+      S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'タスク依頼一覧'!A1:L1500"},opt)
+    ]);
+    const done=["完了","不可","中止"];
+    const list=valuesOf(a).slice(1).map((r,i)=>({type:"list", key:"list|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), source:r[3]||"", url:r[4]||"", detail:[r[5],r[6]].filter(Boolean).join("\n"), company:r[9]||"", site:r[8]||"", status:(r[13]||"").trim(), assignee:r[14]||"", prio:r[15]||""}))
+      .filter(r=>r.ts && !done.includes(r.status));
+    const task=valuesOf(b).slice(1).map((r,i)=>({type:"task", key:"task|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), kind:r[3]||"", detail:r[4]||"", url:"", status:(r[9]||"").trim(), assignee:r[10]||"", prio:r[8]||""}))
+      .filter(r=>r.ts && !done.includes(r.status));
+    const byDue=(x,y)=>(x.due||"9999").localeCompare(y.due||"9999");
+    S.forms={state:"ok", list:list.sort(byDue), task:task.sort(byDue), err:"", at:Date.now()};
+    autoIntake();
+  }catch(e){
+    S.forms={...S.forms,state:"error",err:mcpErrText(e,"Google Sheets")};
+  }
+  render();
+}
+function mcpErrText(e, server){
+  const c=e&&e.code;
+  if(c==="server_not_connected") return server+"のコネクタが未接続です。claude.aiの設定 → コネクタで"+server+"を追加してください。";
+  if(c==="needs_reauth") return server+"の接続が切れています。claude.aiの設定 → コネクタで再接続してください。";
+  if(c==="approval_required"||c==="not_in_manifest") return server+"の利用が許可されていません。ページの許可画面で「許可」を選ぶと使えます。";
+  if(c==="selection_required") return server+"のコネクタが複数あります。claude.aiで使うものを選んでください。";
+  if(c==="blocked_by_policy") return "組織の設定で"+server+"の利用が止められています。";
+  if(c==="tool_error") return server+"がエラーを返しました："+(e.message||"");
+  if(c==="server_unavailable") return server+"に一時的につながりません。少し待ってから再度お試しください。";
+  return server+"との連携に失敗しました（"+(c||"不明")+"）。";
+}
+/* 依頼フォーム・営業戦略ルームから入った新しい行は、ボードに自動で載せる（AUTO_FROM 以降の依頼だけ） */
+const AUTO_FROM="2026-11-17";
+function tsDay(s){ const m=String(s||"").match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m?m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]):""; }
+function srcLabel(r){ return r.type==="list" ? (/営業戦略ルーム/.test(r.site||"")?"営業戦略ルーム":"リスト作成依頼フォーム") : "タスク依頼フォーム"; }
+function hashKey(k){ let h=5381; for(let i=0;i<k.length;i++){ h=((h<<5)+h+k.charCodeAt(i))|0; } return (h>>>0).toString(36); }
+async function autoIntake(){
+  if(S.readOnly || !S.db || !S.loaded.tasks || S.intakeBusy) return;
+  const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !S.tasks.some(t=>t.sourceKey===r.key));
+  if(!rows.length) return;
+  S.intakeBusy=true;
+  let n=0;
+  for(const r of rows){
+    const id="form-"+hashKey(r.key);
+    if(S.tasks.some(t=>t.id===id)) continue;
+    const t=formToTask(r);
+    const asg=t.assignees.length;
+    const doc={...t, status: asg?t.status:"draft", suggest: asg?[]:["kitahara"], sourceLabel:srcLabel(r), options:[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:"auto", doneAt:"", history:[{at:nowIso(), by:S.me, text:"自動で取り込み（"+srcLabel(r)+"）"}]};
+    try{
+      await S.db.doc("tasks/"+id).set(doc);
+      n++;
+      const head="【CSタスク】"+nm(doc.requester)+"さんから"+srcLabel(r)+"で依頼が届きました";
+      const body="\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+linkLine(id);
+      // 営業戦略ルームからの依頼は、送った時点でルーム側がSlackで知らせているので二重に送らない
+      if(srcLabel(r)!=="営業戦略ルーム"){
+        if(asg) notify([...doc.assignees, doc.requester], head+body);
+        else notify(["kitahara"], head+"（担当がまだ決まっていません。振り分けてください）"+body);
+      }
+    }catch(e){ break; }
+  }
+  S.intakeBusy=false;
+  if(n) toast("新しい依頼を "+n+" 件ボードに載せました");
+}
+function formToTask(r){
+  const req=matchMember(r.requester)||S.me;
+  const asg=matchMember(r.assignee);
+  const fromRoom=r.type==="list" && /営業戦略ルーム/.test(r.site||"");
+  return {
+    title: r.type==="list" ? "リスト作成："+(r.company||"企業名なし")+(r.source?"（"+r.source+"）":"") : (r.kind||"タスク")+"："+String(r.detail).split("\n")[0].slice(0,40),
+    memo: (r.type==="list"?"【ターゲット詳細・商材】\n":"")+r.detail+(r.url?"\n\n共有シート："+r.url:"")+(fromRoom?"\n\n"+r.site:"")+"\n\n（"+srcLabel(r)+"から取り込み／依頼者："+r.requester+"）",
+    kind: r.type==="list"?"リスト作成":"通常タスク",
+    requester:req, assignees: asg?[asg]:[], due:r.due, priority: /高/.test(r.prio)?"high":"normal",
+    status: r.status==="対応中"?"doing":"todo", client: r.company||"", projectId:"", sourceKey:r.key
+  };
+}
+async function importForm(key){
+  const r=[...S.forms.list,...S.forms.task].find(x=>x.key===key); if(!r) return;
+  const t=formToTask(r); if(!t.assignees.length) t.assignees=["kitahara"];
+  const id=await createTask(t, true);
+  if(id) toast("ボードに載せました："+t.title);
+}
+
+/* ============ タスク書き込み ============ */
+function hist(t, text){ const h=(t.history||[]).slice(-39); h.push({at:nowIso(), by:S.me, text}); return h; }
+async function createTask(t, notifyOn){
+  if(!S.db) return null;
+  const doc={...t, options:t.options||[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:S.me, doneAt:"", history:[{at:nowIso(), by:S.me, text:"作成"}]};
+  try{
+    const ref=await S.db.collection("tasks").add(doc);
+    if(notifyOn){
+      const msg=(doc.kind==="判断を仰ぐ"?"【CSタスク】"+nm(doc.requester)+"さんから判断のお願いが届きました":"【CSタスク】"+nm(doc.requester)+"さんから依頼が届きました")+
+        "\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+"｜優先度："+PRIO[doc.priority||"normal"]+(doc.client?"｜"+doc.client:"")+linkLine(ref.id);
+      notify(doc.assignees, msg);
+    }
+    return ref.id;
+  }catch(e){ writeFail(e); return null; }
+}
+async function updateTask(t, patch, logText, notifyKeys, notifyMsg){
+  try{
+    await S.db.doc("tasks/"+t.id).update({...patch, updatedAt:nowIso(), history:hist(t, logText)});
+    if(notifyKeys && notifyKeys.length) notify(notifyKeys, notifyMsg+"\n**"+t.title+"**"+linkLine(t.id));
+    return true;
+  }catch(e){ writeFail(e); return false; }
+}
+function writeFail(e){
+  const c=e&&e.code;
+  if(c==="invalid_argument"){ toast("保存できませんでした。このページへの書き込み権限がない可能性があります。"); }
+  else if(c==="quota_exceeded") toast("保存容量の上限に達しました。古いタスクを整理してください。");
+  else toast("保存できませんでした（"+(c||"不明")+"）。もう一度お試しください。");
+}
+function linkLine(id){ return PAGE_URL.startsWith("http")?"\n["+"ボードで開く"+"]("+taskUrl(id)+")":""; }
+
+/* ============ Slack通知 ============ */
+async function notify(keys, message){
+  const targets=[...new Set((keys||[]).filter(k=>k && k!==S.me))].map(member).filter(m=>m.slack);
+  if(!targets.length) return;
+  if(!S.mcp){ toast("Slack通知は送れませんでした（claude.aiで開くと送れます）。"); return; }
+  const failed=[];
+  for(const m of targets){
+    try{ await S.mcp.callTool("Slack","slack_send_message",{channel_id:m.slack, message:"<@"+m.slack+"> "+message}); }
+    catch(e){ failed.push({m,e}); }
+  }
+  if(!failed.length) toast("Slackで "+targets.map(m=>m.name).join("・")+" さんに知らせました");
+  else toast("Slack通知を送れなかった相手がいます（"+failed.map(f=>f.m.name).join("・")+"）："+mcpErrText(failed[0].e,"Slack"), 6000);
+}
+
+/* ============ ドロワー：タスク詳細 ============ */
+function openTask(id){
+  const t=S.tasks.find(x=>x.id===id);
+  if(!t){ if(S.loaded.tasks) toast("タスクが見つかりませんでした"); else S.pendingOpen=id; return; }
+  S.openId=id;
+  if(S.unsubComments) S.unsubComments();
+  S.comments=[];
+  try{
+    S.unsubComments=S.db.collection("tasks/"+id+"/comments").orderBy("at").onSnapshot(snap=>{ S.comments=snap.docs.map(d=>({id:d.id,...d.data()})); refreshDrawer(); }, ()=>{});
+  }catch(e){}
+  try{ history.replaceState(null,"","#t-"+id); }catch(e){}
+  refreshDrawer(true);
+}
+function refreshDrawer(force){
+  if(!S.openId) return;
+  const t=S.tasks.find(x=>x.id===S.openId); if(!t) return;
+  const layer=$("#layer");
+  if(!force && !layer.querySelector("[data-drawer='task']")) return;
+  const draft=$("#cmText")?.value||"";
+  layer.innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="タスクの詳細" data-drawer="task">'+drawerTask(t)+'</div></div>';
+  if(draft && $("#cmText")) $("#cmText").value=draft;
+}
+function drawerTask(t){
+  const me=S.me, isReq=t.requester===me, isAsg=(t.assignees||[]).includes(me), lead=isLead(me);
+  const p=proj(t.projectId);
+  const st=STATUS[t.status]||STATUS.todo;
+  let stateMsg="", cls="";
+  if(t.status==="draft"){ stateMsg="議事録から自動で入ったタスクです。管理職か北原さんが「担当を決めて登録」を押すと、担当者にSlackで通知されます。"; cls="warn"; }
+  else if(t.status==="review"){ stateMsg="担当者の対応が終わりました。依頼した人が内容を確かめて「完了にする」を押すと終わります。"; cls="warn"; }
+  else if(t.status==="done"){ stateMsg="完了しています（"+fmtTime(t.doneAt)+"）。"; cls="ok"; }
+  else if(t.status==="blocked") stateMsg="ほかの人の返事待ちなどで止まっています。";
+  else if(t.status==="reopen") stateMsg="依頼した人から再依頼されています。コメントを確かめて対応してください。";
+  else if(t.status==="cancel") stateMsg="中止になりました。";
+  else if(t.status==="doing") stateMsg="担当者が対応中です。";
+  else stateMsg="まだ着手されていません。";
+  let acts=[];
+  const canAsg=isAsg||lead, canReq=isReq||lead;
+  if(!S.readOnly && t.status==="draft"){ if(lead) acts.push('<button class="btn primary" type="button" data-act="edit">担当を決めて登録</button>','<button class="btn danger" type="button" data-act="delete">不要なので削除</button>'); }
+  else if(!S.readOnly){
+    if(t.kind!=="判断を仰ぐ"){
+      if(canAsg && ["todo","reopen","blocked"].includes(t.status)) acts.push('<button class="btn primary" type="button" data-st="doing">着手する</button>');
+      if(canAsg && ["todo","reopen","doing","blocked"].includes(t.status)) acts.push('<button class="btn'+(t.status==="doing"?" primary":"")+'" type="button" data-st="review">対応が終わった（確認へ）</button>');
+    }
+    if(canAsg && ["todo","reopen","doing"].includes(t.status)) acts.push('<button class="btn" type="button" data-st="blocked">ブロック（ほかの人待ち）</button>');
+    if(canAsg && t.status!=="done" && t.status!=="cancel") acts.push('<button class="btn" type="button" data-act="later">あとで（期限を翌営業日へ）</button>');
+    if(canReq && t.status==="review") acts.push('<button class="btn primary" type="button" data-st="done">完了にする</button>','<button class="btn" type="button" data-st="reopen">再依頼する</button>');
+    if(canReq && ["todo","doing","blocked","reopen"].includes(t.status)) acts.push('<button class="btn" type="button" data-st="done">完了にする</button>');
+    if(canReq && isOpen(t)) acts.push('<button class="btn danger" type="button" data-st="cancel">中止</button>');
+    if((canReq||canAsg) && (t.status==="done"||t.status==="cancel")) acts.push('<button class="btn" type="button" data-st="todo">未着手に戻す</button>');
+  }
+  let decide="";
+  if(t.kind==="判断を仰ぐ"){
+    const opts=(t.options||[]);
+    decide='<div class="field"><span class="lab">判断のお願い'+(t.answer?'　回答：<b style="color:var(--ink)">'+esc(t.answer)+'</b>':'')+'</span>';
+    if(canAsg && !S.readOnly && isOpen(t) && t.status!=="review"){
+      decide+='<div class="decide">'+(opts.length?opts:["OK","NG"]).map(o=>'<button class="btn" type="button" data-answer="'+esc(o)+'">'+esc(o)+'</button>').join("")+'</div><div class="hint">選ぶと依頼した人に回答が届き、「確認待ち」になります。補足はコメントへ。</div>';
+    } else if(!t.answer){ decide+='<div class="hint">'+esc(names(t.assignees))+'さんの回答待ちです。選択肢：'+esc((opts.length?opts:["OK","NG"]).join(" ／ "))+'</div>'; }
+    decide+='</div>';
+  }
+  return '<header><h2>'+esc(t.title)+'<small>'+esc(t.kind||"通常タスク")+'</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<div class="body">'+
+    '<div class="chips">'+dueChip(t)+statusChip(t)+'<span class="chip'+(t.priority==="high"?" danger":"")+'">優先度：'+PRIO[t.priority||"normal"]+'</span></div>'+
+    '<dl class="kv"><dt>依頼者</dt><dd>'+esc(t.requester?member(t.requester).full:"（登録した人になります）")+'</dd><dt>担当</dt><dd>'+esc((t.assignees||[]).map(k=>member(k).full).join("、")||"未設定")+'</dd>'+
+      '<dt>期限</dt><dd>'+(t.due?esc(fmtDate(t.due)):"なし")+'</dd><dt>案件</dt><dd>'+esc(t.client||"—")+'</dd><dt>プロジェクト</dt><dd>'+esc(p?p.name:"—")+'</dd><dt>作成</dt><dd>'+esc(fmtTime(t.createdAt))+'</dd>'+(t.status==="draft"&&(t.suggest||[]).length?'<dt>担当の候補</dt><dd>'+esc(names(t.suggest))+'（'+esc(t.meetingTitle?"議事録から推定":"初期の候補")+'）</dd>':'')+(t.meetingUrl?'<dt>議事録</dt><dd><a href="'+esc(t.meetingUrl)+'" target="_blank" rel="noopener">'+esc(t.meetingTitle||"議事録を開く")+' ↗</a></dd>':'')+'</dl>'+
+    (t.memo?'<div class="memo">'+esc(t.memo)+'</div>':'')+
+    decide+
+    '<div class="state '+cls+'">'+stateMsg+'</div>'+
+    (acts.length?'<div class="actions">'+acts.join("")+'</div>':'')+
+    '<div class="field"><span class="lab">コメント（'+S.comments.length+'）</span>'+
+      '<div class="comments">'+S.comments.map(c=>'<div class="cm"><div class="who"><b>'+esc(nm(c.by))+'</b>'+esc(fmtTime(c.at))+((c.mentions||[]).length?'　→ '+esc(names(c.mentions)):'')+'</div><p>'+mentionHi(c.text)+'</p></div>').join("")+'</div>'+
+      (S.readOnly?'':'<div style="position:relative"><textarea id="cmText" rows="3" placeholder="コメントを書く。「@」で人を呼べます（例：@小山 先方確認お願いします）"></textarea><div id="cmSug" class="mention-sug" hidden></div></div><div class="pick" aria-label="メンションする人">'+S.roster.filter(m=>m.key!==S.me).map(m=>'<button type="button" data-mention="'+esc(m.name)+'">@'+esc(m.name)+'</button>').join("")+'</div><div class="bar"><label class="check"><input type="checkbox" id="cmNotify" checked>依頼者・担当者にもSlackで知らせる</label><span class="spacer"></span><button class="btn primary small" type="button" data-act="comment">投稿する</button></div><div class="hint">メンションした人には、チェックに関係なくSlackで通知が届きます。</div>')+
+    '</div>'+
+    '<details><summary>更新履歴（'+(t.history||[]).length+'件）</summary><div class="hist">'+(t.history||[]).slice().reverse().map(h=>'<span>'+esc(fmtTime(h.at))+'　'+esc(nm(h.by))+'：'+esc(h.text)+'</span>').join("")+'</div></details>'+
+  '</div>'+
+  '<footer>'+((isReq||lead)&&!S.readOnly?'<button class="btn" type="button" data-act="edit">編集する</button>':'')+(lead&&!S.readOnly?'<button class="btn danger" type="button" data-act="delete">削除</button>':'')+'<span style="flex:1"></span><button class="btn" type="button" data-act="copyLink">リンクをコピー</button></footer>';
+}
+async function setStatus(t, st){
+  const label=STATUS[st].label;
+  const patch={status:st};
+  if(st==="done") patch.doneAt=nowIso();
+  if(st==="todo") patch.doneAt="";
+  const both=[t.requester, ...(t.assignees||[])];
+  const MSG={
+    doing:"さんが対応を始めました",
+    review:"さんが対応を終えました。"+nm(t.requester)+"さん、確認をお願いします",
+    reopen:"さんが差し戻しました。もう一度対応をお願いします",
+    done:"さんが完了にしました",
+    blocked:"さんのタスクが止まっています（ほかの人待ち）",
+    cancel:"さんがこのタスクを取り下げました"
+  };
+  const keys=MSG[st]?both:[], msg=MSG[st]?"【CSタスク】"+nm(S.me)+MSG[st]+"（"+label+"）":"";
+  await updateTask(t, patch, "ステータスを「"+label+"」に変更", keys, msg);
+}
+function nextBizDay(from){
+  const d=from?new Date(from+"T00:00:00"):new Date(); if(isNaN(d)) return addDays(1);
+  const base=new Date(Math.max(d.getTime(), new Date(todayStr()+"T00:00:00").getTime()));
+  do{ base.setDate(base.getDate()+1); }while(base.getDay()===0||base.getDay()===6);
+  return base.getFullYear()+"-"+pad(base.getMonth()+1)+"-"+pad(base.getDate());
+}
+
+/* ============ ドロワー：新規・編集 ============ */
+let F=null; // 編集中の下書き
+function openForm(t){
+  F = t ? {id:t.id, title:t.title, memo:t.memo||"", kind:t.kind||"通常タスク", projectId:t.projectId||"", client:t.client||"", assignees:((t.assignees||[]).length?t.assignees:(t.status==="draft"?(t.suggest||[]):[])).slice(), due:t.due||"", priority:t.priority||"normal", options:(t.options||[]).join("\n"), requester:t.requester, notify:false, fromDraft:t.status==="draft"}
+        : {id:null, title:"", memo:"", kind:"通常タスク", projectId:S.project||"", client:"", assignees:[], due:"", priority:"normal", options:"", requester:S.me, notify:true};
+  drawForm();
+}
+function drawForm(){
+  const today=todayStr();
+  const quick=[["今日",today],["明日",addDays(1)],["今週中",endOfWeek()],["なし",""]];
+  $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="タスクの作成" data-drawer="form">'+
+  '<header><h2>'+(F.id?(F.fromDraft?"振り分け待ちのタスクを登録":"タスクを編集"):"新しいタスク")+'<small>頼みたい相手を選ぶと、作成したときにSlackで知らせます。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<div class="body">'+
+    '<div class="field"><label for="fTitle">タイトル<span class="req">必須</span></label><input type="text" id="fTitle" value="'+esc(F.title)+'" placeholder="例：川金産業様 SRリスト作成（半導体装置ほか6キーワード）"></div>'+
+    '<div class="field"><span class="lab">種別</span><div class="pick" data-pick="kind">'+KINDS.map(k=>'<button type="button" data-v="'+k+'" aria-pressed="'+(F.kind===k)+'">'+k+'</button>').join("")+'</div></div>'+
+    (F.kind==="判断を仰ぐ"?'<div class="field"><label for="fOptions">選択肢（1行に1つ）</label><textarea id="fOptions" rows="3" placeholder="例：\nAで進める\nBで進める\n今週は見送る">'+esc(F.options)+'</textarea><div class="hint">相手はボタンを押すだけで回答できます。空欄なら「OK／NG」になります。</div></div>':'')+
+    '<div class="field"><span class="lab">誰に頼む<span class="req">必須</span></span><div class="pick" data-pick="assignees">'+S.roster.map(m=>'<button type="button" data-v="'+m.key+'" aria-pressed="'+F.assignees.includes(m.key)+'">'+esc(m.full)+(m.key===S.me?'（自分）':'')+'</button>').join("")+'</div></div>'+
+    '<div class="row2"><div class="field"><label for="fClient">案件名・SIS番号</label><input type="text" id="fClient" value="'+esc(F.client)+'" placeholder="例：5084_アイクリック"></div>'+
+    '<div class="field"><label for="fProject">プロジェクト</label><select id="fProject"><option value="">なし</option>'+S.projects.map(p=>'<option value="'+p.id+'"'+(F.projectId===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join("")+'</select></div></div>'+
+    '<div class="field"><label for="fDue">期限</label><div class="bar"><input type="date" id="fDue" value="'+esc(F.due)+'"><div class="pick" data-pick="due">'+quick.map(q=>'<button type="button" data-v="'+q[1]+'" aria-pressed="'+(F.due===q[1])+'">'+q[0]+'</button>').join("")+'</div></div></div>'+
+    '<div class="field"><span class="lab">優先度</span><div class="pick" data-pick="priority">'+Object.entries(PRIO).map(([k,v])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(F.priority===k)+'">'+v+'</button>').join("")+'</div></div>'+
+    '<div class="field"><label for="fMemo">メモ</label><textarea id="fMemo" rows="6" placeholder="背景・やってほしいこと・参考URLなど">'+esc(F.memo)+'</textarea></div>'+
+    (F.id?'':'<label class="check"><input type="checkbox" id="fNotify"'+(F.notify?' checked':'')+'>担当者にSlackで知らせる</label>')+
+    '<div class="bar"><label class="check"><input type="checkbox" id="fCal"'+(F.cal?' checked':'')+'>Googleカレンダーにも予定を入れる（期限日に、担当者を招待）</label><input type="time" id="fCalTime" value="'+esc(F.calTime||"10:00")+'" aria-label="開始時刻"><select id="fCalMin" aria-label="長さ">'+[15,30,60,90].map(n=>'<option value="'+n+'"'+(String(F.calMin||30)===String(n)?' selected':'')+'>'+n+'分</option>').join("")+'</select></div>'+
+  '</div>'+
+  '<footer><button class="btn" type="button" data-act="close">キャンセル</button><button class="btn primary" type="button" data-act="saveTask">'+(F.id?(F.fromDraft?"登録して通知する":"保存する"):"作成する")+'</button></footer>'+
+  '</div></div>';
+  $("#fTitle").focus();
+}
+function readForm(){
+  F.title=$("#fTitle").value.trim(); F.memo=$("#fMemo").value; F.client=$("#fClient").value.trim(); F.projectId=$("#fProject").value; F.due=$("#fDue").value;
+  if($("#fOptions")) F.options=$("#fOptions").value;
+  if($("#fNotify")) F.notify=$("#fNotify").checked;
+  if($("#fCal")){ F.cal=$("#fCal").checked; F.calTime=$("#fCalTime").value; F.calMin=$("#fCalMin").value; }
+}
+async function saveTask(){
+  readForm();
+  if(!F.title){ toast("タイトルを入れてください"); $("#fTitle").focus(); return; }
+  if(!F.assignees.length){ toast("誰に頼むかを選んでください"); return; }
+  const options=F.kind==="判断を仰ぐ"?F.options.split("\n").map(s=>s.trim()).filter(Boolean):[];
+  const data={title:F.title, memo:F.memo, kind:F.kind, projectId:F.projectId, client:F.client, assignees:F.assignees, due:F.due, priority:F.priority, options};
+  if(F.cal && !F.due){ toast("カレンダーに入れるには期限を入れてください"); return; }
+  const btn=$('[data-act="saveTask"]'); if(btn) btn.disabled=true;
+  if(F.id){
+    const t=S.tasks.find(x=>x.id===F.id);
+    const draft=t.status==="draft";
+    const added=draft?F.assignees.slice():F.assignees.filter(k=>!(t.assignees||[]).includes(k));
+    const patch=draft?{...data, status:"todo", requester:t.requester||S.me}:data;
+    const msg=draft?"【CSタスク】"+nm(t.requester||S.me)+"さんから依頼が届きました（"+(t.meetingTitle||t.sourceLabel||"議事録")+"より）\n期限："+(data.due?fmtDate(data.due):"なし"):"【CSタスク】"+nm(S.me)+"さんから依頼が届きました";
+    const ok=await updateTask({...t, title:data.title}, patch, draft?((t.sourceLabel||"議事録")+"から登録"):"内容を編集", added, msg);
+    if(ok && draft && patch.requester && patch.requester!==S.me && !added.includes(patch.requester)) notify([patch.requester], "【CSタスク】"+nm(S.me)+"さんが、あなたの依頼の担当を "+names(added)+" さんに決めました\n**"+data.title+"**"+linkLine(F.id));
+    if(ok){ const id=F.id; const c=F.cal?{time:F.calTime,min:F.calMin}:null; F=null; if(c) addToCalendar({...t,...data,id}, c.time, c.min); openTask(id); }
+    else if(btn) btn.disabled=false;
+  } else {
+    const id=await createTask({...data, requester:S.me, status:"todo", sourceKey:""}, F.notify);
+    if(id){ const c=F.cal?{time:F.calTime,min:F.calMin}:null; F=null; closeLayer(); toast("タスクを作成しました"); if(c) addToCalendar({...data,id}, c.time, c.min); }
+    else if(btn) btn.disabled=false;
+  }
+}
+
+/* ============ プロジェクト ============ */
+let P=null;
+function openProject(p){
+  P = p?{id:p.id,name:p.name,desc:p.desc||"",owner:p.owner||S.me,color:p.color||PCOLORS[0]}:{id:null,name:"",desc:"",owner:S.me,color:PCOLORS[S.projects.length%PCOLORS.length]};
+  $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="プロジェクト" data-drawer="project">'+
+  '<header><h2>'+(P.id?"プロジェクトを編集":"新しいプロジェクト")+'<small>作成・編集できるのは管理職と開発者です。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<div class="body">'+
+    '<div class="field"><label for="pName">名前<span class="req">必須</span></label><input type="text" id="pName" value="'+esc(P.name)+'" placeholder="例：つばめリード導入"></div>'+
+    '<div class="field"><label for="pDesc">説明</label><textarea id="pDesc" rows="3" placeholder="目的やゴール">'+esc(P.desc)+'</textarea></div>'+
+    '<div class="field"><label for="pOwner">責任者</label><select id="pOwner">'+S.roster.map(m=>'<option value="'+m.key+'"'+(P.owner===m.key?' selected':'')+'>'+esc(m.full)+'</option>').join("")+'</select></div>'+
+    '<div class="field"><span class="lab">色</span><div class="pick" data-pick="pcolor">'+PCOLORS.map(c=>'<button type="button" data-v="'+c+'" aria-pressed="'+(P.color===c)+'" aria-label="色 '+c+'" style="width:30px;height:26px;background:'+c+';border-color:'+(P.color===c?'var(--ink)':'transparent')+'"></button>').join("")+'</div></div>'+
+  '</div>'+
+  '<footer>'+(P.id?'<button class="btn danger" type="button" data-act="archiveProject">アーカイブ</button><span style="flex:1"></span>':'')+'<button class="btn" type="button" data-act="close">キャンセル</button><button class="btn primary" type="button" data-act="saveProject">'+(P.id?"保存する":"作成する")+'</button></footer>'+
+  '</div></div>';
+}
+async function saveProject(archive){
+  P.name=$("#pName").value.trim(); P.desc=$("#pDesc").value; P.owner=$("#pOwner").value;
+  if(!P.name){ toast("名前を入れてください"); return; }
+  const data={name:P.name, desc:P.desc, owner:P.owner, color:P.color, archived:!!archive, updatedAt:nowIso()};
+  try{
+    if(P.id){ await S.db.doc("projects/"+P.id).update(data); }
+    else { await S.db.collection("projects").add({...data, createdAt:nowIso(), createdBy:S.me}); }
+    closeLayer(); toast(archive?"アーカイブしました":"保存しました");
+  }catch(e){
+    if(e&&e.code==="invalid_argument") toast("保存できませんでした。プロジェクトの作成には、このページの共有で「編集者」になっている必要があります。",6000);
+    else writeFail(e);
+  }
+}
+
+/* ============ メンバー設定 ============ */
+let R=null, RK="";
+function openRoster(){
+  R=S.roster.map(m=>({...m})); RK=(S.minutesCfg.keywords||[]).join("、");
+  drawRoster();
+}
+function drawRoster(){
+  $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="メンバー設定" data-drawer="roster">'+
+  '<header><h2>メンバー設定<small>役割と、Slack通知の送り先（SlackのメンバーID）を管理します。保存には共有の「編集者」権限が必要です。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<div class="body"><div class="tablewrap"><table><thead><tr><th>表示名</th><th>フルネーム</th><th>役割</th><th>Slack ID</th><th>メール（カレンダー用）</th><th></th></tr></thead><tbody>'+
+  R.map((m,i)=>'<tr><td><input type="text" id="rn'+i+'" value="'+esc(m.name)+'" style="width:70px"></td><td><input type="text" id="rf'+i+'" value="'+esc(m.full)+'" style="width:110px"></td><td><select id="rr'+i+'">'+["管理職","開発者","メンバー"].map(r=>'<option'+(m.role===r?' selected':'')+'>'+r+'</option>').join("")+'</select></td><td><input type="text" id="rs'+i+'" value="'+esc(m.slack)+'" style="width:120px"></td><td><input type="text" id="re'+i+'" value="'+esc(m.email||"")+'" style="width:200px"></td><td><button class="btn small danger" type="button" data-rdel="'+i+'">削除</button></td></tr>').join("")+
+  '</tbody></table></div><div><button class="btn small" type="button" data-act="rosterAdd">＋ メンバーを追加</button></div><div class="hint">表示名は苗字だけにしてください（claude.aiのプロフィール名の先頭と照らし合わせて、開いた人を自動で判別します）。</div>'+
+  '<div class="field"><label for="mk">議事録の自動取り込み：タイトルに含まれる言葉（「、」区切り）</label><input type="text" id="mk" value="'+esc(RK)+'"><div class="hint">この言葉がタイトルに入ったGeminiのメモから「次のステップ」を取り込み、振り分け待ちに入れます。例：CSMTG、週次MTG</div></div></div>'+
+  '<footer><button class="btn" type="button" data-act="close">キャンセル</button><button class="btn primary" type="button" data-act="rosterSave">保存する</button></footer></div></div>';
+}
+function readRoster(){ if($("#mk")) RK=$("#mk").value; R=R.map((m,i)=>({...m, name:$("#rn"+i).value.trim(), full:$("#rf"+i).value.trim(), role:$("#rr"+i).value, slack:$("#rs"+i).value.trim(), email:($("#re"+i)?$("#re"+i).value.trim():(m.email||""))})); }
+async function saveRoster(){
+  readRoster();
+  const members=R.filter(m=>m.name).map(m=>({...m, key:m.key||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)), full:m.full||m.name}));
+  const keywords=RK.split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean);
+  try{ await S.db.doc("config/roster").set({members, updatedAt:nowIso(), updatedBy:S.me}); await S.db.doc("config/minutes").set({keywords, updatedAt:nowIso(), updatedBy:S.me}); closeLayer(); toast("設定を保存しました"); }
+  catch(e){ if(e&&e.code==="invalid_argument") toast("保存できませんでした。メンバー設定の保存には「編集者」権限が必要です。",6000); else writeFail(e); }
+}
+
+/* ============ 自分の選択 ============ */
+function openWhoModal(){
+  $("#layer").innerHTML='<div class="scrim" style="justify-content:center;align-items:center" data-scrim="who"><div class="modal" role="dialog" aria-modal="true" aria-label="あなたはどなたですか"><h2>あなたはどなたですか？</h2><p class="hint" style="margin:0">選んだ名前で「自分がやる」「人に頼んだ」が切り替わります。あとから左下の「切替」で変えられます。</p><div class="who">'+
+    S.roster.map(m=>'<button type="button" data-who="'+m.key+'"><b>'+esc(m.full)+'</b></button>').join("")+'</div></div></div>';
+}
+function closeLayer(){
+  $("#layer").innerHTML="";
+  if(S.openId){ S.openId=null; if(S.unsubComments){ S.unsubComments(); S.unsubComments=null; } try{ history.replaceState(null,"","#"+S.view); }catch(e){} }
+}
+function confirmBox(text, okLabel, onOk){
+  const wrap=document.createElement("div");
+  wrap.className="scrim"; wrap.style.cssText="justify-content:center;align-items:center;z-index:35";
+  wrap.innerHTML='<div class="modal" role="alertdialog" aria-modal="true"><h2>'+esc(text)+'</h2><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-c="no">やめる</button><button class="btn danger" type="button" data-c="ok">'+esc(okLabel)+'</button></div></div>';
+  document.body.appendChild(wrap);
+  wrap.addEventListener("click",e=>{ const c=e.target.closest("[data-c]"); if(!c && e.target!==wrap) return; wrap.remove(); if(c&&c.dataset.c==="ok") onOk(); });
+}
+
+/* ============ メンション ============ */
+function mentionsIn(text){ const ks=[]; S.roster.forEach(m=>{ if(m.name && String(text).includes("@"+m.name) && !ks.includes(m.key)) ks.push(m.key); }); return ks; }
+function mentionHi(text){ let h=esc(text); S.roster.slice().sort((a,b)=>b.name.length-a.name.length).forEach(m=>{ if(!m.name) return; h=h.split("@"+esc(m.name)).join('<b class="mention">@'+esc(m.name)+'</b>'); }); return h; }
+function mentionToken(){ const ta=$("#cmText"); if(!ta) return null; const pos=ta.selectionStart; const before=ta.value.slice(0,pos); const m=before.match(/@([^\s@]*)$/); return m?{q:m[1], start:pos-m[0].length, end:pos}:null; }
+function showMentionSug(){
+  const box=$("#cmSug"); if(!box) return; const tk=mentionToken();
+  if(!tk){ box.hidden=true; return; }
+  const list=S.roster.filter(m=>m.key!==S.me && (m.name.startsWith(tk.q)||m.full.replace(/\s/g,"").includes(tk.q)));
+  if(!list.length){ box.hidden=true; return; }
+  box.innerHTML=list.map(m=>'<button type="button" data-mention="'+esc(m.name)+'" data-replace="1">@'+esc(m.full)+'</button>').join(""); box.hidden=false;
+}
+function insertMention(name, replace){
+  const ta=$("#cmText"); if(!ta) return; const tk=replace?mentionToken():null;
+  const v=ta.value, ins="@"+name+" ";
+  if(tk){ ta.value=v.slice(0,tk.start)+ins+v.slice(tk.end); const p=tk.start+ins.length; ta.focus(); ta.setSelectionRange(p,p); }
+  else { const p=ta.selectionStart??v.length; const pre=v.slice(0,p); const sep=pre && !/\s$/.test(pre)?" ":""; ta.value=pre+sep+ins+v.slice(p); const np=(pre+sep+ins).length; ta.focus(); ta.setSelectionRange(np,np); }
+  const box=$("#cmSug"); if(box) box.hidden=true;
+}
+
+/* ============ 交流会 ============ */
+const KR_SHEET = "1S4GDhuB8DGv5I0_LKL_Aqhsqd3ak6jvNSux78zEa4yE";
+const KR_URL = "https://docs.google.com/spreadsheets/d/"+KR_SHEET+"/edit?gid=705332788#gid=705332788";
+S.kr = {state:"idle", rows:[], events:[], at:0, err:"", sel:"", seg:"yes", q:""};
+function krStatus(v){ v=String(v||"").trim(); if(!v) return ""; if(/不参加|欠席|×/.test(v)) return "no"; if(/検討|△/.test(v)) return "maybe"; if(/参加|◎|○/.test(v)) return "yes"; return "other"; }
+function krTruthy(v){ v=String(v||"").trim(); return !!v && !/^(なし|無|×|FALSE|false|未|-|ー)$/.test(v); }
+function krEvents(header){
+  const evs=[]; let year=2025, prevM=0;
+  header.forEach((h,i)=>{ const m=String(h||"").match(/^(\d{1,2})\/(\d{1,2})/); if(!m) return; const mo=+m[1], d=+m[2]; if(prevM && mo<prevM) year++; prevM=mo; evs.push({label:String(h).trim(), col:i, date:year+"-"+pad(mo)+"-"+pad(d)}); });
+  return evs;
+}
+async function loadKouryu(refresh){
+  if(!S.mcp){ S.kr={...S.kr,state:"error",err:"このページからGoogle Sheetsにつなげられません（claude.aiで開いてください）。"}; render(); return; }
+  S.kr={...S.kr,state:"loading"}; render();
+  try{
+    const res=await S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:KR_SHEET, range:"'参加台帳'!A2:AN2500"},{cache:{staleTime:120000,gcTime:900000,refresh:!!refresh}});
+    const v=valuesOf(res); const head=v[0]||[]; const idx=n=>head.findIndex(h=>String(h||"").trim()===n);
+    const C={company:idx("企業名"), sei:idx("姓"), mei:idx("名"), ind:idx("業種"), area:idx("エリア"), role:idx("役職"), route:idx("集客経路"), heat:idx("熱"), newT:idx("新規対象"), demo:idx("デモ実施"), deal:idx("商談化"), won:idx("受注"), note:idx("備考・ヒアリング"), follow:idx("進捗・フォローメモ"), rank:idx("判定ランク")};
+    const g=(r,i)=>i>=0?String(r[i]||"").trim():"";
+    const events=krEvents(head);
+    const rows=v.slice(1).filter(r=>r.some(c=>String(c||"").trim())).map((r,n)=>({n, company:g(r,C.company), name:[g(r,C.sei),g(r,C.mei)].filter(Boolean).join(" "), ind:g(r,C.ind), area:g(r,C.area), role:g(r,C.role), route:g(r,C.route)||"経路未入力", heat:g(r,C.heat), newT:g(r,C.newT), demo:g(r,C.demo), deal:g(r,C.deal), won:g(r,C.won), note:g(r,C.note), follow:g(r,C.follow), rank:g(r,C.rank), st:Object.fromEntries(events.map(e=>[e.label, krStatus(r[e.col])])), raw:Object.fromEntries(events.map(e=>[e.label, String(r[e.col]||"").trim()]))}));
+    const today=todayStr(); const up=events.find(e=>e.date>=today);
+    S.kr={...S.kr, state:"ok", rows, events, at:Date.now(), err:"", sel:S.kr.sel||(up?up.label:(events[events.length-1]||{}).label||"")};
+  }catch(e){ S.kr={...S.kr,state:"error",err:mcpErrText(e,"Google Sheets")}; }
+  render();
+}
+function viewKouryu(){
+  const k=S.kr;
+  let h=topBar("交流会","交流会の参加台帳から、開催回ごとの参加状況・集客経路・フォローの進み具合を表示します。",
+    '<a class="btn" href="'+esc(KR_URL)+'" target="_blank" rel="noopener">参加台帳を開く ↗</a><button class="btn" type="button" data-act="reloadKr">再読み込み</button>');
+  h+='<div class="content">'+banners();
+  if(k.state==="idle"||k.state==="loading"){ h+='<div class="banner">参加台帳を読み込み中です…（初回はGoogle Sheetsの利用許可を確認する画面が出ます）</div></div>'; return h; }
+  if(k.state==="error"){ h+='<div class="banner err">'+esc(k.err)+' <button class="btn small" type="button" data-act="reloadKr">もう一度読み込む</button></div></div>'; return h; }
+  const ev=k.events.find(e=>e.label===k.sel)||k.events[k.events.length-1];
+  if(!ev){ h+='<div class="banner">参加台帳に開催回の列が見つかりませんでした。</div></div>'; return h; }
+  const inEv=k.rows.filter(r=>r.st[ev.label]);
+  const yes=inEv.filter(r=>r.st[ev.label]==="yes"), maybe=inEv.filter(r=>r.st[ev.label]==="maybe"), no=inEv.filter(r=>r.st[ev.label]==="no");
+  const d=dayDiff(ev.date);
+  h+='<div class="bar"><label class="check" for="krSel" style="color:var(--ink);font-weight:700">開催回</label><select id="krSel">'+k.events.slice().reverse().map(e=>'<option value="'+esc(e.label)+'"'+(e.label===ev.label?' selected':'')+'>'+esc(e.label)+(e.date>=todayStr()?'（これから）':'')+'</option>').join("")+'</select>'+
+    '<span class="chip '+(d<0?'':'accent')+'">'+(d===0?'今日開催':d>0?'あと'+d+'日':'開催済み')+'</span><span class="spacer"></span><span class="hint">最終読み込み：'+esc(fmtTime(new Date(k.at).toISOString()))+'</span></div>';
+  h+='<div class="tiles">'+
+    '<div class="tile" style="cursor:default"><span>参加（確定を含む）</span><b>'+yes.length+'</b></div>'+
+    '<div class="tile waiting" style="cursor:default"><span>検討中</span><b>'+maybe.length+'</b></div>'+
+    '<div class="tile" style="cursor:default"><span>不参加・欠席</span><b>'+no.length+'</b></div>'+
+    '<div class="tile" style="cursor:default"><span>参加のうち新規対象</span><b>'+yes.filter(r=>/新規/.test(r.newT)).length+'</b></div>'+
+    '<div class="tile" style="cursor:default"><span>参加のうち「熱」</span><b>'+yes.filter(r=>/熱/.test(r.heat)).length+'</b></div>'+
+  '</div>';
+  // 経路内訳
+  const routes={}; yes.concat(maybe).forEach(r=>{ const k2=r.route; routes[k2]=routes[k2]||{yes:0,maybe:0}; routes[k2][r.st[ev.label]]++; });
+  const rl=Object.entries(routes).sort((a,b)=>(b[1].yes+b[1].maybe)-(a[1].yes+a[1].maybe));
+  const max=Math.max(1,...rl.map(([,c])=>c.yes+c.maybe));
+  h+='<h2 style="font-family:var(--display);font-size:16px;margin:4px 0 0">集客経路の内訳（参加・検討中）</h2>';
+  h+=rl.length?'<div class="tablewrap" style="padding:10px 14px"><div class="legend" style="margin-bottom:8px"><span><i style="background:var(--accent)"></i>参加</span><span><i style="background:var(--warn)"></i>検討中</span></div>'+rl.map(([name,c])=>'<div style="display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;padding:3px 0;font-size:13px"><span style="overflow-wrap:anywhere">'+esc(name)+'</span><div class="stack" style="height:10px"><span style="width:'+(c.yes/max*100)+'%;background:var(--accent)"></span><span style="width:'+(c.maybe/max*100)+'%;background:var(--warn)"></span></div><span class="sub" style="font-variant-numeric:tabular-nums">'+c.yes+'／'+c.maybe+'</span></div>').join("")+'</div>':'<div class="banner">この回の参加・検討中はまだいません。</div>';
+  // 参加者一覧
+  const segs=[["yes","参加",yes.length],["maybe","検討中",maybe.length],["no","不参加",no.length],["all","すべて",inEv.length]];
+  let list=k.seg==="all"?inEv:inEv.filter(r=>r.st[ev.label]===k.seg);
+  if(k.q){ const q=k.q.toLowerCase(); list=list.filter(r=>[r.company,r.name,r.ind,r.route,r.note,r.follow].some(x=>String(x).toLowerCase().includes(q))); }
+  h+='<div class="bar" style="margin-top:6px"><h2 style="font-family:var(--display);font-size:16px;margin:0">参加者</h2><div class="seg" role="group" aria-label="参加状況">'+segs.map(s=>'<button type="button" data-krseg="'+s[0]+'" aria-pressed="'+(k.seg===s[0])+'">'+s[1]+'<i>'+s[2]+'</i></button>').join("")+'</div><input type="search" id="krq" placeholder="企業名・業種・メモで検索" value="'+esc(k.q)+'" aria-label="参加者を検索"></div>';
+  h+=list.length?'<div class="tablewrap"><table><thead><tr><th>状況</th><th>企業名・氏名</th><th>業種・役職</th><th>集客経路</th><th>温度感</th><th>その後</th><th>備考・フォローメモ</th><th></th></tr></thead><tbody>'+
+    list.map(r=>{ const s=r.st[ev.label]; const tk=S.tasks.find(t=>t.sourceKey==="kr|"+ev.label+"|"+r.company+"|"+r.name);
+      return '<tr><td><span class="chip '+(s==="yes"?"accent":s==="maybe"?"warn":"")+'">'+esc(r.raw[ev.label]||"")+'</span></td><td><b>'+esc(r.company||"（企業名なし）")+'</b><div class="sub">'+esc(r.name)+'</div></td><td>'+esc(r.ind)+'<div class="sub">'+esc(r.role)+'</div></td><td>'+esc(r.route)+'</td><td>'+(r.heat?'<span class="chip danger">'+esc(r.heat)+'</span> ':'')+(r.newT?'<span class="chip info">'+esc(r.newT)+'</span>':'')+(r.rank?' <span class="chip">'+esc(r.rank)+'</span>':'')+'</td>'+
+      '<td class="sub">'+[krTruthy(r.demo)?"デモ済":"",krTruthy(r.deal)?"商談化":"",krTruthy(r.won)?"受注":""].filter(Boolean).join("・")+'</td>'+
+      '<td style="max-width:320px"><div style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:5em;overflow:hidden;font-size:12px">'+esc([r.note,r.follow].filter(Boolean).join("\n"))+'</div></td>'+
+      '<td>'+(tk?'<button class="btn small" type="button" data-open="'+tk.id+'">タスクを開く</button>':'<button class="btn small" type="button" data-krtask="'+r.n+'"'+(S.readOnly?' disabled':'')+'>フォローをタスク化</button>')+'</td></tr>'; }).join("")+'</tbody></table></div>':'<div class="banner">該当する参加者はいません。</div>';
+  // 開催回の推移
+  const recent=k.events.slice(-8);
+  h+='<h2 style="font-family:var(--display);font-size:16px;margin:8px 0 0">開催回の推移（直近8回）</h2><div class="tablewrap"><table><thead><tr><th>開催回</th><th class="num">参加</th><th class="num">検討中</th><th class="num">不参加</th><th class="num">デモ実施</th><th class="num">商談化</th><th class="num">受注</th></tr></thead><tbody>'+
+    recent.slice().reverse().map(e=>{ const ys=k.rows.filter(r=>r.st[e.label]==="yes"); return '<tr class="click" data-krev="'+esc(e.label)+'"><td><b>'+esc(e.label)+'</b>'+(e.date>=todayStr()?' <span class="chip accent">これから</span>':'')+'</td><td class="num">'+ys.length+'</td><td class="num">'+k.rows.filter(r=>r.st[e.label]==="maybe").length+'</td><td class="num">'+k.rows.filter(r=>r.st[e.label]==="no").length+'</td><td class="num">'+ys.filter(r=>krTruthy(r.demo)).length+'</td><td class="num">'+ys.filter(r=>krTruthy(r.deal)).length+'</td><td class="num">'+ys.filter(r=>krTruthy(r.won)).length+'</td></tr>'; }).join("")+'</tbody></table></div>';
+  h+='<div class="hint">デモ実施・商談化・受注は、参加台帳の各列に入力がある人の数です（その回に参加した人のうち）。</div>';
+  h+='</div>';
+  return h;
+}
+async function krToTask(n){
+  const r=S.kr.rows.find(x=>x.n===+n); const ev=S.kr.events.find(e=>e.label===S.kr.sel); if(!r||!ev) return;
+  const id=await createTask({title:"交流会フォロー："+(r.company||r.name)+"（"+ev.label+"）", memo:[r.name&&("担当者："+r.name+(r.role?"（"+r.role+"）":"")), r.ind&&("業種："+r.ind), "集客経路："+r.route, r.note&&("備考："+r.note), r.follow&&("フォローメモ："+r.follow), "参加台帳："+KR_URL].filter(Boolean).join("\n"), kind:"通常タスク", projectId:"", client:r.company, assignees:[S.me], due:nextBizDay(ev.date<todayStr()?todayStr():ev.date), priority:/熱/.test(r.heat)?"high":"normal", requester:S.me, status:"todo", sourceKey:"kr|"+ev.label+"|"+r.company+"|"+r.name}, false);
+  if(id){ toast("フォローのタスクを作りました（担当：あなた。担当は編集で変えられます）"); render(); }
+}
+
+/* ============ カレンダー ============ */
+function mondayOf(d){ const x=new Date(d+"T00:00:00"); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate()); }
+function addDaysTo(s,n){ const x=new Date(s+"T00:00:00"); x.setDate(x.getDate()+n); return x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate()); }
+S.cal = {start:mondayOf(todayStr()), sel:null, data:{}, loadedKey:""};
+function calMembers(){ if(S.cal.sel) return S.cal.sel; const dc=["takahashi","hayashi","koyama","oishi","fukata"]; let ks=S.roster.filter(m=>dc.includes(m.key)).map(m=>m.key); if(S.me && !ks.includes(S.me)) ks.unshift(S.me); return ks; }
+function evStart(e){ return (e.start&&(e.start.dateTime||e.start.date))||e.startTime||e.start_time||""; }
+function evEnd(e){ return (e.end&&(e.end.dateTime||e.end.date))||e.endTime||""; }
+function eventsOf(res){ const p=res&&res.payload; if(Array.isArray(p)) return p; if(p&&Array.isArray(p.events)) return p.events; if(p&&Array.isArray(p.items)) return p.items; if(typeof p==="string"){ try{ const j=JSON.parse(p); return j.events||j.items||[]; }catch(e){} } return []; }
+async function loadCalendar(refresh){
+  if(!S.mcp){ toast("このページからGoogleカレンダーにつなげられません（claude.aiで開いてください）。"); return; }
+  const start=S.cal.start, end=addDaysTo(start,7), keys=calMembers();
+  S.cal.loadedKey=start+"|"+keys.join(",");
+  keys.forEach(k=>{ S.cal.data[k]={state:"loading", events:[], err:""}; }); render();
+  await Promise.all(keys.map(async k=>{
+    const m=member(k);
+    if(!m.email){ S.cal.data[k]={state:"error", events:[], err:"メンバー設定にメールアドレスがありません"}; return; }
+    try{
+      const res=await S.mcp.callTool("Google Calendar","list_events",{calendarId:m.email, startTime:start+"T00:00:00", endTime:end+"T00:00:00", orderBy:"startTime", pageSize:250},{cache:{staleTime:120000,gcTime:900000,refresh:!!refresh}});
+      const evs=eventsOf(res).filter(e=>String(e.status||"")!=="cancelled").map(e=>({title:e.summary||e.title||"（タイトルなし）", start:evStart(e), end:evEnd(e), allDay:!!(e.start&&e.start.date&&!e.start.dateTime)}));
+      S.cal.data[k]={state:"ok", events:evs, err:""};
+    }catch(e){ S.cal.data[k]={state:"error", events:[], err:mcpErrText(e,"Googleカレンダー")}; }
+  }));
+  render();
+}
+function viewCalendar(){
+  const start=S.cal.start, days=[0,1,2,3,4,5,6].map(i=>addDaysTo(start,i)), keys=calMembers(), today=todayStr();
+  if(S.cal.loadedKey!==start+"|"+keys.join(",") && S.mcp) setTimeout(()=>loadCalendar(false),0);
+  let h=topBar("カレンダー","DCさんのGoogleカレンダーの予定と、その日が期限のタスクを並べて表示します。",'<button class="btn" type="button" data-act="calPrev">← 前の週</button><button class="btn" type="button" data-act="calToday">今週</button><button class="btn" type="button" data-act="calNext">次の週 →</button><button class="btn" type="button" data-act="calReload">再読み込み</button>');
+  h+='<div class="content">'+banners();
+  h+='<div class="bar"><span class="hint">表示する人：</span><div class="pick">'+S.roster.map(m=>'<button type="button" data-calm="'+m.key+'" aria-pressed="'+keys.includes(m.key)+'">'+esc(m.name)+'</button>').join("")+'</div></div>';
+  h+='<div class="tablewrap"><table style="table-layout:fixed;min-width:980px"><thead><tr><th style="width:110px">メンバー</th>'+days.map(d=>{ const x=new Date(d+"T00:00:00"); const we=x.getDay()===0||x.getDay()===6; return '<th style="'+(d===today?'background:var(--accent-bg);color:var(--accent)':we?'opacity:.6':'')+'">'+esc(fmtDate(d))+'</th>'; }).join("")+'</tr></thead><tbody>';
+  for(const k of keys){
+    const m=member(k), cd=S.cal.data[k]||{state:"idle",events:[]};
+    h+='<tr><td><b>'+esc(m.full)+'</b>'+(cd.state==="loading"?'<div class="sub">読み込み中…</div>':cd.state==="error"?'<div class="sub" style="color:var(--danger)">'+esc(cd.err)+'</div>':'')+'</td>';
+    for(const d of days){
+      const evs=cd.events.filter(e=>String(e.start).slice(0,10)===d);
+      const due=S.tasks.filter(t=>t.due===d && isOpen(t) && (t.assignees||[]).includes(k));
+      h+='<td style="vertical-align:top;'+(d===today?'background:color-mix(in srgb,var(--accent-bg) 45%,transparent)':'')+'"><div style="display:flex;flex-direction:column;gap:4px">'+
+        evs.map(e=>{ const t=e.allDay?"終日":String(e.start).slice(11,16); const hot=/定例|MTG|商談|報告会|交流会/.test(e.title); return '<div style="font-size:12px;line-height:1.4;padding:3px 6px;border-radius:5px;background:'+(hot?'var(--accent-bg)':'var(--muted-bg)')+';overflow-wrap:anywhere"><span style="font-variant-numeric:tabular-nums;color:var(--mute)">'+esc(t)+'</span> '+esc(e.title)+'</div>'; }).join("")+
+        due.map(t=>'<div class="card'+(isOverdue(t)?' is-overdue':'')+'" style="padding:4px 6px;gap:0" tabindex="0" data-open="'+t.id+'"><span style="font-size:11px;color:var(--warn);font-weight:700">期限</span><span style="font-size:12px;overflow-wrap:anywhere">'+esc(t.title)+'</span></div>').join("")+
+      '</div></td>';
+    }
+    h+='</tr>';
+  }
+  h+='</tbody></table></div><div class="hint">予定は開いた人のGoogleカレンダーの権限で読み込みます。見られない人がいる場合は、その人のカレンダーが共有されていないか、メンバー設定のメールアドレスが違います。</div></div>';
+  return h;
+}
+async function addToCalendar(task, time, minutes){
+  if(!S.mcp || !task.due) return;
+  const att=(task.assignees||[]).filter(k=>k!==S.me).map(k=>member(k).email).filter(Boolean).map(email=>({email}));
+  const st=task.due+"T"+(time||"10:00")+":00";
+  const endD=new Date(task.due+"T"+(time||"10:00")+":00"); endD.setMinutes(endD.getMinutes()+(+minutes||30));
+  const et=endD.getFullYear()+"-"+pad(endD.getMonth()+1)+"-"+pad(endD.getDate())+"T"+pad(endD.getHours())+":"+pad(endD.getMinutes())+":00";
+  try{
+    await S.mcp.callTool("Google Calendar","create_event",{summary:"【CSタスク】"+task.title, startTime:st, endTime:et, description:(task.memo||"")+(PAGE_URL.startsWith("http")?"\n\nボード："+taskUrl(task.id):""), attendees:att});
+    toast("Googleカレンダーに予定を入れました"+(att.length?"（担当者を招待）":""));
+    return true;
+  }catch(e){ toast("カレンダーに入れられませんでした："+mcpErrText(e,"Googleカレンダー"),6000); return false; }
+}
+
+/* ============ イベント ============ */
+document.addEventListener("click", async e=>{
+  const el=e.target.closest("[data-go],[data-act],[data-seg],[data-tile],[data-open],[data-person],[data-proj],[data-editproj],[data-st],[data-answer],[data-pick] button,[data-who],[data-import],[data-rdel],[data-scrim],[data-krseg],[data-krtask],[data-krev],[data-calm],[data-mention]");
+  if(!el) return;
+  if(el.dataset.scrim && e.target===el){ if(el.dataset.scrim!=="who" || S.me) closeLayer(); return; }
+  if(el.dataset.scrim) return;
+  if(el.dataset.go){ go(el.dataset.go); return; }
+  if(el.dataset.who){ setMe(el.dataset.who); return; }
+  if(el.dataset.seg){ S[el.dataset.seg]=el.dataset.val; render(); return; }
+  if(el.dataset.tile){
+    const k=el.dataset.tile; S.view="tasks"; S.person=""; S.project=""; S.q="";
+    if(k==="mine"){ S.scope="mine"; S.group="status"; }
+    if(k==="check"){ S.scope="asked"; S.group="status"; }
+    if(k==="decide"){ S.scope="mine"; S.q="判断を仰ぐ"; }
+    if(k==="drafts"){ S.scope="all"; S.group="status"; }
+    if(k==="overdue"){ S.scope="all"; S.person=S.me; S.group="due"; }
+    render(); return;
+  }
+  if(el.dataset.person){ S.view="tasks"; S.scope="all"; S.person=el.dataset.person; S.project=""; S.group="status"; renderSide(); render(); return; }
+  if(el.dataset.editproj){ e.stopPropagation(); openProject(proj(el.dataset.editproj)); return; }
+  if(el.dataset.proj){ S.view="tasks"; S.scope="all"; S.project=el.dataset.proj; S.person=""; renderSide(); render(); return; }
+  if(el.dataset.open){ openTask(el.dataset.open); return; }
+  if(el.dataset.import){ el.disabled=true; await importForm(el.dataset.import); render(); return; }
+  if(el.dataset.mention){ insertMention(el.dataset.mention, el.dataset.replace==="1"); return; }
+  if(el.dataset.krseg){ S.kr.seg=el.dataset.krseg; render(); return; }
+  if(el.dataset.krev){ S.kr.sel=el.dataset.krev; render(); window.scrollTo(0,0); return; }
+  if(el.dataset.krtask){ el.disabled=true; await krToTask(el.dataset.krtask); return; }
+  if(el.dataset.calm){ const ks=calMembers().slice(); const k=el.dataset.calm; S.cal.sel=ks.includes(k)?ks.filter(x=>x!==k):[...ks,k]; render(); return; }
+  if(el.dataset.rdel){ readRoster(); R.splice(+el.dataset.rdel,1); drawRoster(); return; }
+  if(el.parentElement && el.parentElement.dataset && el.parentElement.dataset.pick){
+    const kind=el.parentElement.dataset.pick, v=el.dataset.v;
+    if(kind==="pcolor"){ P.name=$("#pName").value; P.desc=$("#pDesc").value; P.owner=$("#pOwner").value; P.color=v; openProject({...P, id:P.id}); $("#pName").value=P.name; return; }
+    readForm();
+    if(kind==="assignees"){ F.assignees=F.assignees.includes(v)?F.assignees.filter(x=>x!==v):[...F.assignees,v]; }
+    else if(kind==="due"){ F.due=v; }
+    else F[kind]=v;
+    drawForm(); return;
+  }
+  const t=S.openId?S.tasks.find(x=>x.id===S.openId):null;
+  if(el.dataset.st && t){ el.disabled=true; await setStatus(t, el.dataset.st); return; }
+  if(el.dataset.answer && t){
+    el.disabled=true;
+    await updateTask(t, {answer:el.dataset.answer, status:"review"}, "回答：「"+el.dataset.answer+"」", [t.requester], "【CSタスク】"+nm(S.me)+"さんから回答が届きました：「"+el.dataset.answer+"」");
+    return;
+  }
+  switch(el.dataset.act){
+    case "new": if(!S.me){ openWhoModal(); return; } openForm(null); break;
+    case "close": closeLayer(); break;
+    case "who": openWhoModal(); break;
+    case "roster": openRoster(); break;
+    case "rosterAdd": readRoster(); R.push({key:"", name:"", full:"", role:"メンバー", slack:""}); drawRoster(); break;
+    case "rosterSave": saveRoster(); break;
+    case "saveTask": saveTask(); break;
+    case "edit": if(t){ const tt=t; closeLayer(); openForm(tt); } break;
+    case "delete": if(t){ const tt=t; confirmBox("「"+tt.title+"」を削除しますか？元に戻せません。","削除する", async()=>{ try{ await S.db.doc("tasks/"+tt.id).delete(); closeLayer(); toast("削除しました"); }catch(err){ writeFail(err); } }); } break;
+    case "later": if(t){ const nd=nextBizDay(t.due); await updateTask(t,{due:nd},"期限を"+fmtDate(nd)+"に変更"); } break;
+    case "comment": if(t){
+      const text=($("#cmText").value||"").trim(); if(!text) return;
+      el.disabled=true;
+      const mentions=mentionsIn(text);
+      const quote=">"+text.slice(0,300).replace(/\n/g,"\n>");
+      const others=$("#cmNotify")?.checked?[t.requester,...(t.assignees||[])].filter(k=>!mentions.includes(k)):[];
+      try{
+        await S.db.collection("tasks/"+t.id+"/comments").add({by:S.me, text, at:nowIso(), mentions});
+        $("#cmText").value="";
+        if(mentions.length) await notify(mentions, "【CSタスク】"+nm(S.me)+"さんがあなたをメンションしました\n"+quote+"\n**"+t.title+"**"+linkLine(t.id));
+        if(others.length) notify(others, "【CSタスク】"+nm(S.me)+"さんがコメントしました\n"+quote+"\n**"+t.title+"**"+linkLine(t.id));
+      }catch(err){ writeFail(err); }
+      el.disabled=false;
+    } break;
+    case "copyLink": if(t){ const url=PAGE_URL.startsWith("http")?PAGE_URL+"#t-"+t.id:"#t-"+t.id; try{ await navigator.clipboard.writeText(url); toast("リンクをコピーしました"); }catch(err){ toast(url,6000); } } break;
+    case "newProject": openProject(null); break;
+    case "saveProject": saveProject(false); break;
+    case "archiveProject": confirmBox("このプロジェクトをアーカイブしますか？（タスクは残ります）","アーカイブ", ()=>saveProject(true)); break;
+    case "reloadForms": loadForms(true); break;
+    case "reloadKr": loadKouryu(true); break;
+    case "calPrev": S.cal.start=addDaysTo(S.cal.start,-7); render(); break;
+    case "calNext": S.cal.start=addDaysTo(S.cal.start,7); render(); break;
+    case "calToday": S.cal.start=mondayOf(todayStr()); render(); break;
+    case "calReload": S.cal.loadedKey=""; loadCalendar(true); break;
+  }
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && $("#layer").innerHTML && (S.me)) closeLayer();
+  if(e.key==="Enter"){ const el=e.target.closest("[data-open],[data-person],[data-proj]"); if(el && el===e.target){ el.click(); } }
+});
+document.addEventListener("input", e=>{
+  if(e.target.id==="q"){ S.q=e.target.value; render(); }
+  if(e.target.id==="cmText"){ showMentionSug(); }
+  if(e.target.id==="krq"){ S.kr.q=e.target.value; render(); const q=$("#krq"); if(q){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); } }
+});
+document.addEventListener("change", e=>{
+  const id=e.target.id;
+  if(id==="person"){ S.person=e.target.value; if(S.person) S.scope="all"; render(); }
+  if(id==="projectSel"){ S.project=e.target.value; render(); }
+  if(id==="group"){ S.group=e.target.value; render(); }
+  if(id==="showDone"){ S.showDone=e.target.checked; render(); }
+  if(id==="fDue" && F){ F.due=e.target.value; }
+  if(id==="krSel"){ S.kr.sel=e.target.value; S.kr.q=""; render(); }
+});
+$("#menuBtn").addEventListener("click", ()=>$("#side").classList.toggle("open"));
+boot();
