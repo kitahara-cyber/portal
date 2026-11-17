@@ -205,13 +205,16 @@ function request_(email, r) {
 
 /* ---------- 未返信メール（開いた本人のGmailだけを読む。保存はしない） ---------- */
 function mail_(email) {
-  const threads = GmailApp.search('in:inbox newer_than:14d -from:me -category:promotions -category:social -category:forums', 0, 60);
+  const threads = GmailApp.search('in:inbox newer_than:14d -from:me -category:promotions -category:social -category:forums -category:updates', 0, 80);
   const out = [];
   threads.forEach(th => {
     const msgs = th.getMessages(), last = msgs[msgs.length - 1];
     const from = String(last.getFrom() || '');
     if (from.toLowerCase().indexOf(email) >= 0) return;                                  // 最後が自分＝返信済み
-    if (/no-?reply|notification|mailer-daemon|calendar-notification|noreply/i.test(from)) return;  // 自動送信は除く
+    if (/no-?reply|notification|mailer-daemon|calendar-notification|noreply|gemini|postmaster|bounce/i.test(from)) return;  // 自動送信は除く
+    const subj = th.getFirstMessageSubject() || '';
+    if (/自動返信|自動配信|自動送信|Auto[- ]?Reply|Out of Office|不在|^メモ[:：]|配信停止|メールマガジン|メルマガ|Undeliverable|Delivery Status/i.test(subj + ' ' + from)) return;
+    try { if (last.getHeader('List-Unsubscribe') || /bulk|list|auto_reply/i.test(last.getHeader('Precedence') || '') || /^auto/i.test(last.getHeader('Auto-Submitted') || '')) return; } catch (e) {}
     out.push({
       id: th.getId(),
       subject: th.getFirstMessageSubject() || '（件名なし）',
@@ -226,29 +229,22 @@ function mail_(email) {
 
 /* ---------- カレンダー ---------- */
 function calList_(calendarId, start, end) {
-  // 開いた人の権限で読む。購読していない同僚のカレンダーも読めるよう、Calendar API を直接呼ぶ
-  const tz = '+09:00';
-  const tMin = new Date(start + tz).toISOString(), tMax = new Date(end + tz).toISOString();
-  const head = {Authorization: 'Bearer ' + ScriptApp.getOAuthToken()};
-  const url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events?singleEvents=true&orderBy=startTime&maxResults=250&timeZone=Asia%2FTokyo&timeMin=' + encodeURIComponent(tMin) + '&timeMax=' + encodeURIComponent(tMax);
-  const r = UrlFetchApp.fetch(url, {headers: head, muteHttpExceptions: true});
-  if (r.getResponseCode() === 200) {
-    const j = JSON.parse(r.getContentText());
+  // 開いた人の権限で読む。購読していない同僚のカレンダーも読めるよう Calendar API（拡張サービス）を使う
+  const tMin = new Date(start + '+09:00').toISOString(), tMax = new Date(end + '+09:00').toISOString();
+  try {
+    const j = Calendar.Events.list(calendarId, {singleEvents: true, orderBy: 'startTime', maxResults: 250, timeZone: 'Asia/Tokyo', timeMin: tMin, timeMax: tMax});
     return {items: (j.items || []).filter(e => e.status !== 'cancelled').map(e => ({
       summary: e.summary || (e.visibility === 'private' ? '予定あり' : '（タイトルなし）'),
       start: e.start, end: e.end, status: e.status, htmlLink: e.htmlLink || '', location: e.location || ''
     }))};
-  }
-  // 詳細が見られないときは、空き時間情報だけ（予定あり）
-  const fb = UrlFetchApp.fetch('https://www.googleapis.com/calendar/v3/freeBusy', {method: 'post', contentType: 'application/json', headers: head, muteHttpExceptions: true,
-    payload: JSON.stringify({timeMin: tMin, timeMax: tMax, timeZone: 'Asia/Tokyo', items: [{id: calendarId}]})});
-  if (fb.getResponseCode() === 200) {
-    const c = (JSON.parse(fb.getContentText()).calendars || {})[calendarId] || {};
+  } catch (err) {
+    // 詳細が見られないときは、空き時間情報だけ（予定あり）
+    const fb = Calendar.Freebusy.query({timeMin: tMin, timeMax: tMax, timeZone: 'Asia/Tokyo', items: [{id: calendarId}]});
+    const c = (fb.calendars || {})[calendarId] || {};
     if (c.errors && c.errors.length) throw new Error('calendar_not_shared');
     const f = d => Utilities.formatDate(new Date(d), 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ssXXX");
     return {items: (c.busy || []).map(x => ({summary: '予定あり', start: {dateTime: f(x.start)}, end: {dateTime: f(x.end)}, status: 'confirmed', busyOnly: true}))};
   }
-  throw new Error('calendar_not_shared');
 }
 function calCreate_(req) {
   const ev = CalendarApp.getDefaultCalendar().createEvent(String(req.summary || '').slice(0, 200), new Date(req.start + '+09:00'), new Date(req.end + '+09:00'), {
