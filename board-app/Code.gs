@@ -213,7 +213,9 @@ function mail_(email) {
     if (from.toLowerCase().indexOf(email) >= 0) return;                                  // 最後が自分＝返信済み
     if (/no-?reply|notification|mailer-daemon|calendar-notification|noreply|gemini|postmaster|bounce/i.test(from)) return;  // 自動送信は除く
     const subj = th.getFirstMessageSubject() || '';
-    if (/自動返信|自動配信|自動送信|Auto[- ]?Reply|Out of Office|不在|^メモ[:：]|配信停止|メールマガジン|メルマガ|Undeliverable|Delivery Status/i.test(subj + ' ' + from)) return;
+    if (/自動返信|自動配信|自動送信|自動化|一斉送信|Auto[- ]?Reply|Out of Office|不在|^メモ[:：]|配信停止|メールマガジン|メルマガ|Undeliverable|Delivery Status/i.test(subj + ' ' + from)) return;
+    const to = String(last.getTo() || '').toLowerCase(), cc = String(last.getCc() || '').toLowerCase();
+    if (to.indexOf(email) < 0 && cc.indexOf(email) >= 0) return;                         // CCで入っているだけのものは除く
     try { if (last.getHeader('List-Unsubscribe') || /bulk|list|auto_reply/i.test(last.getHeader('Precedence') || '') || /^auto/i.test(last.getHeader('Auto-Submitted') || '')) return; } catch (e) {}
     out.push({
       id: th.getId(),
@@ -224,7 +226,10 @@ function mail_(email) {
       url: 'https://mail.google.com/mail/u/0/#all/' + th.getId()
     });
   });
-  return {items: out.slice(0, 50)};
+  // 同じ件名・同じ差出人がまとめて届いたもの（一斉送信など）は1行にまとめる
+  const seen = {}, items = [];
+  out.forEach(x => { const k = x.subject + '|' + x.from; if (seen[k]) { seen[k].more = (seen[k].more || 0) + 1; return; } seen[k] = x; items.push(x); });
+  return {items: items.slice(0, 50)};
 }
 
 /* ---------- カレンダー ---------- */
