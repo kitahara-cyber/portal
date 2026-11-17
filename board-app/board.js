@@ -94,6 +94,7 @@
       if(server === 'Google Sheets' && tool === 'get_values') return call({op: 'values', spreadsheetId: args.spreadsheetId, range: args.range}).then(function(r){ return {payload: r}; });
       if(server === 'Google Calendar' && tool === 'list_events') return call({op: 'calList', calendarId: args.calendarId, start: args.startTime, end: args.endTime}).then(function(r){ return {payload: r}; });
       if(server === 'Google Calendar' && tool === 'create_event') return call({op: 'calCreate', summary: args.summary, start: args.startTime, end: args.endTime, description: args.description, guests: (args.attendees || []).map(function(a){ return a.email; })}).then(function(r){ return {payload: r}; });
+      if(server === 'Board' && tool === 'record_request') return call(Object.assign({op: 'request'}, args)).then(function(r){ return {payload: r}; });
       return Promise.reject({code: 'not_in_manifest', message: server + ' ' + tool});
     }
   };
@@ -131,7 +132,10 @@ const DEFAULT_ROSTER = [
   {key:"oishi",     name:"大石", full:"大石 翔太", role:"メンバー", slack:"U07N07C7Z6Y", email:""},
   {key:"fukata",    name:"深田", full:"深田 怜佑", role:"メンバー", slack:"U0AGRRPL97Z", email:"ryosuke_fukata@writeup.co.jp"}
 ];
-const KINDS = ["通常タスク","リスト作成","定例資料","継続提案資料","判断を仰ぐ","修正依頼","質問"];
+const KINDS = ["通常タスク","リスト作成","タスク依頼","定例資料","継続提案資料","判断を仰ぐ","修正依頼","質問"];
+const LIST_SOURCES = ["SR","類似分析","ラクリス","スクレイピング","スコアリング","ハウス","黄金リスト","その他"];
+const TASK_REQ_KINDS = ["業務効率化/整理","フォーム","事例","開発","その他"];
+const BOARD_MARK = "CSタスクボードから";
 const STATUS = {
   draft:{label:"振り分け待ち", cls:"draft", color:"#8a918d"},
   todo:{label:"未着手", cls:"", color:"var(--mute)"},
@@ -477,7 +481,7 @@ function formTable(title, rows, type){
   if(!rows.length) return h+'<div class="banner">未完了の依頼はありません。</div>';
   h+='<div class="tablewrap"><table><thead><tr><th>納品希望日</th><th>ステータス</th><th>依頼者</th><th>'+(type==="list"?"企業名／抽出先":"依頼種類")+'</th><th>内容</th><th>担当</th><th></th></tr></thead><tbody>';
   for(const r of rows){
-    const imported=S.tasks.find(t=>t.sourceKey===r.key);
+    const imported=S.tasks.find(t=>t.sourceKey===r.key) || (boardRowTask(r)&&boardRowTask(r).id?boardRowTask(r):null);
     const d=dayDiff(r.due);
     const dueTxt=r.due?(d<0?'<span class="chip danger">'+(-d)+'日超過</span> ':'')+esc(fmtDate(r.due)):'<span class="sub">なし</span>';
     h+='<tr><td>'+dueTxt+'</td><td><span class="chip'+(r.status==="対応中"?" accent":r.status==="保留"?" info":"")+'">'+esc(r.status||"未着手")+'</span></td><td>'+esc(r.requester)+'<div class="sub">'+esc(r.tsLabel)+'</div></td>'+
@@ -506,7 +510,7 @@ async function loadForms(refresh, auto){
     const done=["完了","不可","中止"];
     const list=valuesOf(a).slice(1).map((r,i)=>({type:"list", key:"list|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), source:r[3]||"", url:r[4]||"", detail:[r[5],r[6]].filter(Boolean).join("\n"), company:r[9]||"", site:r[8]||"", status:(r[13]||"").trim(), assignee:r[14]||"", prio:r[15]||""}))
       .filter(r=>r.ts && !done.includes(r.status));
-    const task=valuesOf(b).slice(1).map((r,i)=>({type:"task", key:"task|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), kind:r[3]||"", detail:r[4]||"", url:"", status:(r[9]||"").trim(), assignee:r[10]||"", prio:r[8]||""}))
+    const task=valuesOf(b).slice(1).map((r,i)=>({type:"task", key:"task|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), kind:r[3]||"", detail:r[4]||"", mark:r[7]||"", url:"", status:(r[9]||"").trim(), assignee:r[10]||"", prio:r[8]||""}))
       .filter(r=>r.ts && !done.includes(r.status));
     const byDue=(x,y)=>(x.due||"9999").localeCompare(y.due||"9999");
     S.forms={state:"ok", list:list.sort(byDue), task:task.sort(byDue), err:"", at:Date.now()};
@@ -527,6 +531,7 @@ function mcpErrText(e, server){
   if(c==="server_unavailable") return server+"に一時的につながりません。少し待ってから再度お試しください。";
   return server+"との連携に失敗しました（"+(c||"不明")+"）。";
 }
+function boardRowTask(r){ const m=String((r.site||"")+" "+(r.mark||"")); if(m.indexOf(BOARD_MARK)<0) return null; const id=(m.match(/CSタスクボードから（([A-Za-z0-9_\-]+)）/)||[])[1]; return S.tasks.find(t=>t.id===id) || {id:id||""}; }
 /* 依頼フォーム・営業戦略ルームから入った新しい行は、ボードに自動で載せる（AUTO_FROM 以降の依頼だけ） */
 const AUTO_FROM="2026-11-17";
 function tsDay(s){ const m=String(s||"").match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m?m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]):""; }
@@ -534,7 +539,7 @@ function srcLabel(r){ return r.type==="list" ? (/営業戦略ルーム/.test(r.s
 function hashKey(k){ let h=5381; for(let i=0;i<k.length;i++){ h=((h<<5)+h+k.charCodeAt(i))|0; } return (h>>>0).toString(36); }
 async function autoIntake(){
   if(S.readOnly || !S.db || !S.loaded.tasks || S.intakeBusy) return;
-  const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !S.tasks.some(t=>t.sourceKey===r.key));
+  const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key));
   if(!rows.length) return;
   S.intakeBusy=true;
   let n=0;
@@ -722,6 +727,16 @@ function nextBizDay(from){
   return base.getFullYear()+"-"+pad(base.getMonth()+1)+"-"+pad(base.getDate());
 }
 
+/* ボードから出したリスト・タスク依頼を、タスク管理表の一覧にも1行記録する（フォームと同じ扱い） */
+async function recordRequest(id, req, data){
+  if(!S.mcp) return;
+  const yy=d=>{ const m=String(d||"").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?m[1].slice(2)+"/"+m[2]+"/"+m[3]:""; };
+  const payload={type:req.type, taskId:id, requester:member(S.me).name||"", due:yy(data.due), assignee:(data.assignees||[]).map(k=>member(k).name).join("、"), priority:data.priority==="high"?"高":data.priority==="low"?"低":"中",
+    company:data.client||"", source:req.source, url:req.url, site:req.site, target:data.memo||"", product:req.product, kind:req.rkind, detail:data.title+(data.memo?"\n"+data.memo:""), customer:data.client||""};
+  try{ await S.mcp.callTool("Board","record_request",payload); toast(req.type==="list"?"リスト依頼一覧にも記録しました":"タスク依頼一覧にも記録しました"); }
+  catch(e){ toast("一覧への記録はできませんでした（タスクは作成済み）："+(e&&e.message||""),7000); }
+}
+
 /* ============ ドロワー：新規・編集 ============ */
 let F=null; // 編集中の下書き
 function openForm(t){
@@ -737,6 +752,16 @@ function drawForm(){
   '<div class="body">'+
     '<div class="field"><label for="fTitle">タイトル<span class="req">必須</span></label><input type="text" id="fTitle" value="'+esc(F.title)+'" placeholder="例：川金産業様 SRリスト作成（半導体装置ほか6キーワード）"></div>'+
     '<div class="field"><span class="lab">種別</span><div class="pick" data-pick="kind">'+KINDS.map(k=>'<button type="button" data-v="'+k+'" aria-pressed="'+(F.kind===k)+'">'+k+'</button>').join("")+'</div></div>'+
+    (!F.id && F.kind==="リスト作成"?'<div class="field" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px"><span class="lab">リスト作成依頼（リスト作成依頼フォームと同じ内容）</span>'+
+      '<div class="pick" data-pick="rsrc" style="margin:6px 0">'+LIST_SOURCES.map(x=>'<button type="button" data-v="'+x+'" aria-pressed="'+(F.rsrc===x)+'">'+x+'</button>').join("")+'</div>'+
+      '<div class="row2"><div class="field"><label for="fRurl">共有シートURL</label><input type="text" id="fRurl" value="'+esc(F.rurl||"")+'" placeholder="https://docs.google.com/spreadsheets/..."></div><div class="field"><label for="fRsite">抽出希望サイト（スクレイピングのとき）</label><input type="text" id="fRsite" value="'+esc(F.rsite||"")+'"></div></div>'+
+      '<div class="field"><label for="fRprod">商材・目的</label><textarea id="fRprod" rows="2">'+esc(F.rprod||"")+'</textarea></div>'+
+      '<div class="hint">ターゲット詳細は下の「メモ」に、企業名は「案件名・SIS番号」に書いてください。期限＝納品希望日です。</div>'+
+      '<label class="check"><input type="checkbox" id="fToSheet"'+(F.toSheet!==false?' checked':'')+'>タスク管理表の「リスト依頼一覧」にも記録する</label></div>':'')+
+    (!F.id && F.kind==="タスク依頼"?'<div class="field" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px"><span class="lab">タスク依頼（タスク依頼フォームと同じ内容）</span>'+
+      '<div class="pick" data-pick="rkind" style="margin:6px 0">'+TASK_REQ_KINDS.map(x=>'<button type="button" data-v="'+x+'" aria-pressed="'+(F.rkind===x)+'">'+x+'</button>').join("")+'</div>'+
+      '<div class="hint">詳細は「タイトル」と「メモ」に、関連する顧客は「案件名・SIS番号」に書いてください。期限＝納品希望日です。</div>'+
+      '<label class="check"><input type="checkbox" id="fToSheet"'+(F.toSheet!==false?' checked':'')+'>タスク管理表の「タスク依頼一覧」にも記録する</label></div>':'')+
     (F.kind==="判断を仰ぐ"?'<div class="field"><label for="fOptions">選択肢（1行に1つ）</label><textarea id="fOptions" rows="3" placeholder="例：\nAで進める\nBで進める\n今週は見送る">'+esc(F.options)+'</textarea><div class="hint">相手はボタンを押すだけで回答できます。空欄なら「OK／NG」になります。</div></div>':'')+
     '<div class="field"><span class="lab">誰に頼む<span class="req">必須</span></span><div class="pick" data-pick="assignees">'+S.roster.map(m=>'<button type="button" data-v="'+m.key+'" aria-pressed="'+F.assignees.includes(m.key)+'">'+esc(m.full)+(m.key===S.me?'（自分）':'')+'</button>').join("")+'</div></div>'+
     '<div class="row2"><div class="field"><label for="fClient">案件名・SIS番号</label><input type="text" id="fClient" value="'+esc(F.client)+'" placeholder="例：5084_アイクリック"></div>'+
@@ -754,6 +779,10 @@ function drawForm(){
 function readForm(){
   F.title=$("#fTitle").value.trim(); F.memo=$("#fMemo").value; F.client=$("#fClient").value.trim(); F.projectId=$("#fProject").value; F.due=$("#fDue").value;
   if($("#fOptions")) F.options=$("#fOptions").value;
+  if($("#fRurl")) F.rurl=$("#fRurl").value.trim();
+  if($("#fRsite")) F.rsite=$("#fRsite").value.trim();
+  if($("#fRprod")) F.rprod=$("#fRprod").value;
+  if($("#fToSheet")) F.toSheet=$("#fToSheet").checked;
   if($("#fNotify")) F.notify=$("#fNotify").checked;
   if($("#fCal")){ F.cal=$("#fCal").checked; F.calTime=$("#fCalTime").value; F.calMin=$("#fCalMin").value; }
 }
@@ -776,7 +805,12 @@ async function saveTask(){
     if(ok){ const id=F.id; const c=F.cal?{time:F.calTime,min:F.calMin}:null; F=null; if(c) addToCalendar({...t,...data,id}, c.time, c.min); openTask(id); }
     else if(btn) btn.disabled=false;
   } else {
-    const id=await createTask({...data, requester:S.me, status:"todo", sourceKey:""}, F.notify);
+    const req=(F.kind==="リスト作成"||F.kind==="タスク依頼") && F.toSheet!==false ? {type:F.kind==="リスト作成"?"list":"task", source:F.rsrc||"SR", url:F.rurl||"", site:F.rsite||"", product:F.rprod||"", rkind:F.rkind||"その他"} : null;
+    if(req && F.kind==="リスト作成" && !F.rsrc){ toast("抽出先を選んでください"); if(btn) btn.disabled=false; return; }
+    if(req && F.kind==="タスク依頼" && !F.rkind){ toast("依頼種類を選んでください"); if(btn) btn.disabled=false; return; }
+    const extra=req?(F.kind==="リスト作成"?"\n\n【リスト作成依頼】抽出先："+req.source+(req.url?"\n共有シート："+req.url:"")+(req.site?"\n抽出希望サイト："+req.site:"")+(req.product?"\n商材・目的："+req.product:""):"\n\n【タスク依頼】依頼種類："+req.rkind):"";
+    const id=await createTask({...data, memo:data.memo+extra, requester:S.me, status:"todo", sourceKey:req?("board-"+req.type):""}, F.notify);
+    if(id && req) recordRequest(id, req, data);
     if(id){ const c=F.cal?{time:F.calTime,min:F.calMin}:null; F=null; closeLayer(); toast("タスクを作成しました"); if(c) addToCalendar({...data,id}, c.time, c.min); }
     else if(btn) btn.disabled=false;
   }

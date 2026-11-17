@@ -74,6 +74,7 @@ function api(req) {
     case 'values':  return values_(req.spreadsheetId, req.range);
     case 'calList': return calList_(req.calendarId, req.start, req.end);
     case 'calCreate': return calCreate_(req);
+    case 'request': return request_(email, req);
     default: throw new Error('unknown_op');
   }
 }
@@ -175,6 +176,31 @@ function values_(id, range) {
   return {values: v.slice(0, last)};
 }
 
+/* ---------- ボードから出したリスト・タスク依頼を一覧に記録（フォームと同じ扱い） ---------- */
+function request_(email, r) {
+  const clip = (v, n) => String(v == null ? '' : v).slice(0, n || 2000);
+  const id = String(r.taskId || '').replace(/[^A-Za-z0-9_\-]/g, '');
+  const mark = 'CSタスクボードから（' + id + '）';
+  const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh, row;
+  if (r.type === 'list') {
+    sh = ss.getSheetByName('リスト依頼一覧');
+    row = [now, clip(r.requester, 40), clip(r.due, 10), clip(r.source, 40), clip(r.url, 500), clip(r.target), clip(r.product), clip(r.site, 300), mark, clip(r.company, 200), '', '', '', '未着手', clip(r.assignee, 60), clip(r.priority, 4)];
+  } else if (r.type === 'task') {
+    sh = ss.getSheetByName('タスク依頼一覧');
+    row = [now, clip(r.requester, 40), clip(r.due, 10), clip(r.kind, 40), clip(r.detail), clip(r.customer, 200), '', mark, clip(r.priority, 4), '未着手', clip(r.assignee, 60), ''];
+  } else throw new Error('invalid_type');
+  if (!sh) throw new Error('sheet_not_found');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const last = sh.getRange('A:A').getValues().filter(v => v[0] !== '').length;
+    const rng = sh.getRange(last + 1, 1, 1, row.length);
+    rng.setNumberFormat('@').setValues([row]);
+  } finally { lock.releaseLock(); }
+  return {ok: true};
+}
+
 /* ---------- カレンダー ---------- */
 function calList_(calendarId, start, end) {
   const cal = CalendarApp.getCalendarById(calendarId);
@@ -203,3 +229,6 @@ function setup() {
   UrlFetchApp.getRequest('https://slack.com/api/api.test');
   Logger.log('準備できました：' + DB_SHEET + ' シートを確認してください');
 }
+
+/* Slack通知の確認（エディタで実行すると、北原さんにDMが1通届く） */
+function testSlack() { Logger.log(JSON.stringify(slack_('U09T80ZAMT3', '【CSタスク】ボードからのテスト通知です。このメッセージが届いていれば、Slack通知はつながっています。\n[ボードを開く](https://cs-team-portal.vercel.app/board)'))); }
