@@ -1187,7 +1187,7 @@ const DZ_ACCENT={
 // bg, surface, sunken, line, muted-bg
 const DZ_TONE={
   neutral:{name:"ナチュラル", l:["#f3f4f1","#ffffff","#eceee9","#dbe0db","#eef0ed"], d:["#141917","#1c2320","#171d1a","#2e3833","#232b27"]},
-  white:  {name:"ホワイト",   l:["#ffffff","#ffffff","#f3f4f4","#e2e5e4","#f1f2f2"], d:["#0f1110","#171a19","#131615","#2a2e2c","#1f2321"]},
+  white:  {name:"ホワイト", dname:"ブラック",   l:["#ffffff","#ffffff","#f3f4f4","#e2e5e4","#f1f2f2"], d:["#0f1110","#171a19","#131615","#2a2e2c","#1f2321"]},
   warm:   {name:"あたたかい", l:["#f5f1ea","#fffdf9","#ece6dc","#ddd5c7","#f0eae0"], d:["#1a1714","#23201b","#1d1a16","#3a342c","#2b2721"]},
   cool:   {name:"すっきり",   l:["#eef2f7","#ffffff","#e3e9f1","#d3dbe6","#e8edf4"], d:["#12161c","#1a2029","#151a21","#2b3442","#222a35"]}
 };
@@ -1207,13 +1207,13 @@ function openDesign(){
   const d=dzGet(), dark=dzDark(d);
   const seg=(k,opts)=>'<div class="seg" role="group">'+opts.map(([v,label])=>'<button type="button" data-act="dz" data-k="'+k+'" data-v="'+v+'" aria-pressed="'+(d[k]===v)+'">'+label+'</button>').join("")+'</div>';
   const sw=Object.entries(DZ_ACCENT).map(([k,a])=>'<button type="button" class="dz-sw" data-act="dz" data-k="accent" data-v="'+k+'" aria-pressed="'+(d.accent===k)+'" title="'+a.name+'"><i style="background:'+a[dark?"d":"l"][0]+'"></i><span>'+a.name+'</span></button>').join("");
-  const tn=Object.entries(DZ_TONE).map(([k,t])=>{ const c=t[dark?"d":"l"]; return '<button type="button" class="dz-tone" data-act="dz" data-k="tone" data-v="'+k+'" aria-pressed="'+(d.tone===k)+'"><span class="dz-prev" style="background:'+c[0]+';border-color:'+c[3]+'"><i style="background:'+c[1]+';border-color:'+c[3]+'"></i></span><span>'+t.name+'</span></button>'; }).join("");
+  const tn=Object.entries(DZ_TONE).map(([k,t])=>{ const c=t[dark?"d":"l"]; return '<button type="button" class="dz-tone" data-act="dz" data-k="tone" data-v="'+k+'" aria-pressed="'+(d.tone===k)+'"><span class="dz-prev" style="background:'+c[0]+';border-color:'+c[3]+'"><i style="background:'+c[1]+';border-color:'+c[3]+'"></i></span><span>'+((dark&&t.dname)||t.name)+'</span></button>'; }).join("");
   $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="デザイン" data-drawer="design">'+
     '<header><h2>デザイン<small>この端末（このブラウザ）にだけ保存されます。ほかの人の画面は変わりません。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
     '<div class="body"><div class="dz">'+
       '<section><h3>明るさ</h3>'+seg("mode",[["auto","自動（端末に合わせる）"],["light","ライト"],["dark","ダーク"]])+'</section>'+
       '<section><h3>アクセントの色</h3><p class="hint">ボタン・選択中の項目・リンクの色です。</p><div class="dz-grid">'+sw+'</div></section>'+
-      '<section><h3>背景</h3><div class="dz-grid">'+tn+'</div></section>'+
+      '<section><h3>背景</h3>'+(dark?'<p class="hint">いまはダーク表示なので、背景は暗い色の組み合わせになります。白い背景にしたいときは、明るさを「ライト」にしてください。</p>':'')+'<div class="dz-grid">'+tn+'</div></section>'+
       '<section><h3>文字の大きさ</h3>'+seg("size",Object.entries(DZ_SIZE).map(([k,x])=>[k,x.name]))+'</section>'+
       '<section><button class="btn" type="button" data-act="dzReset">元に戻す</button></section>'+
     '</div></div></div></div>';
