@@ -222,7 +222,7 @@ async function boot(){
   const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
   db.collection("tasks").onSnapshot(snap=>{
     S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); } }
+    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
     else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
     render(); refreshDrawer();
     if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
@@ -564,6 +564,18 @@ async function autoIntake(){
     if(!r.due) continue;
     const t=S.tasks.find(x=>x.sourceKey===r.key && !x.due);
     if(t){ try{ await S.db.doc("tasks/"+t.id).update({due:r.due, updatedAt:nowIso()}); }catch(e){} }
+  }
+  // シート側のステータス（完了・不可・中止・対応中）をボードのタスクに反映する
+  const SHEET_ST={"完了":"done","不可":"cancel","中止":"cancel","対応中":"doing"};
+  for(const r of (S.formsAll||[])){
+    const st=SHEET_ST[r.status]; if(!st) continue;
+    const bt=boardRowTask(r);
+    const t=S.tasks.find(x=>x.sourceKey===r.key) || (bt&&bt.id&&S.tasks.find(x=>x.id===bt.id));
+    if(!t || t.status===st || !isOpen(t)) continue;
+    if(st==="doing" && t.status!=="todo") continue;
+    const patch={status:st, updatedAt:nowIso(), history:hist(t, "スプシのステータスが「"+r.status+"」になったため、"+(STATUS[st]?STATUS[st].label:st)+"に変更")};
+    if(st==="done") patch.doneAt=nowIso();
+    try{ await S.db.doc("tasks/"+t.id).update(patch); }catch(e){}
   }
   const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key));
   if(!rows.length) return;
