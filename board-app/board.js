@@ -1192,7 +1192,7 @@ const DZ_TONE={
   cool:   {name:"すっきり",   l:["#eef2f7","#ffffff","#e3e9f1","#d3dbe6","#e8edf4"], d:["#12161c","#1a2029","#151a21","#2b3442","#222a35"]}
 };
 const DZ_SIZE={s:{name:"小さめ",z:0.92}, m:{name:"標準",z:1}, l:{name:"大きめ",z:1.1}};
-function dzGet(){ let v={}; try{ v=JSON.parse((LS&&LS.getItem("cs.design"))||"{}")||{}; }catch(e){} return {mode:v.mode||"light", accent:DZ_ACCENT[v.accent]?v.accent:"blue", tone:DZ_TONE[v.tone]?v.tone:"neutral", size:DZ_SIZE[v.size]?v.size:"m"}; }
+function dzGet(){ let v={}; try{ v=JSON.parse((LS&&LS.getItem("cs.design.v2"))||"{}")||{}; }catch(e){} return {mode:v.mode||"light", accent:DZ_ACCENT[v.accent]?v.accent:"blue", tone:DZ_TONE[v.tone]?v.tone:"neutral", size:DZ_SIZE[v.size]?v.size:"m"}; }
 function dzDark(d){ return d.mode==="dark" || (d.mode==="auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
 function applyDesign(){
   const d=dzGet(), dark=dzDark(d), r=document.documentElement;
@@ -1201,7 +1201,7 @@ function applyDesign(){
   [["--accent",a[0]],["--accent-ink",a[1]],["--accent-bg",a[2]],["--bg",t[0]],["--surface",t[1]],["--sunken",t[2]],["--line",t[3]],["--muted-bg",t[4]]].forEach(([k,v])=>r.style.setProperty(k,v));
   document.body.style.zoom = DZ_SIZE[d.size].z===1 ? "" : String(DZ_SIZE[d.size].z);
 }
-function setDesign(k,v){ const d=dzGet(); d[k]=v; try{ LS&&LS.setItem("cs.design", JSON.stringify(d)); }catch(e){} applyDesign(); openDesign(); }
+function setDesign(k,v){ const d=dzGet(); d[k]=v; try{ LS&&LS.setItem("cs.design.v2", JSON.stringify(d)); }catch(e){} applyDesign(); openDesign(); }
 try{ window.matchMedia && matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ if(dzGet().mode==="auto") applyDesign(); }); }catch(e){}
 function openDesign(){
   const d=dzGet(), dark=dzDark(d);
@@ -1304,7 +1304,7 @@ document.addEventListener("click", async e=>{
     case "reloadKr": loadKouryu(true); break;
     case "design": openDesign(); break;
     case "dz": setDesign(el.dataset.k, el.dataset.v); break;
-    case "dzReset": try{ LS&&LS.removeItem("cs.design"); }catch(_){} applyDesign(); openDesign(); break;
+    case "dzReset": try{ LS&&LS.removeItem("cs.design.v2"); }catch(_){} applyDesign(); openDesign(); break;
     case "calPrev": if(S.cal.mode==="day") S.cal.day=addDaysTo(S.cal.day,-1); else S.cal.start=addDaysTo(S.cal.start,-7); render(); break;
     case "calNext": if(S.cal.mode==="day") S.cal.day=addDaysTo(S.cal.day,1); else S.cal.start=addDaysTo(S.cal.start,7); render(); break;
     case "calToday": S.cal.day=todayStr(); S.cal.start=mondayOf(todayStr()); render(); break;
