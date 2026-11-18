@@ -756,16 +756,13 @@ async function setStatus(t, st){
   const patch={status:st};
   if(st==="done") patch.doneAt=nowIso();
   if(st==="todo") patch.doneAt="";
-  const both=[t.requester, ...(t.assignees||[])];
-  const MSG={
-    doing:"さんが対応を始めました",
-    review:"さんが対応を終えました。"+nm(t.requester)+"さん、確認をお願いします",
-    reopen:"さんが差し戻しました。もう一度対応をお願いします",
-    done:"さんが完了にしました",
-    blocked:"さんのタスクが止まっています（ほかの人待ち）",
-    cancel:"さんがこのタスクを取り下げました"
+  // Slack通知は「相手が動く必要があるとき」だけ：確認へ（依頼者へ）・差し戻し（担当者へ）。着手・完了・中止などは通知しない
+  const NOTIFY={
+    review:{to:[t.requester], text:"さんが対応を終えました。確認をお願いします"},
+    reopen:{to:(t.assignees||[]), text:"さんが差し戻しました。もう一度対応をお願いします"}
   };
-  const keys=MSG[st]?both:[], msg=MSG[st]?"【CSタスク】"+nm(S.me)+MSG[st]+"（"+label+"）":"";
+  const n=NOTIFY[st];
+  const keys=n?n.to.filter(k=>k && k!==S.me):[], msg=n?"【CSタスク】"+nm(S.me)+n.text+"（"+label+"）":"";
   await updateTask(t, patch, "ステータスを「"+label+"」に変更", keys, msg);
 }
 function nextBizDay(from){
