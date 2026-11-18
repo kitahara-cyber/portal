@@ -506,7 +506,7 @@ function formTable(title, rows, type){
 }
 
 /* ============ フォーム依頼の読み込み（Google Sheets） ============ */
-function normDue(s){ const m=String(s||"").match(/(\d{2,4})\/(\d{1,2})\/(\d{1,2})/); if(!m) return ""; let y=+m[1]; if(y<100) y+=2000; return y+"-"+pad(+m[2])+"-"+pad(+m[3]); }
+function normDue(s){ const m=String(s||"").match(/(\d{2,4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/); if(!m) return ""; let y=+m[1]; if(y<100) y+=2000; return y+"-"+pad(+m[2])+"-"+pad(+m[3]); }
 function tsLabel(s){ const m=String(s||"").match(/\d{4}\/(\d{1,2})\/(\d{1,2})/); return m?(+m[1])+"/"+(+m[2])+" 依頼":""; }
 function valuesOf(res){ const p=res && res.payload; if(p && Array.isArray(p.values)) return p.values; if(p && p.content && Array.isArray(p.content.values)) return p.content.values; if(typeof p==="string"){ try{ const j=JSON.parse(p); return j.values||[]; }catch(e){} } return []; }
 async function loadForms(refresh, auto){
@@ -551,6 +551,12 @@ function srcLabel(r){ return r.type==="list" ? (/営業戦略ルーム/.test(r.s
 function hashKey(k){ let h=5381; for(let i=0;i<k.length;i++){ h=((h<<5)+h+k.charCodeAt(i))|0; } return (h>>>0).toString(36); }
 async function autoIntake(){
   if(S.readOnly || !S.db || !S.loaded.tasks || S.intakeBusy) return;
+  // 以前の取り込みで期限が空になったタスクに、シートの納品希望日を入れ直す
+  for(const r of [...S.forms.list,...S.forms.task]){
+    if(!r.due) continue;
+    const t=S.tasks.find(x=>x.sourceKey===r.key && !x.due);
+    if(t){ try{ await S.db.doc("tasks/"+t.id).update({due:r.due, updatedAt:nowIso()}); }catch(e){} }
+  }
   const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key));
   if(!rows.length) return;
   S.intakeBusy=true;
