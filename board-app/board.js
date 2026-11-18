@@ -714,12 +714,12 @@ function drawerTask(t){
   else if(!S.readOnly){
     if(t.kind!=="判断を仰ぐ"){
       if(canAsg && ["todo","reopen","blocked"].includes(t.status)) acts.push('<button class="btn primary" type="button" data-st="doing">着手する</button>');
-      if(canAsg && ["todo","reopen","doing","blocked"].includes(t.status)) acts.push('<button class="btn'+(t.status==="doing"?" primary":"")+'" type="button" data-st="review">対応が終わった（確認へ）</button>');
+      if(canAsg && !isListTask(t) && ["todo","reopen","doing","blocked"].includes(t.status)) acts.push('<button class="btn'+(t.status==="doing"?" primary":"")+'" type="button" data-st="review">対応が終わった（確認へ）</button>');
     }
     if(canAsg && ["todo","reopen","doing"].includes(t.status)) acts.push('<button class="btn" type="button" data-st="blocked">ブロック（ほかの人待ち）</button>');
     if(canAsg && t.status!=="done" && t.status!=="cancel") acts.push('<button class="btn" type="button" data-act="later">あとで（期限を翌営業日へ）</button>');
     if(canReq && t.status==="review") acts.push('<button class="btn primary" type="button" data-st="done">完了にする</button>','<button class="btn" type="button" data-st="reopen">再依頼する</button>');
-    if(canReq && ["todo","doing","blocked","reopen"].includes(t.status)) acts.push('<button class="btn" type="button" data-st="done">完了にする</button>');
+    if((canReq || (canAsg && isListTask(t))) && ["todo","doing","blocked","reopen","review"].includes(t.status) && !(canReq && t.status==="review")) acts.push('<button class="btn" type="button" data-st="done">完了にする</button>');
     if(canReq && isOpen(t)) acts.push('<button class="btn danger" type="button" data-st="cancel">中止</button>');
     if((canReq||canAsg) && (t.status==="done"||t.status==="cancel")) acts.push('<button class="btn" type="button" data-st="todo">未着手に戻す</button>');
   }
