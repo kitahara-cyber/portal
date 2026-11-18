@@ -95,6 +95,7 @@
       if(server === 'Google Calendar' && tool === 'list_events') return call({op: 'calList', calendarId: args.calendarId, start: args.startTime, end: args.endTime}).then(function(r){ return {payload: r}; });
       if(server === 'Google Calendar' && tool === 'create_event') return call({op: 'calCreate', summary: args.summary, start: args.startTime, end: args.endTime, description: args.description, guests: (args.attendees || []).map(function(a){ return a.email; })}).then(function(r){ return {payload: r}; });
       if(server === 'Board' && tool === 'unreplied') return call({op: 'mail'}).then(function(r){ return {payload: r}; });
+      if(server === 'Board' && tool === 'clients') return call({op: 'clients', refresh: !!args.refresh}).then(function(r){ return {payload: r}; });
       if(server === 'Board' && tool === 'find_thread') return call({op: 'findThread', client: args.client}).then(function(r){ return {payload: r}; });
       if(server === 'Board' && tool === 'list_report') return call(Object.assign({op: 'listReport'}, args)).then(function(r){ return {payload: r}; });
       if(server === 'Board' && tool === 'explain') return call({op: 'explain', id: args.id, force: !!args.force}).then(function(r){ return {payload: r}; });
@@ -222,11 +223,12 @@ async function boot(){
   const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
   db.collection("tasks").onSnapshot(snap=>{
     S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
+    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
     else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
     render(); refreshDrawer();
     if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
   }, e=>{ clearTimeout(timer); S.loadErr=dbErrText(e); render(); });
+  db.collection("deleted").onSnapshot(snap=>{ const ids=new Set(), keys=new Set(); snap.docs.forEach(d=>{ const x=d.data()||{}; ids.add(d.id); if(x.sourceKey) keys.add(x.sourceKey); }); S.deleted={ids,keys}; }, ()=>{});
   db.collection("threads").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>{ const x=d.data(); if(x&&x.key) m[x.key]=x.url; }); S.threads=m; }, ()=>{});
   db.collection("projects").onSnapshot(snap=>{
     S.projects=snap.docs.map(d=>({id:d.id, ...d.data()})).filter(p=>!p.archived).sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
@@ -434,7 +436,7 @@ function viewTeam(){
   '</div>';
   const keys=["todo","reopen","doing","blocked","review"];
   h+='<div class="legend">'+keys.map(k=>'<span><i style="background:'+STATUS[k].color+'"></i>'+STATUS[k].label+'</span>').join("")+'</div>';
-  h+='<div class="tablewrap"><table><thead><tr><th>メンバー</th><th>担当中の内訳</th><th class="num">担当中</th><th class="num">期限切れ</th><th class="num">確認待ち<br><span style="font-weight:400">（自分が確認する）</span></th><th class="num">頼んでいる</th><th class="num">直近7日の完了</th><th>いちばん近い期限</th></tr></thead><tbody>';
+  h+='<div class="tablewrap"><table><thead><tr><th>メンバー</th><th class="num">担当企業</th><th>担当中の内訳</th><th class="num">担当中</th><th class="num">期限切れ</th><th class="num">確認待ち<br><span style="font-weight:400">（自分が確認する）</span></th><th class="num">頼んでいる</th><th class="num">直近7日の完了</th><th>いちばん近い期限</th></tr></thead><tbody>';
   for(const m of S.roster){
     const mine=all.filter(t=>(t.assignees||[]).includes(m.key));
     const open=mine.filter(isOpen);
@@ -445,7 +447,8 @@ function viewTeam(){
     const done7=mine.filter(t=>t.status==="done" && daysSince(t.doneAt)<=7).length;
     const next=sortTasks(open.filter(t=>t.due && t.status!=="review"))[0];
     const total=open.length||1;
-    h+='<tr class="click" data-person="'+m.key+'" tabindex="0"><td><b>'+esc(m.full)+'</b></td>'+
+    const cl=clientsOfMember(m);
+    h+='<tr class="click" data-person="'+m.key+'" tabindex="0"><td><b>'+esc(m.full)+'</b></td><td class="num" title="'+esc(cl.map(c=>c.label).join("\n"))+'">'+(S.clients.length?cl.length:"—")+'</td>'+
       '<td><div class="stack" title="'+keys.map(k=>STATUS[k].label+' '+counts[k]).join(' / ')+'">'+keys.map(k=>counts[k]?'<span style="width:'+(counts[k]/total*100)+'%;background:'+STATUS[k].color+'"></span>':'').join("")+'</div></td>'+
       '<td class="num"><b>'+open.length+'</b></td><td class="num" style="'+(od?'color:var(--danger);font-weight:700':'')+'">'+od+'</td><td class="num">'+toCheck+'</td><td class="num">'+asked+'</td><td class="num">'+done7+'</td>'+
       '<td>'+(next?dueChip(next)+' <span class="sub">'+esc(next.title)+'</span>':'<span class="sub">なし</span>')+'</td></tr>';
@@ -582,7 +585,8 @@ async function autoIntake(){
     if(st==="done") patch.doneAt=nowIso();
     try{ await S.db.doc("tasks/"+t.id).update(patch); }catch(e){}
   }
-  const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key));
+  const del=S.deleted||{ids:new Set(),keys:new Set()};
+  const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key) && !del.keys.has(r.key) && !del.ids.has("form-"+hashKey(r.key)));
   if(!rows.length) return;
   S.intakeBusy=true;
   let n=0;
@@ -741,7 +745,7 @@ function drawerTask(t){
   '<div class="body">'+
     '<div class="chips">'+dueChip(t)+statusChip(t)+'<span class="chip'+(t.priority==="high"?" danger":"")+'">優先度：'+PRIO[t.priority||"normal"]+'</span></div>'+
     '<dl class="kv"><dt>依頼者</dt><dd>'+esc(t.requester?member(t.requester).full:"（登録した人になります）")+'</dd><dt>担当</dt><dd>'+esc((t.assignees||[]).map(k=>member(k).full).join("、")||"未設定")+'</dd>'+
-      '<dt>期限</dt><dd>'+(t.due?esc(fmtDate(t.due)):"なし")+'</dd><dt>案件</dt><dd>'+esc(t.client||"—")+'</dd><dt>プロジェクト</dt><dd>'+esc(p?p.name:"—")+'</dd><dt>作成</dt><dd>'+esc(fmtTime(t.createdAt))+'</dd>'+(t.status==="draft"&&(t.suggest||[]).length?'<dt>担当の候補</dt><dd>'+esc(names(t.suggest))+'（'+esc(t.meetingTitle?"議事録から推定":"初期の候補")+'）</dd>':'')+(t.meetingUrl?'<dt>議事録</dt><dd><a href="'+esc(t.meetingUrl)+'" target="_blank" rel="noopener">'+esc(t.meetingTitle||"議事録を開く")+' ↗</a></dd>':'')+'</dl>'+
+      '<dt>期限</dt><dd>'+(t.due?esc(fmtDate(t.due)):"なし")+'</dd><dt>案件</dt><dd>'+esc(t.client||"—")+(clientOf(t.client)?' <span class="sub">'+esc(clientDcText(clientOf(t.client)))+'</span>':'')+'</dd><dt>プロジェクト</dt><dd>'+esc(p?p.name:"—")+'</dd><dt>作成</dt><dd>'+esc(fmtTime(t.createdAt))+'</dd>'+(t.status==="draft"&&(t.suggest||[]).length?'<dt>担当の候補</dt><dd>'+esc(names(t.suggest))+'（'+esc(t.meetingTitle?"議事録から推定":"初期の候補")+'）</dd>':'')+(t.meetingUrl?'<dt>議事録</dt><dd><a href="'+esc(t.meetingUrl)+'" target="_blank" rel="noopener">'+esc(t.meetingTitle||"議事録を開く")+' ↗</a></dd>':'')+'</dl>'+
     (t.memo?'<div class="memo">'+esc(t.memo)+'</div>':'')+
     aiBox(t)+
     listBox(t)+
@@ -813,9 +817,10 @@ function drawForm(){
       '<div class="hint">詳細は「タイトル」と「メモ」に、関連する顧客は「案件名・SIS番号」に書いてください。期限＝納品希望日です。</div>'+
       '<label class="check"><input type="checkbox" id="fToSheet"'+(F.toSheet!==false?' checked':'')+'>タスク管理表の「タスク依頼一覧」にも記録する</label></div>':'')+
     (F.kind==="判断を仰ぐ"?'<div class="field"><label for="fOptions">選択肢（1行に1つ）</label><textarea id="fOptions" rows="3" placeholder="例：\nAで進める\nBで進める\n今週は見送る">'+esc(F.options)+'</textarea><div class="hint">相手はボタンを押すだけで回答できます。空欄なら「OK／NG」になります。</div></div>':'')+
+    '<div class="field"><label for="fClient">案件（企業）</label><input type="text" id="fClient" list="clientList" value="'+esc(F.client)+'" placeholder="企業名かSIS番号を入れると候補が出ます（例：5084）" autocomplete="off"><datalist id="clientList">'+S.clients.map(c=>'<option value="'+esc(c.label)+'">'+esc(clientDcText(c))+'</option>').join("")+'</datalist>'+
+      (clientOf(F.client)?'<div class="hint">'+esc(clientDcText(clientOf(F.client)))+'　'+esc(clientOf(F.client).status||"")+'</div>':'')+'</div>'+
+    '<div class="field"><span class="lab">プロジェクト</span><input type="hidden" id="fProject" value="'+esc(F.projectId)+'"><div class="pick" data-pick="projectId"><button type="button" data-v="" aria-pressed="'+(!F.projectId)+'">なし</button>'+S.projects.map(p=>'<button type="button" data-v="'+p.id+'" aria-pressed="'+(F.projectId===p.id)+'"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+(p.color||"var(--accent)")+';margin-right:5px"></i>'+esc(p.name)+'</button>').join("")+'</div></div>'+
     '<div class="field"><span class="lab">誰に頼む<span class="req">必須</span></span><div class="pick" data-pick="assignees">'+S.roster.map(m=>'<button type="button" data-v="'+m.key+'" aria-pressed="'+F.assignees.includes(m.key)+'">'+esc(m.full)+(m.key===S.me?'（自分）':'')+'</button>').join("")+'</div></div>'+
-    '<div class="row2"><div class="field"><label for="fClient">案件名・SIS番号</label><input type="text" id="fClient" value="'+esc(F.client)+'" placeholder="例：5084_アイクリック"></div>'+
-    '<div class="field"><label for="fProject">プロジェクト</label><select id="fProject"><option value="">なし</option>'+S.projects.map(p=>'<option value="'+p.id+'"'+(F.projectId===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join("")+'</select></div></div>'+
     '<div class="field"><label for="fDue">期限</label><div class="bar"><input type="date" id="fDue" value="'+esc(F.due)+'"><div class="pick" data-pick="due">'+quick.map(q=>'<button type="button" data-v="'+q[1]+'" aria-pressed="'+(F.due===q[1])+'">'+q[0]+'</button>').join("")+'</div></div></div>'+
     '<div class="field"><span class="lab">優先度</span><div class="pick" data-pick="priority">'+Object.entries(PRIO).map(([k,v])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(F.priority===k)+'">'+v+'</button>').join("")+'</div></div>'+
     '<div class="field"><label for="fMemo">メモ</label><textarea id="fMemo" rows="6" placeholder="背景・やってほしいこと・参考URLなど">'+esc(F.memo)+'</textarea></div>'+
@@ -1318,8 +1323,26 @@ async function lrSubmit(post){
   S.listBusy=null; refreshDrawer(true);
 }
 
+
+/* ============ 担当企業（案件管理マスターシートのメイン／サブディレクター） ============ */
+S.clients=[];
+async function loadClients(){
+  if(!window.__GAS || !S.mcp) return;
+  try{ const r=await S.mcp.callTool("Board","clients",{}); S.clients=((r&&r.payload)||{}).items||[]; if(S.view==="team") render(); }catch(e){}
+}
+function clientOf(raw){
+  const v=String(raw||"").trim(); if(!v || !S.clients.length) return null;
+  const sis=(v.match(/^(\d{4})/)||[])[1];
+  if(sis){ const c=S.clients.find(x=>x.sis===sis); if(c) return c; }
+  const k=clientKey(v); if(!k) return null;
+  return S.clients.find(x=>clientKey(x.name)===k) || S.clients.find(x=>{ const ck=clientKey(x.name); return ck && ck.length>1 && (ck.includes(k)||k.includes(ck)); }) || null;
+}
+function clientDcText(c){ return c ? "担当："+(c.main||"未設定")+(c.sub?"（サブ："+c.sub+"）":"") : ""; }
+function clientsOfMember(m){ const n=normName(m.name); return S.clients.filter(c=>c.main && normName(c.main)===n); }
+
 /* ============ イベント ============ */
 document.addEventListener("change", e=>{
+  if(e.target && e.target.id==="fClient" && F){ readForm(); const c=clientOf(F.client); if(c){ if(/^\d{4}$/.test(F.client.trim())) F.client=c.label; const k=matchMember(c.main); if(k && !F.assignees.length && F.kind!=="リスト作成") F.assignees=[k]; } drawForm(); return; }
   if(e.target && e.target.id==="calDate" && e.target.value){ const v=e.target.value; if(S.cal.mode==="day") S.cal.day=v; else S.cal.start=mondayOf(v); render(); }
 });
 document.addEventListener("click", async e=>{
@@ -1379,7 +1402,7 @@ document.addEventListener("click", async e=>{
     case "rosterSave": saveRoster(); break;
     case "saveTask": saveTask(); break;
     case "edit": if(t){ const tt=t; closeLayer(); openForm(tt); } break;
-    case "delete": if(t){ const tt=t; confirmBox("「"+tt.title+"」を削除しますか？元に戻せません。","削除する", async()=>{ try{ await S.db.doc("tasks/"+tt.id).delete(); closeLayer(); toast("削除しました"); }catch(err){ writeFail(err); } }); } break;
+    case "delete": if(t){ const tt=t; confirmBox("「"+tt.title+"」を削除しますか？元に戻せません。","削除する", async()=>{ try{ S.deleted=S.deleted||{ids:new Set(),keys:new Set()}; S.deleted.ids.add(tt.id); if(tt.sourceKey) S.deleted.keys.add(tt.sourceKey); await S.db.doc("tasks/"+tt.id).delete(); closeLayer(); toast("削除しました（自動で入り直すことはありません）"); }catch(err){ writeFail(err); } }); } break;
     case "later": if(t){ const nd=nextBizDay(t.due); await updateTask(t,{due:nd},"期限を"+fmtDate(nd)+"に変更"); } break;
     case "comment": if(t){
       const text=($("#cmText").value||"").trim(); if(!text) return;

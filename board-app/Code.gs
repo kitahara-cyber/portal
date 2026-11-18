@@ -80,6 +80,7 @@ function api(req) {
     case 'explain': return explain_(email, String(req.id || ''), !!req.force);
     case 'listReport': return listReport_(email, req);
     case 'findThread': return findThread_(String(req.client || ''));
+    case 'clients': return clients_(!!req.refresh);
     default: throw new Error('unknown_op');
   }
 }
@@ -123,6 +124,11 @@ function write_(email, path, data, mode) {
     for (let i = 0; i < rows.length; i++) { if (rows[i][0] === path) { idx = i; break; } }
     const now = new Date().toISOString();
     if (mode === 'delete') {
+      // 消したタスクは「削除済み」の印を残し、フォームの取り込みや自動登録で同じものが入り直さないようにする
+      if (idx >= 0 && /^tasks\/[^\/]+$/.test(path)) {
+        let cur = {}; try { cur = JSON.parse(rows[idx][1] || '{}'); } catch (e) {}
+        sh.appendRow(['deleted/' + path.split('/')[1], JSON.stringify({id: path.split('/')[1], sourceKey: cur.sourceKey || '', title: String(cur.title || '').slice(0, 80), meetingFileId: cur.meetingFileId || '', by: email, at: now}), now, email]);
+      }
       if (idx >= 0) sh.deleteRow(idx + 2);
       // サブコレクション（コメントなど）も消す
       const pre = path + '/';
@@ -384,6 +390,29 @@ function findThread_(client) {
   const url = 'https://writeuphq.slack.com/archives/' + ch + '/p' + String(ts).replace('.', '');
   writeSys_('threads/' + Utilities.base64EncodeWebSafe(key).replace(/=+$/, ''), {client: client, key: key, url: url, by: 'auto'});
   return {url: url};
+}
+
+
+/* ---------- 担当企業（案件管理マスターシート › 01_案件マスタ のメイン／サブディレクター） ---------- */
+const CLIENT_MASTER = '1LsPYSkdZXluqe5HP_T-exVYVu_jUfh88ADS96Qx0bvM';
+function clients_(refresh) {
+  const cache = CacheService.getScriptCache();
+  if (!refresh) { const c = cache.get('clients_v1'); if (c) return JSON.parse(c); }
+  const sh = SpreadsheetApp.openById(CLIENT_MASTER).getSheetByName('01_案件マスタ');
+  const n = sh.getLastRow();
+  const a = sh.getRange(2, 2, n - 1, 4).getDisplayValues();    // B:E 案件名・SIS・ステータス・案件区分
+  const b = sh.getRange(2, 25, n - 1, 2).getDisplayValues();   // Y:Z メイン・サブディレクター
+  const seen = {}, items = [];
+  a.forEach((r, i) => {
+    const name = String(r[0] || '').trim(), sis = String(r[1] || '').trim(), status = String(r[2] || '').trim();
+    if (!name && !sis) return;
+    if (/解約|完了/.test(status)) return;
+    const key = sis || name; if (seen[key]) return; seen[key] = 1;
+    items.push({sis: sis, name: name.replace(/^\d+_/, ''), label: (sis && name.indexOf(sis + '_') !== 0 ? sis + '_' : '') + name, status: status, kind: String(r[3] || ''), main: String(b[i][0] || '').trim(), sub: String(b[i][1] || '').trim()});
+  });
+  const out = {items: items, at: new Date().toISOString()};
+  try { cache.put('clients_v1', JSON.stringify(out), 1800); } catch (e) {}
+  return out;
 }
 
 /* ---------- AIに背景を聞く ----------
