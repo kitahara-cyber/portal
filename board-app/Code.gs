@@ -77,6 +77,7 @@ function api(req) {
     case 'calCreate': return calCreate_(req);
     case 'request': return request_(email, req);
     case 'mail': return mail_(email);
+    case 'explain': return explain_(email, String(req.id || ''), !!req.force);
     default: throw new Error('unknown_op');
   }
 }
@@ -258,6 +259,96 @@ function calCreate_(req) {
     sendInvites: true
   });
   return {id: ev.getId()};
+}
+
+
+/* ---------- AIに背景を聞く ----------
+ * スクリプトプロパティ ANTHROPIC_API_KEY（または GEMINI_API_KEY）があればAIが説明を書く。
+ * どちらも無いときは、記録から分かることだけを並べて返す。結果はタスクに保存して、全員が見られるようにする。 */
+const SOURCE_GUIDE = {
+  '議事録から取り込み': 'Googleの会議メモ（Geminiの議事録）を毎日夕方に自動で読み、決まったこと・宿題をタスクにしたもの。',
+  '議事録から登録': '会議の議事録を読んで、決まったこと・宿題をタスクとして登録したもの。',
+  '自動登録（定例資料の前日作成）': '顧客との定例MTGの前日に、定例資料（または継続提案資料の下書き）を自動で作成し、その確認を担当ディレクターに頼むもの。',
+  '自動登録（定例フォロー昼）': '顧客との定例MTGの日の昼に、MTGでよりそいアンケート（顧客満足アンケート）への回答をお願いするよう担当ディレクターに頼むもの。',
+  '自動登録（定例フォロー夕方）': '定例MTGの日の夕方に、議事録が見つからなかったため「今日の定例のまとめ」の空欄（決まったこと・次の一手）の記入を頼むもの。',
+  'Slackの依頼から取り込み': 'Slackで送られていた依頼（定例資料の確認・定例のまとめ・アンケート依頼・感想のお願いなど）をボードに取り込んだもの。',
+  '自動で取り込み': 'リスト作成依頼フォーム／タスク依頼フォーム（スプレッドシートの依頼一覧）に入った依頼を、ボードに自動で載せたもの。',
+  'タスク管理表から取り込み': 'ボードを作ったときに、以前のタスク管理表（スプレッドシート）から移したもの。',
+  '作成': 'ボードの「新規タスク」から人が登録したもの。'
+};
+function explain_(email, id, force) {
+  if (!/^[A-Za-z0-9_\-]+$/.test(id)) throw new Error('invalid_id');
+  const all = readAll_();
+  const t = all['tasks/' + id];
+  if (!t) throw new Error('not_found');
+  if (t.ai && t.ai.text && !force) return t.ai;
+  const roster = ((all['config/roster'] || {}).members) || [];
+  const nm = k => { const m = roster.find(x => x.key === k); return m ? (m.full || m.name) : (k || ''); };
+  const proj = t.projectId ? all['projects/' + t.projectId] : null;
+  const comments = Object.keys(all).filter(k => k.indexOf('tasks/' + id + '/comments/') === 0).map(k => all[k]).sort((a, b) => String(a.at).localeCompare(String(b.at))).slice(-10);
+  const first = ((t.history || [])[0] || {}).text || '';
+  const guideKey = Object.keys(SOURCE_GUIDE).find(k => first.indexOf(k) === 0);
+  const ctx = [
+    'タイトル：' + t.title,
+    '種類：' + (t.kind || '通常タスク'),
+    '依頼者：' + nm(t.requester) + '／担当：' + (t.assignees || []).map(nm).join('、'),
+    '期限：' + (t.due || 'なし') + '／状態：' + (t.status || ''),
+    '案件（顧客）：' + (t.client || 'なし'),
+    'プロジェクト：' + (proj ? proj.name + (proj.desc ? '（' + proj.desc + '）' : '') : 'なし'),
+    '入った経路：' + first + (guideKey ? '　→ ' + SOURCE_GUIDE[guideKey] : ''),
+    t.sourceLabel ? '取り込み元：' + t.sourceLabel : '',
+    t.meetingTitle ? '元の会議：' + t.meetingTitle + (t.meetingUrl ? '（' + t.meetingUrl + '）' : '') : '',
+    'メモ：\n' + (t.memo || '（なし）'),
+    comments.length ? 'コメント：\n' + comments.map(c => '・' + nm(c.by) + '：' + String(c.text || '').slice(0, 300)).join('\n') : '',
+    '更新履歴：\n' + (t.history || []).slice(-8).map(h => '・' + String(h.at).slice(0, 10) + ' ' + nm(h.by) + '：' + h.text).join('\n')
+  ].filter(Boolean).join('\n');
+  let text = '', by = 'record';
+  try {
+    const r = llm_(ctx);
+    if (r) { text = r.text; by = r.by; }
+  } catch (e) { text = ''; }
+  if (!text) {
+    text = '【どこから来たか】\n' + (guideKey ? SOURCE_GUIDE[guideKey] : (first || '記録がありません')) +
+      (t.meetingTitle ? '\n元の会議：' + t.meetingTitle : '') +
+      '\n\n【やること】\n' + (t.memo || t.title) +
+      '\n\n【分からないとき】\n依頼者の' + nm(t.requester) + 'さんにコメントで聞いてください。' +
+      (by === 'record' ? '\n\n（AIの設定がまだのため、記録から分かることだけを表示しています）' : '');
+  }
+  const ai = {text: text, at: new Date().toISOString(), by: by, askedBy: email};
+  write_(email, 'tasks/' + id, {ai: ai}, 'update');
+  return ai;
+}
+function llm_(ctx) {
+  const props = PropertiesService.getScriptProperties();
+  const sys = 'あなたは株式会社ライトアップのCSチームのタスクボードの案内役です。担当者が「なにこのタスク？」と思ったときに読む説明を、日本語で書きます。' +
+    '次の4つの見出しで、それぞれ1〜3行の箇条書きにしてください：【どこから来たか】【なぜ必要か（背景）】【何をすれば終わりか】【分からないとき誰に聞くか】。' +
+    '記録に書かれていないことは作らず、推測するときは「〜と思われます」と書いてください。全体で350字以内。挨拶や前置きは不要です。';
+  const user = '次のタスクについて説明してください。\n\n' + ctx;
+  const ak = props.getProperty('ANTHROPIC_API_KEY');
+  if (ak) {
+    const model = props.getProperty('ANTHROPIC_MODEL') || 'claude-sonnet-5-5';
+    const r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: {'x-api-key': ak, 'anthropic-version': '2023-06-01'},
+      payload: JSON.stringify({model: model, max_tokens: 900, system: sys, messages: [{role: 'user', content: user}]})});
+    if (r.getResponseCode() === 200) {
+      const j = JSON.parse(r.getContentText());
+      return {text: (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim(), by: 'claude'};
+    }
+    console.warn('anthropic ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 300));
+  }
+  const gk = props.getProperty('GEMINI_API_KEY');
+  if (gk) {
+    const model = props.getProperty('GEMINI_MODEL') || 'gemini-2.5-flash';
+    const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: {'x-goog-api-key': gk},
+      payload: JSON.stringify({systemInstruction: {parts: [{text: sys}]}, contents: [{role: 'user', parts: [{text: user}]}], generationConfig: {maxOutputTokens: 900}})});
+    if (r.getResponseCode() === 200) {
+      const j = JSON.parse(r.getContentText());
+      return {text: (((j.candidates || [])[0] || {}).content || {parts: []}).parts.map(p => p.text || '').join('').trim(), by: 'gemini'};
+    }
+    console.warn('gemini ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 300));
+  }
+  return null;
 }
 
 /* ---------- 初回だけ：権限の確認（エディタで一度実行する） ---------- */
