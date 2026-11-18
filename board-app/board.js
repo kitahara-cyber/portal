@@ -1273,8 +1273,8 @@ function listBox(t){
     '<button class="btn small" type="button" data-act="lrAdd">＋ セグメントを追加</button>'+
     '<label class="lab" for="lrThread" style="margin-top:6px">報告先のSlackスレッド（企業のスレッドのリンク）</label><input type="url" id="lrThread" placeholder="スレッドの親メッセージで「リンクをコピー」したURL" value="'+esc(th)+'">'+
     (th&&!t.reportThread?'<div class="hint">この企業のスレッドを自動で入れています。違っていたら貼り替えてください。</div>':(S.threadLook&&S.threadLook[ck]==="loading"?'<div class="hint">この企業のスレッドを探しています…</div>':''))+
-    '<div class="actions"><button class="btn" type="button" data-act="lrSave"'+(busy?' disabled':'')+'>セグメント名をシートに保存</button><button class="btn primary" type="button" data-act="lrPost"'+(busy?' disabled':'')+'>'+(busy?'送信中…':'スレッドで完了報告して「確認へ」')+'</button></div>'+
-    '<div class="hint">「完了報告」を押すと、企業のスレッドで'+esc(req.full||"依頼者")+'さんにメンションして報告し、リスト依頼一覧のセグメント名とステータス（完了）を更新して、このタスクを「確認待ち」にします。</div></div>';
+    '<div class="actions"><button class="btn" type="button" data-act="lrSave"'+(busy?' disabled':'')+'>セグメント名をシートに保存</button><button class="btn primary" type="button" data-act="lrPost"'+(busy?' disabled':'')+'>'+(busy?'送信中…':'スレッドで完了報告して完了にする')+'</button></div>'+
+    '<div class="hint">「完了報告」を押すと、企業のスレッドで'+esc(req.full||"依頼者")+'さんにメンションして報告し、リスト依頼一覧のセグメント名とステータス（完了）を更新して、このタスクを完了にします。</div></div>';
 }
 function lrRead(){
   const segs=[]; for(let i=0;document.getElementById("lrName"+i);i++){ segs.push({name:$("#lrName"+i).value.trim(), url:$("#lrUrl"+i).value.trim()}); }
@@ -1293,8 +1293,8 @@ async function lrSubmit(post){
     const p=(r&&r.payload)||{};
     t.listSegs=segs; t.reportThread=v.thread;
     if(post){
-      await S.db.doc("tasks/"+t.id).update({status:"review", updatedAt:nowIso(), history:hist(t, "スレッドでリスト追加の完了を報告（確認へ）")});
-      toast(p.sheet==="not_found"?"報告しました（リスト依頼一覧の行は見つからず、シートは更新していません）":"スレッドで報告し、シートも更新しました",6000);
+      await S.db.doc("tasks/"+t.id).update({status:"done", doneAt:nowIso(), updatedAt:nowIso(), history:hist(t, "スレッドでリスト追加の完了を報告して完了")});
+      toast(p.sheet==="not_found"?"報告して完了にしました（リスト依頼一覧の行は見つからず、シートは更新していません）":"スレッドで報告して完了にしました（シートも更新済み）",6000);
     } else toast(p.sheet==="not_found"?"リスト依頼一覧の行が見つかりませんでした":"セグメント名をシートに保存しました");
     S.listEdit=null;
   }catch(e){
