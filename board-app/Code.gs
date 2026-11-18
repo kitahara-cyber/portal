@@ -78,6 +78,8 @@ function api(req) {
     case 'request': return request_(email, req);
     case 'mail': return mail_(email);
     case 'explain': return explain_(email, String(req.id || ''), !!req.force);
+    case 'listReport': return listReport_(email, req);
+    case 'findThread': return findThread_(String(req.client || ''));
     default: throw new Error('unknown_op');
   }
 }
@@ -261,6 +263,128 @@ function calCreate_(req) {
   return {id: ev.getId()};
 }
 
+
+
+/* ---------- リスト作成タスク：セグメント名をシートへ・企業スレッドで完了報告 ---------- */
+function clientKey_(c) {
+  return String(c || '').replace(/^\d+_/, '').replace(/株式会社|合同会社|有限会社|一般社団法人|（株）|\(株\)|様|\s|　/g, '').toLowerCase();
+}
+function parseThread_(url) {
+  const m = String(url || '').match(/archives\/([A-Z0-9]+)\/p(\d{10})(\d{6})/);
+  if (!m) return null;
+  const t = String(url).match(/thread_ts=(\d+\.\d+)/);
+  return {channel: m[1], ts: t ? t[1] : m[2] + '.' + m[3]};
+}
+function findListRow_(sh, task) {
+  const n = sh.getLastRow(); if (n < 2) return -1;
+  const vals = sh.getRange(2, 1, n - 1, 9).getDisplayValues();
+  const sk = String(task.sourceKey || '');
+  const m = sk.match(/^list\|(.*?)\|(.*?)(?:#(\d+))?$/);
+  if (m) {
+    let want = m[3] ? +m[3] : 1, seen = 0;
+    for (let i = 0; i < vals.length; i++) {
+      if (vals[i][0] === m[1] && vals[i][1] === m[2]) { seen++; if (seen === want) return i + 2; }
+    }
+  }
+  const mark = 'CSタスクボードから（' + task.id + '）';
+  for (let i = vals.length - 1; i >= 0; i--) { if (String(vals[i][8]).indexOf(mark) >= 0 || String(vals[i][7]).indexOf(mark) >= 0) return i + 2; }
+  return -1;
+}
+function listReport_(email, r) {
+  const id = String(r.id || '');
+  if (!/^[A-Za-z0-9_\-]+$/.test(id)) throw new Error('invalid_id');
+  const all = readAll_();
+  const t = all['tasks/' + id]; if (!t) throw new Error('not_found');
+  t.id = id;
+  const segs = (r.segments || []).map(x => ({name: String(x.name || '').slice(0, 200).trim(), url: String(x.url || '').slice(0, 500).trim()})).filter(x => x.name || x.url);
+  const thread = String(r.thread || '').trim();
+  const out = {sheet: '', slack: '', segments: segs};
+  // 1) シート：セグメント名（K列）、報告するときはステータス（N列）も完了に
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('リスト依頼一覧');
+  const row = sh ? findListRow_(sh, t) : -1;
+  if (row > 0) {
+    const names = segs.map(x => x.name).filter(Boolean).join('\n');
+    if (names) sh.getRange(row, 11).setValue(names);
+    if (r.post) sh.getRange(row, 14).setValue('完了');
+    out.sheet = 'row' + row;
+  } else out.sheet = 'not_found';
+  // 2) Slack：企業のスレッドで依頼者をメンションして報告
+  if (r.post) {
+    const th = parseThread_(thread);
+    if (!th) throw new Error('thread_url_invalid');
+    const roster = ((all['config/roster'] || {}).members) || [];
+    const mem = k => roster.find(x => x.key === k) || {};
+    const me = roster.find(x => String(x.email || '').toLowerCase() === email) || {};
+    const req = mem(t.requester);
+    const lines = [(req.slack ? '<@' + req.slack + '>' : (req.full || req.name || '') + 'さん'), 'リスト追加完了いたしました。', 'ご確認よろしくお願いいたします。', ''];
+    segs.forEach(x => { if (x.name) lines.push('【' + x.name + '】'); if (x.url) lines.push(x.url); lines.push(''); });
+    lines.push('（' + (me.full || me.name || email) + '／CSタスクボードから送信）');
+    const token = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+    if (!token) throw new Error('slack_not_configured');
+    const res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', {method: 'post', contentType: 'application/json; charset=utf-8', muteHttpExceptions: true,
+      headers: {Authorization: 'Bearer ' + token}, payload: JSON.stringify({channel: th.channel, thread_ts: th.ts, text: lines.join('\n'), unfurl_links: false})});
+    const j = JSON.parse(res.getContentText() || '{}');
+    if (!j.ok) throw new Error('slack_error: ' + (j.error || res.getResponseCode()));
+    out.slack = 'ok';
+  }
+  // 3) タスクと、企業→スレッドの対応を保存
+  const patch = {listSegs: segs, reportThread: thread};
+  write_(email, 'tasks/' + id, patch, 'update');
+  if (thread && parseThread_(thread) && t.client) {
+    const key = clientKey_(t.client);
+    if (key) writeSys_('threads/' + Utilities.base64EncodeWebSafe(key).replace(/=+$/, ''), {client: t.client, key: key, url: thread, by: email});
+  }
+  return out;
+}
+function writeSys_(path, data) {
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = sheet_(), rows = rows_(), now = new Date().toISOString();
+    let idx = -1;
+    for (let i = 0; i < rows.length; i++) { if (rows[i][0] === path) { idx = i; break; } }
+    const json = JSON.stringify(data);
+    if (idx >= 0) sh.getRange(idx + 2, 2, 1, 3).setValues([[json, now, 'system']]);
+    else sh.appendRow([path, json, now, 'system']);
+  } finally { lock.releaseLock(); }
+}
+
+
+/* 企業スレッドを探す：案件管理チャンネルの「■名前：〇〇」で始まる親メッセージ（Zapierが作るもの）から探す。
+ * 通知用Slackアプリがそのチャンネルに入っている必要がある。見つからなければ空を返す（画面で手入力） */
+function findThread_(client) {
+  const key = clientKey_(client); if (!key) return {url: ''};
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('SLACK_BOT_TOKEN'); if (!token) return {url: '', err: 'slack_not_configured'};
+  const ch = props.getProperty('SLACK_CLIENT_CHANNEL') || 'C07LFRA6P36';
+  const cache = CacheService.getScriptCache();
+  let idx = null;
+  try { idx = JSON.parse(cache.get('thread_idx') || 'null'); } catch (e) {}
+  if (!idx) {
+    idx = {}; let cursor = '', err = '';
+    for (let page = 0; page < 10; page++) {
+      const res = UrlFetchApp.fetch('https://slack.com/api/conversations.history?limit=200&channel=' + ch + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), {headers: {Authorization: 'Bearer ' + token}, muteHttpExceptions: true});
+      const j = JSON.parse(res.getContentText() || '{}');
+      if (!j.ok) { err = j.error || 'error'; break; }
+      (j.messages || []).forEach(m => {
+        const mm = String(m.text || '').match(/■名前：([^\n]+)/);
+        if (!mm) return;
+        const company = mm[1].split(/　|\s{2,}/)[0];
+        const k = clientKey_(company);
+        if (k && !idx[k]) idx[k] = m.ts;
+      });
+      cursor = (j.response_metadata || {}).next_cursor || '';
+      if (!cursor) break;
+    }
+    if (err && !Object.keys(idx).length) return {url: '', err: err};
+    try { cache.put('thread_idx', JSON.stringify(idx), 21600); } catch (e) {}
+  }
+  let ts = idx[key];
+  if (!ts) { const k2 = Object.keys(idx).find(k => k.indexOf(key) >= 0 || key.indexOf(k) >= 0); if (k2) ts = idx[k2]; }
+  if (!ts) return {url: ''};
+  const url = 'https://writeuphq.slack.com/archives/' + ch + '/p' + String(ts).replace('.', '');
+  writeSys_('threads/' + Utilities.base64EncodeWebSafe(key).replace(/=+$/, ''), {client: client, key: key, url: url, by: 'auto'});
+  return {url: url};
+}
 
 /* ---------- AIに背景を聞く ----------
  * スクリプトプロパティ ANTHROPIC_API_KEY（または GEMINI_API_KEY）があればAIが説明を書く。
