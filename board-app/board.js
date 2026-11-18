@@ -669,8 +669,12 @@ function refreshDrawer(force){
   const layer=$("#layer");
   if(!force && !layer.querySelector("[data-drawer='task']")) return;
   const draft=$("#cmText")?.value||"";
-  layer.innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="タスクの詳細" data-drawer="task">'+drawerTask(t)+'</div></div>';
+  const prev=layer.querySelector("[data-drawer='task'] .body"), sc=(prev && layer.querySelector("[data-drawer='task']").dataset.id===S.openId)?prev.scrollTop:0;
+  const focused=document.activeElement && document.activeElement.id==="cmText";
+  layer.innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="タスクの詳細" data-drawer="task" data-id="'+esc(S.openId)+'">'+drawerTask(t)+'</div></div>';
+  const body=layer.querySelector("[data-drawer='task'] .body"); if(body && sc) body.scrollTop=sc;
   if(draft && $("#cmText")) $("#cmText").value=draft;
+  if(focused && $("#cmText")) $("#cmText").focus();
 }
 function drawerTask(t){
   const me=S.me, isReq=t.requester===me, isAsg=(t.assignees||[]).includes(me), lead=isLead(me);
