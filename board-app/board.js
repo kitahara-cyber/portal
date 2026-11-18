@@ -1267,7 +1267,7 @@ function listBox(t){
   const busy=S.listBusy===t.id;
   S.threadLook=S.threadLook||{};
   const ck=clientKey(t.client);
-  if(!th && ck && !S.threadLook[ck]){ S.threadLook[ck]="loading"; S.mcp.callTool("Board","find_thread",{client:t.client}).then(r=>{ const u=r&&r.payload&&r.payload.url; S.threadLook[ck]=u?"found":"none"; if(u){ S.threads=S.threads||{}; S.threads[ck]=u; if(S.openId===t.id && !(($("#lrThread")||{}).value)) { const el=$("#lrThread"); if(el) el.value=u; } } }).catch(()=>{ S.threadLook[ck]="none"; }); }
+  if(!th && ck && !S.threadLook[ck]){ S.threadLook[ck]="loading"; S.mcp.callTool("Board","find_thread",{client:t.client}).then(r=>{ const u=r&&r.payload&&r.payload.url; S.threadLook[ck]=u?"found":"none"; if(u){ S.threads=S.threads||{}; S.threads[ck]=u; if(S.openId===t.id && !(($("#lrThread")||{}).value)) { const el=$("#lrThread"); if(el) el.value=u; } } if(S.openId===t.id) refreshDrawer(); }).catch(()=>{ S.threadLook[ck]="none"; if(S.openId===t.id) refreshDrawer(); }); }
   return '<div class="field lr-box"><span class="lab">リスト追加の報告'+(t.client?'（'+esc(t.client)+'）':'')+'</span>'+
     segs.map((x,i)=>'<div class="lr-row"><input type="text" id="lrName'+i+'" placeholder="セグメント名（例：S-0024-1 ドラEVER（ドライバー求人））" value="'+esc(x.name||"")+'"><input type="url" id="lrUrl'+i+'" placeholder="追加した行のリンク（スプシの行を右クリック →「この範囲へのリンクを取得」）" value="'+esc(x.url||"")+'">'+(segs.length>1?'<button class="x" type="button" data-act="lrDel" data-i="'+i+'" aria-label="この行を消す">×</button>':'')+'</div>').join("")+
     '<button class="btn small" type="button" data-act="lrAdd">＋ セグメントを追加</button>'+
