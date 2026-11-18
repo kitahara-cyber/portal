@@ -16,7 +16,7 @@
       - 料金・割引・期間・更新条件・単価の指示：facts.json の `"plan_input"` に入れる（担当が決めた値なので入れてよい）。
       - 文章の指示（簡潔に・控えめに・言葉を合わせる 等）：該当する章の欄（summary・voices・talks・field・gaps・proposals・target_note など）を書き直す。数字は data.json・facts.json にあるものだけ。他のお客様の社名は書かない。
       - できない・意味が分からない指示は、直さずに H に `できなかった`、I に理由（例：「どの施策か分からないので、施策の名前を教えてください」）。
-   4. 作り直す：`python3 _build/teirei/renew.py work/edit/data.json work/edit/facts.json work/edit/story.json work/edit/renew.html --director <担当> --sis <SIS>` → 7章 7-4 の 2. と同じ lock.py（`--gzip` つき）で同じ場所に置き直す。
+   4. 作り直す：`python3 _build/teirei/renew.py work/edit/data.json work/edit/facts.json work/edit/story.json work/edit/renew.html --director <担当> --sis <SIS>` → 7章 7-4 の 2. と同じ lock.py（`--gzip` つき）で同じ場所に置き直し、7-4 の 3.（`renew_to_portal.py`）でお客様のポータルの分も差し替える。
    5. H に `反映済み`、I に何をどう直したかを1行（例：「施策のウェビナーを外し、メールフォローを1つ目に」）。
 3. まとめて commit・push（`継続提案：変更を反映（<会社名>）`。最後に `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`）。
 4. 書いた人（G列。分からなければ担当）に Slack の DM：「<会社名>様の継続提案資料に、変更を反映しました：<直したこと>／<資料のURL>」。できなかった行は理由も送る。

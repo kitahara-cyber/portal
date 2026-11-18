@@ -9,6 +9,7 @@
 3. 日次報告 `19BxCNocKdGOyoDrrDiji3AeiRiWkPmMbCwthV6NcPeg` の `集計!D1:S12000` を get_values（ファイルに保存される）→ そのファイルの場所を控える（`work/crm_raw.json` にコピーしてよい）。
 4. JD シート `11K2kL-50gSeDtk8PTRUGJUfDsfoWu6GZNjyaYOeBZLI` から、`_build/daily/RUNBOOK_morning.md` で jd.py に渡しているのと同じ範囲（v2_DH・v2_RX・CSタスク・月額変更推移）を取り、
    `python3 _build/daily/jd.py work/v2_DH.json work/v2_RX.json work/cstask.json work/fee.json <今日> > work/jd.json`
+4-2. 記録シート `1sA96H5h0UoUAW7kHrqaCuPu9_s6THgP9b50olIOnMQI` の `AI提案!A1:K2000` を get_values → そのまま `work/aiprop.json` に保存（ポータルの「今の戦略」＝定例で決めた打ち手に使う）。
 5. 部品を広げる：`python3 _build/refresh/unpack.py <鍵>`（`/home/claude/` 以下に広がる）
 6. 作り直す：`bash /home/claude/refresh/refresh.sh <リポジトリの場所> work/crm_raw.json`
    - 最後に `REFRESH_OK` が出れば成功。途中で止まったら、エラーの最後の数行を北原さんへの DM に書き、push しない（`git checkout -- c acronet aiclick` で元に戻す）。
