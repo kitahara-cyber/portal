@@ -554,6 +554,7 @@ function mcpErrText(e, server){
 function boardRowTask(r){ const m=String((r.site||"")+" "+(r.mark||"")); if(m.indexOf(BOARD_MARK)<0) return null; const id=(m.match(/CSタスクボードから（([A-Za-z0-9_\-]+)）/)||[])[1]; return S.tasks.find(t=>t.id===id) || {id:id||""}; }
 /* 依頼フォーム・営業戦略ルームから入った新しい行は、ボードに自動で載せる（AUTO_FROM 以降の依頼だけ） */
 const AUTO_FROM="2026-11-17";
+const LIST_OWNER="kitami";   // リスト作成はすべて北見さん担当
 function tsDay(s){ const m=String(s||"").match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m?m[1]+"-"+pad(+m[2])+"-"+pad(+m[3]):""; }
 function srcLabel(r){ return r.type==="list" ? (/営業戦略ルーム/.test(r.site||"")?"営業戦略ルーム":"リスト作成依頼フォーム") : "タスク依頼フォーム"; }
 function hashKey(k){ let h=5381; for(let i=0;i<k.length;i++){ h=((h<<5)+h+k.charCodeAt(i))|0; } return (h>>>0).toString(36); }
@@ -564,6 +565,10 @@ async function autoIntake(){
     if(!r.due) continue;
     const t=S.tasks.find(x=>x.sourceKey===r.key && !x.due);
     if(t){ try{ await S.db.doc("tasks/"+t.id).update({due:r.due, updatedAt:nowIso()}); }catch(e){} }
+  }
+  // 担当が決まっていないリスト作成タスクは北見さんへ
+  for(const t of S.tasks.filter(x=>isListTask(x) && isOpen(x) && (x.status==="draft" || !(x.assignees||[]).length))){
+    try{ await S.db.doc("tasks/"+t.id).update({assignees:[LIST_OWNER], status:t.status==="draft"?"todo":t.status, suggest:[], updatedAt:nowIso(), history:hist(t, "リスト作成のため担当を北見さんに設定")}); }catch(e){}
   }
   // シート側のステータス（完了・不可・中止・対応中）をボードのタスクに反映する
   const SHEET_ST={"完了":"done","不可":"cancel","中止":"cancel","対応中":"doing"};
@@ -604,7 +609,7 @@ async function autoIntake(){
 }
 function formToTask(r){
   const req=matchMember(r.requester)||S.me;
-  const asg=matchMember(r.assignee);
+  const asg=r.type==="list" ? LIST_OWNER : matchMember(r.assignee);
   const fromRoom=r.type==="list" && /営業戦略ルーム/.test(r.site||"");
   return {
     title: r.type==="list" ? "リスト作成："+(r.company||"企業名なし")+(r.source?"（"+r.source+"）":"") : (r.kind||"タスク")+"："+String(r.detail).split("\n")[0].slice(0,40),
@@ -1352,6 +1357,7 @@ document.addEventListener("click", async e=>{
     if(kind==="assignees"){ F.assignees=F.assignees.includes(v)?F.assignees.filter(x=>x!==v):[...F.assignees,v]; }
     else if(kind==="due"){ F.due=v; }
     else F[kind]=v;
+    if(kind==="kind" && v==="リスト作成" && !F.id) F.assignees=[LIST_OWNER];
     drawForm(); return;
   }
   const t=S.openId?S.tasks.find(x=>x.id===S.openId):null;
