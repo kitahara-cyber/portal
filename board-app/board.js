@@ -1192,7 +1192,7 @@ const DZ_TONE={
   cool:   {name:"すっきり",   l:["#eef2f7","#ffffff","#e3e9f1","#d3dbe6","#e8edf4"], d:["#12161c","#1a2029","#151a21","#2b3442","#222a35"]}
 };
 const DZ_SIZE={s:{name:"小さめ",z:0.92}, m:{name:"標準",z:1}, l:{name:"大きめ",z:1.1}};
-function dzGet(){ let v={}; try{ v=JSON.parse((LS&&LS.getItem("cs.design"))||"{}")||{}; }catch(e){} return {mode:v.mode||"auto", accent:DZ_ACCENT[v.accent]?v.accent:"blue", tone:DZ_TONE[v.tone]?v.tone:"neutral", size:DZ_SIZE[v.size]?v.size:"m"}; }
+function dzGet(){ let v={}; try{ v=JSON.parse((LS&&LS.getItem("cs.design"))||"{}")||{}; }catch(e){} return {mode:v.mode||"light", accent:DZ_ACCENT[v.accent]?v.accent:"blue", tone:DZ_TONE[v.tone]?v.tone:"neutral", size:DZ_SIZE[v.size]?v.size:"m"}; }
 function dzDark(d){ return d.mode==="dark" || (d.mode==="auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
 function applyDesign(){
   const d=dzGet(), dark=dzDark(d), r=document.documentElement;
@@ -1211,7 +1211,7 @@ function openDesign(){
   $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="デザイン" data-drawer="design">'+
     '<header><h2>デザイン<small>この端末（このブラウザ）にだけ保存されます。ほかの人の画面は変わりません。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
     '<div class="body"><div class="dz">'+
-      '<section><h3>明るさ</h3>'+seg("mode",[["auto","自動（端末に合わせる）"],["light","ライト"],["dark","ダーク"]])+'</section>'+
+      '<section><h3>明るさ</h3>'+seg("mode",[["light","ライト（標準）"],["dark","ダーク"],["auto","端末に合わせる"]])+'</section>'+
       '<section><h3>アクセントの色</h3><p class="hint">ボタン・選択中の項目・リンクの色です。</p><div class="dz-grid">'+sw+'</div></section>'+
       '<section><h3>背景</h3>'+(dark?'<p class="hint">いまはダーク表示なので、背景は暗い色の組み合わせになります。白い背景にしたいときは、明るさを「ライト」にしてください。</p>':'')+'<div class="dz-grid">'+tn+'</div></section>'+
       '<section><h3>文字の大きさ</h3>'+seg("size",Object.entries(DZ_SIZE).map(([k,x])=>[k,x.name]))+'</section>'+
