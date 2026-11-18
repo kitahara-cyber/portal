@@ -520,10 +520,13 @@ async function loadForms(refresh, auto){
       S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'タスク依頼一覧'!A1:L1500"},opt)
     ]);
     const done=["完了","不可","中止"];
-    const list=valuesOf(a).slice(1).map((r,i)=>({type:"list", key:"list|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), source:r[3]||"", url:r[4]||"", detail:[r[5],r[6]].filter(Boolean).join("\n"), company:r[9]||"", site:r[8]||"", status:(r[13]||"").trim(), assignee:r[14]||"", prio:r[15]||""}))
-      .filter(r=>r.ts && !done.includes(r.status));
-    const task=valuesOf(b).slice(1).map((r,i)=>({type:"task", key:"task|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), kind:r[3]||"", detail:r[4]||"", mark:r[7]||"", url:"", status:(r[9]||"").trim(), assignee:r[10]||"", prio:r[8]||""}))
-      .filter(r=>r.ts && !done.includes(r.status));
+    // 同じ時刻・同じ依頼者の行が複数あるときは、2行目以降に #2, #3… を付けて別の依頼として扱う
+    const uniq=xs=>{ const c={}; xs.forEach(x=>{ c[x.key]=(c[x.key]||0)+1; if(c[x.key]>1) x.key+="#"+c[x.key]; }); return xs; };
+    const listAll=uniq(valuesOf(a).slice(1).map((r,i)=>({type:"list", key:"list|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), source:r[3]||"", url:r[4]||"", detail:[r[5],r[6]].filter(Boolean).join("\n"), company:r[9]||"", site:r[8]||"", status:(r[13]||"").trim(), assignee:r[14]||"", prio:r[15]||""})));
+    const list=listAll.filter(r=>r.ts && !done.includes(r.status));
+    const taskAll=uniq(valuesOf(b).slice(1).map((r,i)=>({type:"task", key:"task|"+(r[0]||i)+"|"+(r[1]||""), ts:r[0], tsLabel:tsLabel(r[0]), requester:r[1]||"", due:normDue(r[2]), kind:r[3]||"", detail:r[4]||"", mark:r[7]||"", url:"", status:(r[9]||"").trim(), assignee:r[10]||"", prio:r[8]||""})));
+    const task=taskAll.filter(r=>r.ts && !done.includes(r.status));
+    S.formsAll=[...listAll,...taskAll];
     const byDue=(x,y)=>(x.due||"9999").localeCompare(y.due||"9999");
     S.forms={state:"ok", list:list.sort(byDue), task:task.sort(byDue), err:"", at:Date.now()};
     autoIntake();
@@ -552,7 +555,7 @@ function hashKey(k){ let h=5381; for(let i=0;i<k.length;i++){ h=((h<<5)+h+k.char
 async function autoIntake(){
   if(S.readOnly || !S.db || !S.loaded.tasks || S.intakeBusy) return;
   // 以前の取り込みで期限が空になったタスクに、シートの納品希望日を入れ直す
-  for(const r of [...S.forms.list,...S.forms.task]){
+  for(const r of (S.formsAll||[])){
     if(!r.due) continue;
     const t=S.tasks.find(x=>x.sourceKey===r.key && !x.due);
     if(t){ try{ await S.db.doc("tasks/"+t.id).update({due:r.due, updatedAt:nowIso()}); }catch(e){} }
