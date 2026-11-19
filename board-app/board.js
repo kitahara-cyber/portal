@@ -316,13 +316,15 @@ function reqWhere(t){
   const k=String(t.sourceKey||"");
   if(t.sourceLabel) return {text:t.sourceLabel+(/フォーム/.test(t.sourceLabel)?"（スプレッドシート）":""), url:""};
   if(t.meetingTitle) return {text:"議事録「"+t.meetingTitle+"」", url:t.meetingUrl||""};
-  if(/^slack\|/.test(k)){ const ch=(String(t.memo||"").match(/（([^（）]+?)で @channel/)||[])[1]; return {text:"Slack"+(ch?" "+ch:"")+"（@channel／@here）", url:slackLink(t)}; }
+  if(/^slack\|/.test(k)){ const mm=String(t.memo||"").match(/（([^（）]+?)で\s*(@channel|@here|2人以上)/)||[]; const ch=mm[1]||""; const how=mm[2]==="2人以上"||/^【複数あて】/.test(t.title||"")?"2人以上へのメンション":"@channel／@here"; return {text:"Slack"+(ch?" "+ch:"")+"（"+how+"）", url:slackLink(t)}; }
   if(/^task\|/.test(k)||/^タスク管理表/.test(first)) return {text:"タスク管理表（タスク依頼フォーム）", url:""};
   if(/^list\|/.test(k)) return {text:"リスト作成依頼フォーム（スプレッドシート）", url:""};
-  if(/^Slack/.test(first)) return {text:"Slack（"+first.replace(/^Slackの/,"")+"）", url:slackLink(t)};
+  if(/^Slack/.test(first)) return {text:"Slack（定例資料の自動作成のお知らせから取り込み）", url:slackLink(t)};
   let m=first.match(/^自動登録（(.+)）/); if(m) return {text:"自動登録："+m[1], url:slackLink(t)};
-  m=first.match(/^作成（(.+)）/); if(m) return {text:"CSタスクボード（"+m[1]+"）", url:""};
-  if(/^作成/.test(first)) return {text:"CSタスクボード", url:""};
+  const by=(!AUTO_BY.includes(t.createdBy)&&t.createdBy)?member(t.createdBy).name+"さんが":"";
+  m=first.match(/^作成（(.+)）/); if(m) return {text:"CSタスクボードで"+by+"直接作成（"+m[1]+"）", url:""};
+  if(/^作成/.test(first)||/^board-/.test(k)) return {text:"CSタスクボードで"+by+"直接作成", url:""};
+  if(/各自に分けて作成/.test(first)) return {text:"CSタスクボード（「各自に分ける」で作成）", url:""};
   return {text:first||"不明", url:slackLink(t)};
 }
 function reqWho(t){
@@ -702,7 +704,7 @@ async function h100Sync(){
       requester:matchMember(x.sales)||"kitahara", assignees:[asg], due:nextBizDay(tsDay(x.ts)), priority:"normal", status:"todo", sourceKey:x.key,
       sourceLabel:"100件リスト申込フォーム", fromName:x.company+(x.name?"（"+x.name+"様）":"")+"の申込", options:[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:"auto", doneAt:"", history:[{at:nowIso(), by:S.me, text:"自動で取り込み（100件リスト申込フォーム）"}]};
     S.h100Busy=true;
-    try{ await S.db.doc("tasks/"+id).set(doc); notify([asg], "【CSタスク】100件リストの申込が届きました\n**"+doc.title+"**\n期限："+fmtDate(doc.due)+linkLine(id)); toast("100件リストの依頼をボードに載せました：" + x.company); }catch(e){}
+    try{ await S.db.doc("tasks/"+id).set(doc); notify([asg], "【CSタスク】100件リストの申込が届きました\n**"+doc.title+"**\n期限："+fmtDate(doc.due)+"\n依頼元：100件リスト申込フォーム（"+doc.fromName+"）"+linkLine(id)); toast("100件リストの依頼をボードに載せました：" + x.company); }catch(e){}
     S.h100Busy=false;
   }
 }
@@ -808,8 +810,10 @@ async function createTask(t, notifyOn){
   try{
     const ref=await S.db.collection("tasks").add(doc);
     if(notifyOn){
-      const msg=isClaimOpen(doc)?"【CSタスク】"+nm(doc.requester)+"さんから、誰か1人の対応でOKな依頼が届きました（候補："+names(doc.assignees)+"）\n対応できる方はボードで「担当します」を押してください\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+linkLine(ref.id):(doc.kind==="判断を仰ぐ"?"【CSタスク】"+nm(doc.requester)+"さんから判断のお願いが届きました":"【CSタスク】"+nm(doc.requester)+"さんから依頼が届きました")+
+      const w=reqWhere(doc), src="\n依頼元："+w.text+(w.url?" "+w.url:"");
+      const msg0=isClaimOpen(doc)?"【CSタスク】"+nm(doc.requester)+"さんから、誰か1人の対応でOKな依頼が届きました（候補："+names(doc.assignees)+"）\n対応できる方はボードで「担当します」を押してください\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+linkLine(ref.id):(doc.kind==="判断を仰ぐ"?"【CSタスク】"+nm(doc.requester)+"さんから判断のお願いが届きました":"【CSタスク】"+nm(doc.requester)+"さんから依頼が届きました")+
         "\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+"｜優先度："+PRIO[doc.priority||"normal"]+(doc.client?"｜"+doc.client:"")+linkLine(ref.id);
+      const msg=msg0.replace(/(\n\[ボードで開く\]\(|$)/, src+"$1");
       notify(doc.assignees.filter(k=>k!==S.me), msg);
     }
     return ref.id;
