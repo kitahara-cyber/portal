@@ -223,11 +223,12 @@ async function boot(){
   const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
   db.collection("tasks").onSnapshot(snap=>{
     S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
+    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setTimeout(applySlackClaims,2500); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
     else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
     render(); refreshDrawer();
     if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
   }, e=>{ clearTimeout(timer); S.loadErr=dbErrText(e); render(); });
+  db.collection("slackclaim").onSnapshot(snap=>{ S.slackClaims=snap.docs.map(d=>({id:d.id, ...(d.data()||{})})); applySlackClaims(); }, ()=>{});
   db.collection("deleted").onSnapshot(snap=>{ const ids=new Set(), keys=new Set(); snap.docs.forEach(d=>{ const x=d.data()||{}; ids.add(d.id); if(x.sourceKey) keys.add(x.sourceKey); }); S.deleted={ids,keys}; }, ()=>{});
   db.collection("threads").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>{ const x=d.data(); if(x&&x.key) m[x.key]=x.url; }); S.threads=m; }, ()=>{});
   db.collection("projects").onSnapshot(snap=>{
@@ -447,11 +448,11 @@ function segBtn(kind,val,label,n){ const on=S[kind]===val; return '<button type=
 function card(t){
   const p=proj(t.projectId);
   return '<article class="card'+(isOverdue(t)?' is-overdue':'')+'" tabindex="0" data-open="'+t.id+'">'+
-    '<div class="chips">'+dueChip(t)+statusChip(t)+(t.priority==="high"?'<span class="chip danger">優先度：高</span>':'')+(t.kind&&t.kind!=="通常タスク"?'<span class="chip info">'+esc(t.kind)+'</span>':'')+'</div>'+
+    '<div class="chips">'+dueChip(t)+statusChip(t)+(t.priority==="high"?'<span class="chip danger">優先度：高</span>':'')+(t.kind&&t.kind!=="通常タスク"?'<span class="chip info">'+esc(t.kind)+'</span>':'')+(isClaimOpen(t)&&isOpen(t)?'<span class="chip warn">引き受け待ち</span>':'')+'</div>'+
     '<h4>'+esc(t.title)+'</h4>'+
     (t.status==="done"?'<div class="meta donel">✓ 完了 '+esc(t.doneAt?fmtWhen({iso:t.doneAt}):"日時不明")+(doneBy(t)?'（'+esc(doneBy(t))+'）':'')+'</div>':t.status==="cancel"?'<div class="meta">中止 '+esc(fmtWhen({iso:closedWhen(t)||""}))+'</div>':'')+
     '<div class="meta origin">依頼 '+esc(fmtWhen(reqWhen(t)))+'｜'+esc(reqWhere(t).text)+'</div>'+
-    (t.status==="draft"?'<div class="meta">'+esc(t.sourceLabel||"議事録")+'から｜担当未定'+((t.suggest||[]).length?'（候補：'+esc(names(t.suggest))+'）':'')+'</div>':'<div class="meta">'+esc(nm(t.requester))+' → '+esc(names(t.assignees))+'</div>')+
+    (t.status==="draft"?'<div class="meta">'+esc(t.sourceLabel||"議事録")+'から｜担当未定'+((t.suggest||[]).length?'（候補：'+esc(names(t.suggest))+'）':'')+'</div>':'<div class="meta">'+esc(nm(t.requester))+' → '+(isClaimOpen(t)?'誰か1人（'+esc(names(candidatesOf(t)))+'）':esc(names(t.assignees)))+'</div>')+
     ((t.client||p)?'<div class="meta">'+esc([t.client,p&&p.name].filter(Boolean).join("｜"))+'</div>':'')+
     (t.kind==="判断を仰ぐ" && t.answer?'<div class="meta">回答：<b>'+esc(t.answer)+'</b></div>':'')+
   '</article>';
@@ -731,15 +732,57 @@ async function importForm(key){
 
 /* ============ タスク書き込み ============ */
 function hist(t, text){ const h=(t.history||[]).slice(-39); h.push({at:nowIso(), by:S.me, text}); return h; }
+const MODES=[
+  ["together","全員で1つ","1件のタスクを選んだ人全員で持ちます（今までどおり）。"],
+  ["each","各自それぞれ","選んだ人ごとに1件ずつ作ります。アンケート回答・提出物など、一人ひとりにやってほしいとき。"],
+  ["claim","誰か1人でOK","選んだ人全員に届き、最初に「担当します」を押した人が担当になります。ほかの人の一覧からは消えます。"]
+];
+function isClaimOpen(t){ return t.claim==="open"; }
+function candidatesOf(t){ return (t.candidates&&t.candidates.length?t.candidates:t.assignees)||[]; }
+async function claimTask(t, by, via){
+  if(!isClaimOpen(t)) return false;
+  const others=candidatesOf(t).filter(k=>k!==by);
+  const ok=await updateTask(t, {assignees:[by], claim:"taken", claimedBy:by, claimedAt:nowIso()}, (via?via+"で":"")+nm(by)+"さんが担当することになりました", [], "");
+  if(ok){
+    const tell=others.filter(k=>k!==S.me);
+    if(tell.length) notify(tell, "【CSタスク】"+nm(by)+"さんが担当することになりました（あなたの対応は不要です）\n**"+t.title+"**"+linkLine(t.id));
+    if(t.requester && t.requester!==by && t.requester!==S.me && !tell.includes(t.requester)) notify([t.requester], "【CSタスク】あなたの依頼を "+nm(by)+" さんが担当します\n**"+t.title+"**"+linkLine(t.id));
+  }
+  return ok;
+}
+async function splitEach(t){
+  const cs=candidatesOf(t); if(cs.length<2) return;
+  const base={...t}; ["id","history","comments","claim","claimedBy","claimedAt","candidates","ai"].forEach(k=>delete base[k]);
+  for(const k of cs.slice(1)){
+    try{ await S.db.collection("tasks").add({...base, assignees:[k], createdAt:nowIso(), updatedAt:nowIso(), createdBy:S.me, history:[{at:nowIso(), by:S.me, text:"「"+t.title+"」を各自に分けて作成"}]}); }catch(e){ writeFail(e); return; }
+  }
+  await updateTask(t, {assignees:[cs[0]], claim:"", candidates:[]}, "各自それぞれのタスクに分けました（"+names(cs)+"）", cs.filter(k=>k!==S.me), "【CSタスク】この依頼は各自でやることになりました。あなたの分のタスクがあります");
+  toast("各自のタスクに分けました（"+cs.length+"件）");
+}
+async function applySlackClaims(){
+  if(S.readOnly || !S.db || !S.loaded || !S.loaded.tasks || S.claimBusy) return;
+  S.claimBusy=true;
+  try{
+    for(const c of (S.slackClaims||[])){
+      const t=S.tasks.find(x=>x.id===c.task); if(!t || !c.key) continue;
+      if(c.kind==="claim" && isClaimOpen(t)) await claimTask(t, c.key, "Slackのスレッド（「"+String(c.text||"").slice(0,30)+"」）");
+      else if(c.kind==="done" && isOpen(t) && !(t.history||[]).some(h=>/Slackのスレッドで完了/.test(h.text||""))){
+        const pt={status:"done", doneAt:c.at||nowIso(), updatedAt:nowIso(), history:hist(t, "Slackのスレッドで完了の返信があったため完了（"+nm(c.key)+"）")};
+        if(isClaimOpen(t)){ pt.assignees=[c.key]; pt.claim="taken"; pt.claimedBy=c.key; }
+        try{ await S.db.doc("tasks/"+t.id).update(pt); }catch(e){}
+      }
+    }
+  } finally { S.claimBusy=false; }
+}
 async function createTask(t, notifyOn){
   if(!S.db) return null;
   const doc={...t, options:t.options||[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:S.me, doneAt:"", history:[{at:nowIso(), by:S.me, text:"作成"}]};
   try{
     const ref=await S.db.collection("tasks").add(doc);
     if(notifyOn){
-      const msg=(doc.kind==="判断を仰ぐ"?"【CSタスク】"+nm(doc.requester)+"さんから判断のお願いが届きました":"【CSタスク】"+nm(doc.requester)+"さんから依頼が届きました")+
+      const msg=isClaimOpen(doc)?"【CSタスク】"+nm(doc.requester)+"さんから、誰か1人の対応でOKな依頼が届きました（候補："+names(doc.assignees)+"）\n対応できる方はボードで「担当します」を押してください\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+linkLine(ref.id):(doc.kind==="判断を仰ぐ"?"【CSタスク】"+nm(doc.requester)+"さんから判断のお願いが届きました":"【CSタスク】"+nm(doc.requester)+"さんから依頼が届きました")+
         "\n**"+doc.title+"**\n期限："+(doc.due?fmtDate(doc.due):"なし")+"｜優先度："+PRIO[doc.priority||"normal"]+(doc.client?"｜"+doc.client:"")+linkLine(ref.id);
-      notify(doc.assignees, msg);
+      notify(doc.assignees.filter(k=>k!==S.me), msg);
     }
     return ref.id;
   }catch(e){ writeFail(e); return null; }
@@ -826,7 +869,16 @@ function drawerTask(t){
   else stateMsg="まだ着手されていません。";
   let acts=[];
   const canAsg=isAsg||lead, canReq=isReq||lead;
-  if(!S.readOnly && t.status==="draft"){ acts.push('<button class="btn primary" type="button" data-act="edit">担当を決めて登録</button>'); if(lead) acts.push('<button class="btn danger" type="button" data-act="delete">不要なので削除</button>'); }
+  if(isClaimOpen(t) && isOpen(t)){
+    stateMsg="誰か1人が対応すればよい依頼です。対応する人が「担当します」を押すと、その人の担当になり、ほかの候補の一覧からは消えます。候補："+names(candidatesOf(t)); cls="warn";
+  }
+  if(!S.readOnly && isClaimOpen(t) && isOpen(t)){
+    if(candidatesOf(t).includes(me)) acts.push('<button class="btn primary" type="button" data-act="claim">担当します</button>');
+    else acts.push('<button class="btn" type="button" data-act="claim">自分が担当します（候補外）</button>');
+    acts.push('<button class="btn" type="button" data-act="splitEach">各自に分ける（全員にやってもらう）</button>');
+    if(canReq) acts.push('<button class="btn danger" type="button" data-st="cancel">中止</button>');
+  }
+  else if(!S.readOnly && t.status==="draft"){ acts.push('<button class="btn primary" type="button" data-act="edit">担当を決めて登録</button>'); if(lead) acts.push('<button class="btn danger" type="button" data-act="delete">不要なので削除</button>'); }
   else if(!S.readOnly){
     if(t.kind!=="判断を仰ぐ"){
       if(canAsg && ["todo","reopen","blocked"].includes(t.status)) acts.push('<button class="btn primary" type="button" data-st="doing">着手する</button>');
@@ -851,7 +903,7 @@ function drawerTask(t){
   return '<header><h2>'+esc(t.title)+'<small>'+esc(t.kind||"通常タスク")+'</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
   '<div class="body">'+
     '<div class="chips">'+dueChip(t)+statusChip(t)+'<span class="chip'+(t.priority==="high"?" danger":"")+'">優先度：'+PRIO[t.priority||"normal"]+'</span></div>'+
-    '<dl class="kv"><dt>依頼者</dt><dd>'+esc(t.requester?reqWho(t):"（登録した人になります）")+'</dd><dt>担当</dt><dd>'+esc((t.assignees||[]).map(k=>member(k).full).join("、")||"未設定")+'</dd>'+
+    '<dl class="kv"><dt>依頼者</dt><dd>'+esc(t.requester?reqWho(t):"（登録した人になります）")+'</dd><dt>担当</dt><dd>'+(isClaimOpen(t)?'<span class="chip warn">引き受け待ち</span> 候補：'+esc(candidatesOf(t).map(k=>member(k).full).join("、")):esc((t.assignees||[]).map(k=>member(k).full).join("、")||"未設定")+(t.claimedBy?' <span class="sub">（'+esc(fmtTime(t.claimedAt))+'に引き受け）</span>':''))+'</dd>'+
       '<dt>期限</dt><dd>'+(t.due?esc(fmtDate(t.due)):"なし")+'</dd><dt>案件</dt><dd>'+esc(t.client||"—")+(clientOf(t.client)?' <span class="sub">'+esc(clientDcText(clientOf(t.client)))+'</span>':'')+'</dd><dt>プロジェクト</dt><dd>'+esc(p?p.name:"—")+'</dd><dt>ボード登録</dt><dd>'+esc(fmtTime(t.createdAt))+'</dd>'+(t.status==="draft"&&(t.suggest||[]).length?'<dt>担当の候補</dt><dd>'+esc(names(t.suggest))+'（'+esc(t.meetingTitle?"議事録から推定":"初期の候補")+'）</dd>':'')+(t.meetingUrl?'<dt>議事録</dt><dd><a href="'+esc(t.meetingUrl)+'" target="_blank" rel="noopener">'+esc(t.meetingTitle||"議事録を開く")+' ↗</a></dd>':'')+'</dl>'+
     originBox(t)+
     (t.memo?'<div class="memo">'+esc(t.memo)+'</div>':'')+
@@ -929,6 +981,7 @@ function drawForm(){
       (clientOf(F.client)?'<div class="hint">'+esc(clientDcText(clientOf(F.client)))+'　'+esc(clientOf(F.client).status||"")+'</div>':'')+'</div>'+
     '<div class="field"><span class="lab">プロジェクト</span><input type="hidden" id="fProject" value="'+esc(F.projectId)+'"><div class="pick" data-pick="projectId"><button type="button" data-v="" aria-pressed="'+(!F.projectId)+'">なし</button>'+S.projects.map(p=>'<button type="button" data-v="'+p.id+'" aria-pressed="'+(F.projectId===p.id)+'"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+(p.color||"var(--accent)")+';margin-right:5px"></i>'+esc(p.name)+'</button>').join("")+'</div></div>'+
     '<div class="field"><span class="lab">誰に頼む<span class="req">必須</span></span><div class="pick" data-pick="assignees">'+S.roster.map(m=>'<button type="button" data-v="'+m.key+'" aria-pressed="'+F.assignees.includes(m.key)+'">'+esc(m.full)+(m.key===S.me?'（自分）':'')+'</button>').join("")+'</div></div>'+
+    (!F.id && F.assignees.length>=2?'<div class="field"><span class="lab">頼み方（2人以上を選んだとき）</span><div class="pick" data-pick="mode">'+MODES.map(m=>'<button type="button" data-v="'+m[0]+'" aria-pressed="'+((F.mode||"together")===m[0])+'">'+m[1]+'</button>').join("")+'</div><div class="hint">'+esc((MODES.find(m=>m[0]===(F.mode||"together"))||MODES[0])[2])+'</div></div>':'')+
     '<div class="field"><label for="fDue">期限</label><div class="bar"><input type="date" id="fDue" value="'+esc(F.due)+'"><div class="pick" data-pick="due">'+quick.map(q=>'<button type="button" data-v="'+q[1]+'" aria-pressed="'+(F.due===q[1])+'">'+q[0]+'</button>').join("")+'</div></div></div>'+
     '<div class="field"><span class="lab">優先度</span><div class="pick" data-pick="priority">'+Object.entries(PRIO).map(([k,v])=>'<button type="button" data-v="'+k+'" aria-pressed="'+(F.priority===k)+'">'+v+'</button>').join("")+'</div></div>'+
     '<div class="field"><label for="fMemo">'+(F.kind==="リスト作成"&&!F.id?"ターゲット詳細（業種・地域・規模など）":"メモ")+'</label><textarea id="fMemo" rows="6" placeholder="'+(F.kind==="リスト作成"&&!F.id?"例：一都三県／介護・人材募集／従業員10〜50名／YouTubeかインスタのアカウントあり":"背景・やってほしいこと・参考URLなど")+'">'+esc(F.memo)+'</textarea></div>'+
@@ -973,7 +1026,12 @@ async function saveTask(){
     if(req && F.kind==="タスク依頼" && !F.rkind){ toast("依頼種類を選んでください"); if(btn) btn.disabled=false; return; }
     const extra=req&&F.kind!=="リスト作成"?"\n\n【タスク依頼】依頼種類："+req.rkind:"";
     const listBody=F.kind==="リスト作成"?listMemo({target:data.memo, product:F.rprod||"", source:F.rsrc||"", xsite:F.rsite||"", url:F.rurl||"", requester:nm(S.me), type:"list", fromBoard:true}).replace(/\n\n（[^）]*から取り込み／依頼者：[^）]*）$/,""):"";
-    const id=await createTask({...data, memo:listBody||(data.memo+extra), requester:S.me, status:"todo", sourceKey:req?("board-"+req.type):""}, F.notify);
+    const mode=F.assignees.length>=2?(F.mode||"together"):"together";
+    const baseDoc={...data, memo:listBody||(data.memo+extra), requester:S.me, status:"todo", sourceKey:req?("board-"+req.type):""};
+    let id=null;
+    if(mode==="each"){ for(const k of F.assignees){ const x=await createTask({...baseDoc, assignees:[k]}, F.notify); if(!id) id=x; } }
+    else if(mode==="claim") id=await createTask({...baseDoc, claim:"open", candidates:F.assignees.slice()}, F.notify);
+    else id=await createTask(baseDoc, F.notify);
     if(id && req) recordRequest(id, req, data);
     if(id){ const c=F.cal?{time:F.calTime,min:F.calMin}:null; F=null; closeLayer(); toast("タスクを作成しました"); if(c) addToCalendar({...data,id}, c.time, c.min); }
     else if(btn) btn.disabled=false;
@@ -1510,6 +1568,8 @@ document.addEventListener("click", async e=>{
     case "mailTask": el.disabled=true; await mailToTask(el.dataset.mid); break;
     case "rosterSave": saveRoster(); break;
     case "saveTask": saveTask(); break;
+    case "claim": if(t){ el.disabled=true; if(await claimTask(t, S.me, "")) toast("担当になりました"); } break;
+    case "splitEach": if(t){ el.disabled=true; await splitEach(t); } break;
     case "edit": if(t){ const tt=t; closeLayer(); openForm(tt); } break;
     case "delete": if(t){ const tt=t; confirmBox("「"+tt.title+"」を削除しますか？元に戻せません。","削除する", async()=>{ try{ S.deleted=S.deleted||{ids:new Set(),keys:new Set()}; S.deleted.ids.add(tt.id); if(tt.sourceKey) S.deleted.keys.add(tt.sourceKey); await S.db.doc("tasks/"+tt.id).delete(); closeLayer(); toast("削除しました（自動で入り直すことはありません）"); }catch(err){ writeFail(err); } }); } break;
     case "later": if(t){ const nd=nextBizDay(t.due); await updateTask(t,{due:nd},"期限を"+fmtDate(nd)+"に変更"); } break;
