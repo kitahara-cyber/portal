@@ -284,7 +284,7 @@ function renderSide(){
     '<nav class="nav" aria-label="メイン">'+nav.map(n=>'<button type="button" data-go="'+n[0]+'"'+(S.view===n[0]?' aria-current="page"':'')+'><b>'+n[1]+'</b><span>'+n[2]+'</span></button>').join("")+'</nav>'+
     '<h4>ツール</h4><div class="links">'+LINKS.map(l=>'<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join("")+'</div>'+
     '<h4>表示</h4><div class="nav"><button type="button" data-act="design"><b>デザイン</b><span>色・明るさ・文字の大きさ</span></button></div>'+
-    (isLead(S.me)?'<h4>管理</h4><div class="nav"><button type="button" data-act="roster"><b>メンバー設定</b><span>役割・SlackのID</span></button></div>':'')+
+    (S.me?'<h4>管理</h4><div class="nav"><button type="button" data-act="roster"><b>メンバー設定</b><span>役割・SlackのID</span></button></div>':'')+
     '<div class="me">'+(me?'<div class="avatar">'+esc(me.name.slice(0,2))+'</div><div><b>'+esc(me.full)+'</b></div>':'<div><b>未選択</b></div>')+(S.lockedMe?'':'<button type="button" data-act="who">切替</button>')+'</div>';
 }
 function closeSideMobile(){ $("#side").classList.remove("open"); }
@@ -510,10 +510,10 @@ function viewTeam(){
 }
 
 function viewProjects(){
-  const canMake=isLead(S.me) && !S.readOnly;
-  let h=topBar("プロジェクト","案件や施策ごとにタスクをまとめます。作成・編集は管理職と開発者だけができます。", canMake?'<button class="btn primary" type="button" data-act="newProject">＋ 新しいプロジェクト</button>':'');
+  const canMake=!!S.me && !S.readOnly;
+  let h=topBar("プロジェクト","案件や施策ごとにタスクをまとめます。メンバーなら誰でも作成・編集できます。", canMake?'<button class="btn primary" type="button" data-act="newProject">＋ 新しいプロジェクト</button>':'');
   h+='<div class="content">'+banners();
-  if(!S.projects.length) h+='<div class="banner">まだプロジェクトがありません。'+(canMake?'「＋ 新しいプロジェクト」から作れます。':'管理職か開発者が作成すると、ここに表示されます。')+'</div>';
+  if(!S.projects.length) h+='<div class="banner">まだプロジェクトがありません。'+(canMake?'「＋ 新しいプロジェクト」から作れます。':'作成すると、ここに表示されます。')+'</div>';
   h+='<div class="pgrid">'+S.projects.map(p=>{
     const ts=S.tasks.filter(t=>t.projectId===p.id);
     const open=ts.filter(isOpen).length, od=ts.filter(isOverdue).length, done=ts.filter(t=>t.status==="done").length;
@@ -1081,7 +1081,7 @@ let P=null;
 function openProject(p){
   P = p?{id:p.id,name:p.name,desc:p.desc||"",owner:p.owner||S.me,color:p.color||PCOLORS[0]}:{id:null,name:"",desc:"",owner:S.me,color:PCOLORS[S.projects.length%PCOLORS.length]};
   $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="プロジェクト" data-drawer="project">'+
-  '<header><h2>'+(P.id?"プロジェクトを編集":"新しいプロジェクト")+'<small>作成・編集できるのは管理職と開発者です。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<header><h2>'+(P.id?"プロジェクトを編集":"新しいプロジェクト")+'<small>メンバーなら誰でも作成・編集できます。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
   '<div class="body">'+
     '<div class="field"><label for="pName">名前<span class="req">必須</span></label><input type="text" id="pName" value="'+esc(P.name)+'" placeholder="例：つばめリード導入"></div>'+
     '<div class="field"><label for="pDesc">説明</label><textarea id="pDesc" rows="3" placeholder="目的やゴール">'+esc(P.desc)+'</textarea></div>'+
@@ -1113,7 +1113,7 @@ function openRoster(){
 }
 function drawRoster(){
   $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="メンバー設定" data-drawer="roster">'+
-  '<header><h2>メンバー設定<small>役割と、Slack通知の送り先（SlackのメンバーID）を管理します。保存には共有の「編集者」権限が必要です。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
+  '<header><h2>メンバー設定<small>役割と、Slack通知の送り先（SlackのメンバーID）を管理します。メンバーなら誰でも保存できます。</small></h2><button class="x" type="button" data-act="close" aria-label="閉じる">×</button></header>'+
   '<div class="body"><div class="tablewrap"><table><thead><tr><th>表示名</th><th>フルネーム</th><th>役割</th><th>Slack ID</th><th>メール（カレンダー用）</th><th></th></tr></thead><tbody>'+
   R.map((m,i)=>'<tr><td><input type="text" id="rn'+i+'" value="'+esc(m.name)+'" style="width:70px"></td><td><input type="text" id="rf'+i+'" value="'+esc(m.full)+'" style="width:110px"></td><td><select id="rr'+i+'">'+["管理職","開発者","メンバー"].map(r=>'<option'+(m.role===r?' selected':'')+'>'+r+'</option>').join("")+'</select></td><td><input type="text" id="rs'+i+'" value="'+esc(m.slack)+'" style="width:120px"></td><td><input type="text" id="re'+i+'" value="'+esc(m.email||"")+'" style="width:200px"></td><td><button class="btn small danger" type="button" data-rdel="'+i+'">削除</button></td></tr>').join("")+
   '</tbody></table></div><div><button class="btn small" type="button" data-act="rosterAdd">＋ メンバーを追加</button></div><div class="hint">表示名は苗字だけにしてください（claude.aiのプロフィール名の先頭と照らし合わせて、開いた人を自動で判別します）。</div>'+
@@ -1145,7 +1145,7 @@ async function saveRoster(){
   const members=R.filter(m=>m.name).map(m=>({...m, key:m.key||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)), full:m.full||m.name}));
   const keywords=RK.split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean);
   try{ await S.db.doc("config/roster").set({members, updatedAt:nowIso(), updatedBy:S.me}); await S.db.doc("config/minutes").set({keywords, updatedAt:nowIso(), updatedBy:S.me}); closeLayer(); toast("設定を保存しました"); }
-  catch(e){ if(e&&e.code==="invalid_argument") toast("保存できませんでした。メンバー設定の保存には「編集者」権限が必要です。",6000); else writeFail(e); }
+  catch(e){ if(e&&e.code==="invalid_argument") toast("保存できませんでした。メンバー設定に自分のメールアドレスが入っているか確認してください。",6000); else writeFail(e); }
 }
 
 /* ============ 自分の選択 ============ */

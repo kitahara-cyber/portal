@@ -111,7 +111,7 @@ function memberKey_(email) {
   return m ? m.key : '';
 }
 function canWrite_(email, path) {
-  if (/^(config|projects)\//.test(path)) return LEADS.indexOf(memberKey_(email)) >= 0;
+  if (/^(config|projects)\//.test(path)) return !!memberKey_(email);   // メンバー設定に入っている人なら誰でも
   if (/^data\/users\//.test(path)) return path.indexOf('data/users/' + email + '/') === 0;
   return /^(tasks|minutes)\//.test(path);
 }
