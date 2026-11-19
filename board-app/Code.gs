@@ -81,6 +81,8 @@ function api(req) {
     case 'listReport': return listReport_(email, req);
     case 'findThread': return findThread_(String(req.client || ''));
     case 'clients': return clients_(!!req.refresh);
+    case 'attach': return attach_(email, req);
+    case 'shareDomain': return shareDomain_(String(req.fileId || ''));
     default: throw new Error('unknown_op');
   }
 }
@@ -517,3 +519,35 @@ function setup() {
 
 /* Slack通知の確認（エディタで実行すると、北原さんにDMが1通届く） */
 function testSlack() { Logger.log(JSON.stringify(slack_('U09T80ZAMT3', '【CSタスク】ボードからのテスト通知です。このメッセージが届いていれば、Slack通知はつながっています。\n[ボードを開く](https://cs-team-portal.vercel.app/board)'))); }
+
+
+/* ---------- 添付ファイル（アップロードした人のドライブに置き、ライトアップの人が見られる設定にする） ---------- */
+function attachFolder_() {
+  const props = PropertiesService.getUserProperties();
+  const id = props.getProperty('attach_folder');
+  if (id) { try { const fo = DriveApp.getFolderById(id); if (!fo.isTrashed()) return fo; } catch (e) {} }
+  const fo = DriveApp.createFolder('CSタスクボード_添付ファイル');
+  try { fo.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  props.setProperty('attach_folder', fo.getId());
+  return fo;
+}
+function domainView_(f) {
+  try { f.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); return 'domain'; }
+  catch (e) { try { f.setSharing(DriveApp.Access.DOMAIN, DriveApp.Permission.VIEW); return 'domain'; } catch (e2) { return 'private'; } }
+}
+function attach_(email, req) {
+  const name = String(req.name || 'file').replace(/[\\/:*?"<>|]/g, '_').slice(0, 200);
+  const b64 = String(req.b64 || '');
+  if (!b64) throw new Error('empty');
+  if (b64.length > 34000000) throw new Error('too_large');
+  const blob = Utilities.newBlob(Utilities.base64Decode(b64), String(req.mime || 'application/octet-stream'), name);
+  const f = attachFolder_().createFile(blob);
+  try { f.setDescription('CSタスクボードの添付（タスク ' + String(req.taskId || '') + '／' + email + '）'); } catch (e) {}
+  const shared = domainView_(f);
+  return {id: f.getId(), name: name, url: f.getUrl(), mime: blob.getContentType(), size: f.getSize(), shared: shared};
+}
+function shareDomain_(fileId) {
+  if (!/^[A-Za-z0-9_\-]{10,}$/.test(fileId)) return {shared: 'unknown'};
+  try { const f = DriveApp.getFileById(fileId); return {shared: domainView_(f), name: f.getName()}; }
+  catch (e) { return {shared: 'unknown'}; }
+}
