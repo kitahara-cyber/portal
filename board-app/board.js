@@ -225,7 +225,7 @@ async function boot(){
   const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
   db.collection("tasks").onSnapshot(snap=>{
     S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setTimeout(applySlackClaims,2500); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
+    if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setTimeout(applySlackClaims,2500); setTimeout(autoProject,4000); setInterval(()=>{ if(!document.hidden) autoProject(); },3*60*1000); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
     else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
     render(); refreshDrawer();
     if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
@@ -739,6 +739,32 @@ const MODES=[
   ["each","各自それぞれ","選んだ人ごとに1件ずつ作ります。アンケート回答・提出物など、一人ひとりにやってほしいとき。"],
   ["claim","誰か1人でOK","選んだ人全員に届き、最初に「担当します」を押した人が担当になります。ほかの人の一覧からは消えます。"]
 ];
+/* ---- プロジェクトの自動振り分け（プロジェクト未設定のタスクだけ。人が外したものは戻さない） ---- */
+const PROJECT_RULES=[
+  ["zentai",   t=>/^【全体連絡】/.test(t.title||"")],
+  ["list",     t=>t.kind==="リスト作成" || /リスト(作成|生成|追加)|ハウスリスト|架電禁止|100件リスト|スクレイピング|情報付与/.test(t.title||"")],
+  ["apo",      t=>/アポ通知|商談(実施|管理|結果)|アポ管理|アポ設定|日程設定/.test(t.title||"")],
+  ["dashboard",t=>/ダッシュボード/.test(t.title||"")],
+  ["koryukai", t=>/交流会/.test(t.title||"")],
+  ["yorisoi",  t=>/よりそい/.test(t.title||"")],
+  ["teirei",   t=>["定例資料","継続提案資料"].includes(t.kind) || /定例|継続提案|満了|まとめを記入/.test(t.title||"")],
+  ["tsubame",  t=>/つばめ|チェッカー/.test(t.title||"")],
+  ["cs-dx",    t=>/タスクボード|自動化|Claude|案件管理|受注成立フォーム|仕組み化/.test(t.title||"")],
+  ["seisaku",  t=>/記事|チラシ|ビフォーアフター|バナー|LP|導入事例|動画|資料(作成|修正)/.test(t.title||"")],
+  ["client",   t=>!!(t.client) || /様|フォーム営業|連絡先|Chatwork|広告|診断|サンプル配布|講座/.test(t.title||"")]
+];
+function guessProject(t){ for(const [id,f] of PROJECT_RULES){ try{ if(f(t) && proj(id)) return id; }catch(e){} } return ""; }
+async function autoProject(){
+  if(S.readOnly || !S.db || !S.loaded || !S.loaded.tasks || S.projBusy) return;
+  S.projBusy=true;
+  try{
+    for(const t of S.tasks){
+      if(t.projectId || t.projAuto) continue;
+      const g=guessProject(t); if(!g) continue;
+      try{ await S.db.doc("tasks/"+t.id).update({projectId:g, projAuto:true}); t.projectId=g; t.projAuto=true; }catch(e){}
+    }
+  } finally { S.projBusy=false; }
+}
 function isClaimOpen(t){ return t.claim==="open"; }
 function candidatesOf(t){ return (t.candidates&&t.candidates.length?t.candidates:t.assignees)||[]; }
 async function claimTask(t, by, via){
@@ -1015,7 +1041,7 @@ async function saveTask(){
   if(!F.title){ toast("タイトルを入れてください"); $("#fTitle").focus(); return; }
   if(!F.assignees.length){ toast("誰に頼むかを選んでください"); return; }
   const options=F.kind==="判断を仰ぐ"?F.options.split("\n").map(s=>s.trim()).filter(Boolean):[];
-  const data={title:F.title, memo:F.memo, kind:F.kind, projectId:F.projectId, client:F.client, assignees:F.assignees, due:F.due, priority:F.priority, options};
+  const data={title:F.title, memo:F.memo, kind:F.kind, projectId:F.projectId, client:F.client, assignees:F.assignees, due:F.due, priority:F.priority, options}; if(F.id || F.projectId) data.projAuto=true;
   if(F.cal && !F.due){ toast("カレンダーに入れるには期限を入れてください"); return; }
   const btn=$('[data-act="saveTask"]'); if(btn) btn.disabled=true;
   if(F.id){
