@@ -824,7 +824,7 @@ function openTask(id){
   if(!t){ if(S.loaded.tasks) toast("タスクが見つかりませんでした"); else S.pendingOpen=id; return; }
   S.openId=id;
   if(S.unsubComments) S.unsubComments();
-  S.comments=[];
+  S.comments=[]; S.cmEdit=null;
   try{
     S.unsubComments=S.db.collection("tasks/"+id+"/comments").orderBy("at").onSnapshot(snap=>{ S.comments=snap.docs.map(d=>({id:d.id,...d.data()})); refreshDrawer(); }, ()=>{});
   }catch(e){}
@@ -916,7 +916,12 @@ function drawerTask(t){
     '<div class="state '+cls+'">'+stateMsg+'</div>'+
     (acts.length?'<div class="actions">'+acts.join("")+'</div>':'')+
     '<div class="field"><span class="lab">コメント（'+S.comments.length+'）</span>'+
-      '<div class="comments">'+S.comments.map(c=>'<div class="cm"><div class="who"><b>'+esc(nm(c.by))+'</b>'+esc(fmtTime(c.at))+((c.mentions||[]).length?'　→ '+esc(names(c.mentions)):'')+'</div><p>'+mentionHi(c.text)+'</p></div>').join("")+'</div>'+
+      '<div class="comments">'+S.comments.map(c=>{
+        const mine=c.by===S.me && !S.readOnly, editing=S.cmEdit===c.id && mine;
+        return '<div class="cm"><div class="who"><b>'+esc(nm(c.by))+'</b>'+esc(fmtTime(c.at))+(c.editedAt?' <span class="sub">（編集済み '+esc(fmtTime(c.editedAt))+'）</span>':'')+((c.mentions||[]).length?'　→ '+esc(names(c.mentions)):'')+(mine&&!editing?' <button type="button" class="linkbtn" data-act="cmEdit" data-cid="'+esc(c.id)+'">編集</button>':'')+'</div>'+
+          (editing?'<textarea id="cmEdit-'+esc(c.id)+'" rows="3">'+esc(c.text)+'</textarea><div class="bar"><span class="spacer"></span><button class="btn small" type="button" data-act="cmCancel">キャンセル</button><button class="btn primary small" type="button" data-act="cmSave" data-cid="'+esc(c.id)+'">保存する</button></div><div class="hint">新しく「@」を足した人にだけSlackで通知します。</div>'
+                  :'<p>'+mentionHi(c.text)+'</p>')+'</div>';
+      }).join("")+'</div>'+
       (S.readOnly?'':'<div style="position:relative"><textarea id="cmText" rows="3" placeholder="コメントを書く。「@」で人を呼べます（例：@小山 先方確認お願いします）"></textarea><div id="cmSug" class="mention-sug" hidden></div></div><div class="pick" aria-label="メンションする人">'+S.roster.filter(m=>m.key!==S.me).map(m=>'<button type="button" data-mention="'+esc(m.name)+'">@'+esc(m.name)+'</button>').join("")+'</div><div class="bar"><label class="check"><input type="checkbox" id="cmNotify" checked>依頼者・担当者にもSlackで知らせる</label><span class="spacer"></span><button class="btn primary small" type="button" data-act="comment">投稿する</button></div><div class="hint">メンションした人には、チェックに関係なくSlackで通知が届きます。</div>')+
     '</div>'+
     '<details><summary>更新履歴（'+(t.history||[]).length+'件）</summary><div class="hist">'+(t.history||[]).slice().reverse().map(h=>'<span>'+esc(fmtTime(h.at))+'　'+esc(nm(h.by))+'：'+esc(h.text)+'</span>').join("")+'</div></details>'+
@@ -1619,6 +1624,21 @@ document.addEventListener("click", async e=>{
     case "edit": if(t){ const tt=t; closeLayer(); openForm(tt); } break;
     case "delete": if(t){ const tt=t; confirmBox("「"+tt.title+"」を削除しますか？元に戻せません。","削除する", async()=>{ try{ S.deleted=S.deleted||{ids:new Set(),keys:new Set()}; S.deleted.ids.add(tt.id); if(tt.sourceKey) S.deleted.keys.add(tt.sourceKey); await S.db.doc("tasks/"+tt.id).delete(); closeLayer(); toast("削除しました（自動で入り直すことはありません）"); }catch(err){ writeFail(err); } }); } break;
     case "later": if(t){ const nd=nextBizDay(t.due); await updateTask(t,{due:nd},"期限を"+fmtDate(nd)+"に変更"); } break;
+    case "cmEdit": S.cmEdit=el.dataset.cid; refreshDrawer(true); { const ta=$("#cmEdit-"+el.dataset.cid); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } } break;
+    case "cmCancel": S.cmEdit=null; refreshDrawer(true); break;
+    case "cmSave": if(t){
+      const cid=el.dataset.cid, c=S.comments.find(x=>x.id===cid); if(!c || c.by!==S.me) return;
+      const text=(($("#cmEdit-"+cid)||{}).value||"").trim(); if(!text){ toast("空にはできません"); return; }
+      if(text===c.text){ S.cmEdit=null; refreshDrawer(true); return; }
+      el.disabled=true;
+      const mentions=mentionsIn(text), added=mentions.filter(k=>!(c.mentions||[]).includes(k));
+      try{
+        await S.db.doc("tasks/"+t.id+"/comments/"+cid).update({text, mentions, editedAt:nowIso()});
+        c.text=text; c.mentions=mentions; c.editedAt=nowIso();
+        S.cmEdit=null; refreshDrawer(true); toast("コメントを直しました");
+        if(added.length) notify(added, "【CSタスク】"+nm(S.me)+"さんがあなたをメンションしました\n>"+text.slice(0,300).replace(/\n/g,"\n>")+"\n**"+t.title+"**"+linkLine(t.id));
+      }catch(err){ writeFail(err); el.disabled=false; }
+    } break;
     case "comment": if(t){
       const text=($("#cmText").value||"").trim(); if(!text) return;
       el.disabled=true;
