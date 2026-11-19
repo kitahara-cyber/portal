@@ -1469,6 +1469,7 @@ function attachBox(t){
   let h='<div class="field attach" data-drop="'+esc(t.id)+'"><span class="lab">添付ファイル・データ（'+list.length+'）</span>';
   if(list.length) h+='<ul class="attlist">'+list.map((a,i)=>'<li>'+fileIcon(a)+' <a href="'+esc(a.url)+'" target="_blank" rel="noopener">'+esc(a.name||a.url)+'</a> <span class="sub">'+esc([fmtSize(a.size), nm(a.by), fmtTime(a.at), a.shared==="private"?"⚠ ライトアップ共有にできませんでした":""].filter(Boolean).join("・"))+'</span>'+(!S.readOnly&&(a.by===S.me||isLead(S.me))?' <button type="button" class="linkbtn" data-attdel="'+i+'" aria-label="外す">外す</button>':'')+'</li>').join("")+'</ul>';
   if(!S.readOnly){
+    if(S.attachAuth) h+='<div class="banner warn" style="margin:4px 0">ファイル添付には、このボードにGoogleドライブの許可が必要です。'+(S.attachAuth!=="none"?' <a href="'+esc(S.attachAuth)+'" target="_blank" rel="noopener"><b>Googleドライブを許可する ↗</b></a>（開いた画面で「Google ドライブ」にチェックを入れて「続行」）。済んだら、もう一度ファイルを選んでください。':'ボードを開き直して、許可画面で「Google ドライブ」にチェックを入れてください。')+'</div>';
     if(busy) h+='<div class="hint">アップロードしています…</div>';
     else if(window.__GAS) h+='<div class="dropzone"><label class="btn small">ファイルを選ぶ<input type="file" id="attFile" multiple hidden></label><span>または、ここにPDFなどをドラッグ</span></div>';
     h+='<div class="bar" style="margin-top:6px"><input type="text" id="attUrl" placeholder="GoogleドキュメントやスプレッドシートなどのURLを貼る" style="flex:1"><button class="btn small" type="button" data-act="attLink">リンクを追加</button></div>'+
@@ -1486,7 +1487,9 @@ async function attachFiles(t, files){
     try{
       const b64=await readB64(f);
       const r=await S.mcp.callTool("Board","attach",{taskId:t.id, name:f.name, mime:f.type||"application/octet-stream", b64});
-      const p=r&&r.payload; if(p&&p.url) added.push({name:p.name||f.name, url:p.url, fileId:p.id, mime:p.mime||f.type, size:p.size||f.size, shared:p.shared, by:S.me, at:nowIso()});
+      const p=r&&r.payload;
+      if(p&&p.needAuth){ S.attachAuth=p.authUrl||"none"; S.attachBusy=null; refreshDrawer(true); toast("ファイル添付には、Googleドライブの許可が必要です。添付欄の「Googleドライブを許可する」を押してください",8000); return; }
+      if(p&&p.url) added.push({name:p.name||f.name, url:p.url, fileId:p.id, mime:p.mime||f.type, size:p.size||f.size, shared:p.shared, by:S.me, at:nowIso()});
     }catch(e){ toast("アップロードできませんでした："+f.name+"（"+(e&&e.message||e)+"）",7000); }
   }
   S.attachBusy=null;

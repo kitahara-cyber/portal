@@ -535,13 +535,29 @@ function domainView_(f) {
   try { f.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); return 'domain'; }
   catch (e) { try { f.setSharing(DriveApp.Access.DOMAIN, DriveApp.Permission.VIEW); return 'domain'; } catch (e2) { return 'private'; } }
 }
+function driveAuth_() {
+  try {
+    const info = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL, ['https://www.googleapis.com/auth/drive']);
+    if (info.getAuthorizationStatus() === ScriptApp.AuthorizationStatus.REQUIRED) return {needAuth: true, authUrl: info.getAuthorizationUrl()};
+  } catch (e) {}
+  return null;
+}
 function attach_(email, req) {
+  const na = driveAuth_(); if (na) return na;
   const name = String(req.name || 'file').replace(/[\\/:*?"<>|]/g, '_').slice(0, 200);
   const b64 = String(req.b64 || '');
   if (!b64) throw new Error('empty');
   if (b64.length > 34000000) throw new Error('too_large');
   const blob = Utilities.newBlob(Utilities.base64Decode(b64), String(req.mime || 'application/octet-stream'), name);
-  const f = attachFolder_().createFile(blob);
+  let f;
+  try { f = attachFolder_().createFile(blob); }
+  catch (e) {
+    if (/権限|permission|auth/i.test(String(e && e.message || e))) {
+      let url = ''; try { url = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL).getAuthorizationUrl(); } catch (e2) {}
+      return {needAuth: true, authUrl: url};
+    }
+    throw e;
+  }
   try { f.setDescription('CSタスクボードの添付（タスク ' + String(req.taskId || '') + '／' + email + '）'); } catch (e) {}
   const shared = domainView_(f);
   return {id: f.getId(), name: name, url: f.getUrl(), mime: blob.getContentType(), size: f.getSize(), shared: shared};
