@@ -275,6 +275,9 @@ function calCreate_(req) {
 function clientKey_(c) {
   return String(c || '').replace(/^\d+_/, '').replace(/株式会社|合同会社|有限会社|一般社団法人|（株）|\(株\)|様|\s|　/g, '').toLowerCase();
 }
+function threadPath_(key) {  // 企業名（日本語）から衝突しないパスを作る
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, key, Utilities.Charset.UTF_8).map(b => ('0' + (b & 255).toString(16)).slice(-2)).join('').slice(0, 16);
+}
 function parseThread_(url) {
   const m = String(url || '').match(/archives\/([A-Z0-9]+)\/p(\d{10})(\d{6})/);
   if (!m) return null;
@@ -338,7 +341,7 @@ function listReport_(email, r) {
   write_(email, 'tasks/' + id, patch, 'update');
   if (thread && parseThread_(thread) && t.client) {
     const key = clientKey_(t.client);
-    if (key) writeSys_('threads/' + Utilities.base64EncodeWebSafe(key).replace(/=+$/, ''), {client: t.client, key: key, url: thread, by: email});
+    if (key) writeSys_('threads/' + threadPath_(key), {client: t.client, key: key, url: thread, by: email});
   }
   return out;
 }
@@ -388,7 +391,7 @@ function findThread_(client) {
   if (!ts) { const k2 = Object.keys(idx).find(k => k.indexOf(key) >= 0 || key.indexOf(k) >= 0); if (k2) ts = idx[k2]; }
   if (!ts) return {url: ''};
   const url = 'https://writeuphq.slack.com/archives/' + ch + '/p' + String(ts).replace('.', '');
-  writeSys_('threads/' + Utilities.base64EncodeWebSafe(key).replace(/=+$/, ''), {client: client, key: key, url: url, by: 'auto'});
+  writeSys_('threads/' + threadPath_(key), {client: client, key: key, url: url, by: 'auto'});
   return {url: url};
 }
 

@@ -523,7 +523,7 @@ async function loadForms(refresh, auto){
   S.forms={...S.forms,state:"loading"}; render();
   const opt={cache:{staleTime:60000,gcTime:600000, refresh:!!refresh}};
   try{
-    S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:H100_SHEET, range:"'フォームの回答 1'!A1:AH1500"},opt).then(r=>{ S.h100=parseH100(r); h100Sync(); }).catch(()=>{});
+    S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:H100_SHEET, range:"'フォームの回答 1'!A:AH"},opt).then(r=>{ S.h100=parseH100(r); h100Sync(); }).catch(()=>{});
     const [a,b]=await Promise.all([
       S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'リスト依頼一覧'!A1:P1500"},opt),
       S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'タスク依頼一覧'!A1:L1500"},opt)
@@ -594,7 +594,7 @@ async function autoIntake(){
   }
   const del=S.deleted||{ids:new Set(),keys:new Set()};
   const rows=[...S.forms.list,...S.forms.task].filter(r=>tsDay(r.ts)>=AUTO_FROM && !boardRowTask(r) && !S.tasks.some(t=>t.sourceKey===r.key) && !del.keys.has(r.key) && !del.ids.has("form-"+hashKey(r.key)));
-  if(!rows.length) return;
+  if(!rows.length){ h100Sync(); return; }
   S.intakeBusy=true;
   let n=0;
   for(const r of rows){
@@ -617,6 +617,7 @@ async function autoIntake(){
   }
   S.intakeBusy=false;
   if(n) toast("新しい依頼を "+n+" 件ボードに載せました");
+  h100Sync();
 }
 
 
