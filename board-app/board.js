@@ -523,6 +523,7 @@ async function loadForms(refresh, auto){
   S.forms={...S.forms,state:"loading"}; render();
   const opt={cache:{staleTime:60000,gcTime:600000, refresh:!!refresh}};
   try{
+    S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:H100_SHEET, range:"'フォームの回答 1'!A1:AH1500"},opt).then(r=>{ S.h100=parseH100(r); h100Sync(); }).catch(()=>{});
     const [a,b]=await Promise.all([
       S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'リスト依頼一覧'!A1:P1500"},opt),
       S.mcp.callTool("Google Sheets","get_values",{spreadsheetId:SHEET_ID, range:"'タスク依頼一覧'!A1:L1500"},opt)
@@ -616,6 +617,48 @@ async function autoIntake(){
   }
   S.intakeBusy=false;
   if(n) toast("新しい依頼を "+n+" 件ボードに載せました");
+}
+
+
+/* ============ 100件リスト（無料営業キャンペーン申込フォーム）→ 北見さんのタスク ============ */
+const H100_SHEET="1pHtiFMjTCCjH1L_-rYczw6FMfm-kPDirnCJotv0gKTo", H100_GID="908157083", H100_FROM="2026-11-10";
+function parseH100(res){
+  const rows=valuesOf(res).slice(1); const out=[];
+  rows.forEach((r,i)=>{
+    if(!r[0]||!r[1]) return;
+    out.push({row:i+2, ts:r[0], company:String(r[1]).trim(), name:r[4]||"", url:r[7]||"", strength:r[8]||"", note:r[21]||"", sales:r[22]||"",
+      flag:r[25]||"", owner:r[26]||"", list:r[27]||"", cond:r[28]||"", sendOk:String(r[29]||"").toUpperCase()==="TRUE", sent:r[30]||"", targetList:r[31]||"", persona:r[32]||"",
+      key:"h100|"+r[0]+"|"+String(r[1]).trim()});
+  });
+  return out;
+}
+function h100Memo(x){
+  const sec=(h,v)=>String(v||"").trim()?"【"+h+"】\n"+String(v).trim():"";
+  return [sec("申込企業",x.company+(x.name?"（"+x.name+"様）":"")), sec("サービスURL",x.url), sec("サービスの特徴・強み",x.strength), sec("リスト作成条件",x.cond), sec("ターゲット・ペルソナ",[x.targetList,x.persona].filter(Boolean).join("\n")), sec("備考",x.note),
+    "【やること】\n100件リストを作成し、申込行の「リスト」欄にURL、「リストメール送信OK？」にチェック（毎日20時に自動送信）。\n申込行：https://docs.google.com/spreadsheets/d/"+H100_SHEET+"/edit#gid="+H100_GID+"&range="+x.row+":"+x.row]
+    .filter(Boolean).join("\n\n")+"\n\n（100件リスト申込フォームから取り込み）";
+}
+async function h100Sync(){
+  if(S.readOnly || !S.db || !S.loaded.tasks || !(S.h100||[]).length) return;
+  const del=S.deleted||{ids:new Set(),keys:new Set()};
+  for(const x of S.h100){
+    const t=S.tasks.find(y=>y.sourceKey===x.key);
+    const done=x.sendOk || /送信済/.test(x.sent);
+    if(t){
+      if(done && isOpen(t)){ try{ await S.db.doc("tasks/"+t.id).update({status:"done", doneAt:nowIso(), updatedAt:nowIso(), history:hist(t,"申込シートで送信済みになったため完了に変更")}); }catch(e){} }
+      continue;
+    }
+    if(done || tsDay(x.ts)<H100_FROM || del.keys.has(x.key) || del.ids.has("h100-"+hashKey(x.key))) continue;
+    const id="h100-"+hashKey(x.key);
+    if(S.tasks.some(y=>y.id===id) || S.h100Busy) continue;
+    const asg=matchMember(x.owner)||LIST_OWNER;
+    const doc={title:"100件リスト作成："+x.company+"様", memo:h100Memo(x), kind:"リスト作成", projectId:"", client:x.company,
+      requester:matchMember(x.sales)||"kitahara", assignees:[asg], due:nextBizDay(tsDay(x.ts)), priority:"normal", status:"todo", sourceKey:x.key,
+      sourceLabel:"100件リスト申込フォーム", options:[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:"auto", doneAt:"", history:[{at:nowIso(), by:S.me, text:"自動で取り込み（100件リスト申込フォーム）"}]};
+    S.h100Busy=true;
+    try{ await S.db.doc("tasks/"+id).set(doc); notify([asg], "【CSタスク】100件リストの申込が届きました\n**"+doc.title+"**\n期限："+fmtDate(doc.due)+linkLine(id)); toast("100件リストの依頼をボードに載せました：" + x.company); }catch(e){}
+    S.h100Busy=false;
+  }
 }
 
 /* リスト依頼一覧の1行を、項目ごとに分けたメモにする（ターゲット詳細と商材が混ざらないように） */
@@ -1290,7 +1333,7 @@ async function aiAsk(id, force){
 
 /* ============ リスト作成タスク：セグメント名・行リンク・企業スレッドで完了報告 ============ */
 function clientKey(c){ return String(c||"").replace(/^\d+_/,"").replace(/株式会社|合同会社|有限会社|一般社団法人|（株）|\(株\)|様|\s|　/g,"").toLowerCase(); }
-function isListTask(t){ return t.kind==="リスト作成" || /^list\|/.test(t.sourceKey||""); }
+function isListTask(t){ return !/^h100\|/.test(t.sourceKey||"") && (t.kind==="リスト作成" || /^list\|/.test(t.sourceKey||"")); }
 function listBox(t){
   if(!window.__GAS || !isListTask(t)) return "";
   const segs=(S.listEdit&&S.listEdit.id===t.id)?S.listEdit.segs:((t.listSegs&&t.listSegs.length)?t.listSegs:[{name:"",url:""}]);

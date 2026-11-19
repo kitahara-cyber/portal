@@ -15,7 +15,7 @@ const DB_SHEET = '_board_db';
 const APP_JS   = 'https://raw.githubusercontent.com/kitahara-cyber/portal/board-app/board-app/board.js';
 const LEADS    = ['takahashi', 'sato', 'koguchi', 'kitahara'];      // プロジェクト・名簿・設定を変更できる人（名簿の key）
 // 読み取りを許すスプレッドシート（フォーム依頼・交流会の参加台帳）
-const READABLE_SHEETS = ['1GKcj5qfLoaUlhqxEMEicIxhPbCPCyLkUCJkELnK6wkg', '1S4GDhuB8DGv5I0_LKL_Aqhsqd3ak6jvNSux78zEa4yE'];
+const READABLE_SHEETS = ['1GKcj5qfLoaUlhqxEMEicIxhPbCPCyLkUCJkELnK6wkg', '1S4GDhuB8DGv5I0_LKL_Aqhsqd3ak6jvNSux78zEa4yE', '1pHtiFMjTCCjH1L_-rYczw6FMfm-kPDirnCJotv0gKTo'];  // 100件リスト申込フォーム（回答）を追加
 
 /* ---------- 画面 ---------- */
 function appCode_() {
