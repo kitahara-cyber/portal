@@ -82,6 +82,7 @@ function api(req) {
     case 'findThread': return findThread_(String(req.client || ''));
     case 'clients': return clients_(!!req.refresh);
     case 'attach': return attach_(email, req);
+    case 'attachInit': return attachInit_();
     case 'shareDomain': return shareDomain_(String(req.fileId || ''));
     default: throw new Error('unknown_op');
   }
@@ -541,6 +542,18 @@ function driveAuth_() {
     if (info.getAuthorizationStatus() === ScriptApp.AuthorizationStatus.REQUIRED) return {needAuth: true, authUrl: info.getAuthorizationUrl()};
   } catch (e) {}
   return null;
+}
+// ブラウザから直接ドライブへアップロードするための準備（本人のトークンと保存先フォルダ）
+function attachInit_() {
+  const na = driveAuth_(); if (na) return na;
+  try { return {token: ScriptApp.getOAuthToken(), folderId: attachFolder_().getId(), email: Session.getActiveUser().getEmail()}; }
+  catch (e) {
+    if (/権限|permission|auth/i.test(String(e && e.message || e))) {
+      let url = ''; try { url = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL).getAuthorizationUrl(); } catch (e2) {}
+      return {needAuth: true, authUrl: url};
+    }
+    throw e;
+  }
 }
 function attach_(email, req) {
   const na = driveAuth_(); if (na) return na;
