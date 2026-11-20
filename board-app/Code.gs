@@ -82,7 +82,7 @@ function api(req) {
     case 'findThread': return findThread_(String(req.client || ''));
     case 'clients': return clients_(!!req.refresh);
     case 'attach': return attach_(email, req);
-    case 'attachInit': return attachInit_();
+    case 'attachInit': return attachTicket_(email);
     case 'shareDomain': return shareDomain_(String(req.fileId || ''));
     default: throw new Error('unknown_op');
   }
@@ -579,4 +579,67 @@ function shareDomain_(fileId) {
   if (!/^[A-Za-z0-9_\-]{10,}$/.test(fileId)) return {shared: 'unknown'};
   try { const f = DriveApp.getFileById(fileId); return {shared: domainView_(f), name: f.getName()}; }
   catch (e) { return {shared: 'unknown'}; }
+}
+
+
+/* ---------- 共有の添付フォルダ（北原さんのドライブ）へのアップロード ----------
+ * メンバーは自分のドライブの許可なしで添付できる。ボード（本人として実行）が短時間有効の受付票を発行し、
+ * 「自分として実行」で別にデプロイしたアップロード用URL（doPost）が受付票を確かめて保存・削除する。 */
+const UPLOAD_URL = '';   // アップロード用デプロイ（実行：自分／アクセス：全員）の /exec URL
+function attachSecret_() {
+  const p = PropertiesService.getScriptProperties();
+  let s = p.getProperty('ATTACH_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); p.setProperty('ATTACH_SECRET', s); }
+  return s;
+}
+function sign_(body) { return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body, attachSecret_())); }
+function attachTicket_(email) {
+  const url = UPLOAD_URL || PropertiesService.getScriptProperties().getProperty('UPLOAD_URL') || '';
+  if (!url) return {noUpload: true};
+  const body = String(email || '').toLowerCase() + '|' + (Date.now() + 3 * 3600 * 1000);
+  return {uploadUrl: url, ticket: body + '|' + sign_(body)};
+}
+function checkTicket_(t) {
+  const p = String(t || '').split('|');
+  if (p.length !== 3) return '';
+  const body = p[0] + '|' + p[1];
+  if (sign_(body) !== p[2] || +p[1] < Date.now() || !/@writeup\.co\.jp$/i.test(p[0])) return '';
+  return p[0];
+}
+function sharedFolder_() {
+  const p = PropertiesService.getScriptProperties();
+  const id = p.getProperty('ATTACH_FOLDER');
+  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
+  const f = DriveApp.createFolder('CSタスクボード_添付ファイル（共有）');
+  try { f.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  p.setProperty('ATTACH_FOLDER', f.getId());
+  return f;
+}
+function doPost(e) {
+  let out;
+  try {
+    const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const who = checkTicket_(req.ticket);
+    if (!who) throw new Error('受付票が無効です。ボードを開き直してください');
+    const folder = sharedFolder_();
+    if (req.op === 'upload') {
+      const name = String(req.name || 'file').replace(/[\\/:*?"<>|]/g, '_').slice(0, 200);
+      const b64 = String(req.b64 || '');
+      if (!b64) throw new Error('ファイルが空です');
+      const blob = Utilities.newBlob(Utilities.base64Decode(b64), String(req.mime || 'application/octet-stream'), name);
+      const f = folder.createFile(blob);
+      try { f.setDescription('CSタスクボードの添付（タスク ' + String(req.taskId || '') + '／' + who + '）'); } catch (e2) {}
+      let shared = 'domain';
+      try { f.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW); } catch (e3) { shared = 'private'; }
+      out = {ok: true, id: f.getId(), name: name, url: f.getUrl(), mime: blob.getContentType(), size: f.getSize(), shared: shared, central: true};
+    } else if (req.op === 'trash') {
+      const f = DriveApp.getFileById(String(req.fileId || ''));
+      let inFolder = false; const it = f.getParents();
+      while (it.hasNext()) if (it.next().getId() === folder.getId()) inFolder = true;
+      if (!inFolder) throw new Error('ボードの添付フォルダのファイルではありません');
+      f.setTrashed(true);
+      out = {ok: true};
+    } else throw new Error('不明な操作です');
+  } catch (err) { out = {ok: false, error: String(err && err.message || err)}; }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
