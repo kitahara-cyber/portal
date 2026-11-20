@@ -619,6 +619,11 @@ function doPost(e) {
   let out;
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (req.type === 'url_verification' || req.type === 'event_callback') {
+      const r = slackEvent_(req);
+      if (r.challenge) return ContentService.createTextOutput(r.challenge);
+      return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);
+    }
     const who = checkTicket_(req.ticket);
     if (!who) throw new Error('受付票が無効です。ボードを開き直してください');
     const folder = sharedFolder_();
@@ -642,4 +647,119 @@ function doPost(e) {
     } else throw new Error('不明な操作です');
   } catch (err) { out = {ok: false, error: String(err && err.message || err)}; }
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ---------- Slackボット：ボットがメンションされた投稿をタスクにする ----------
+ * Slackアプリの Event Subscriptions の Request URL に、アップロード用デプロイ（実行：自分）の /exec URL を設定する。
+ * スクリプト プロパティ：SLACK_VERIFICATION_TOKEN（アプリの Basic Information の Verification Token）、
+ *   SLACK_TASKBOT_TOKEN（このボットの xoxb- トークン。無ければ SLACK_BOT_TOKEN を使う） */
+const BOARD_EXEC = 'https://script.google.com/a/macros/writeup.co.jp/s/AKfycbzZpVgr8E8UaEIqSPqhRcq4Z0fZAKDgvzmQwnvI4UHF0oV2eRukxqsBp-6pIt3BFRgr/exec';
+function taskbotToken_() { const p = PropertiesService.getScriptProperties(); return p.getProperty('SLACK_TASKBOT_TOKEN') || p.getProperty('SLACK_BOT_TOKEN'); }
+function slackApi_(method, payload, get) {
+  const opt = {method: get ? 'get' : 'post', muteHttpExceptions: true, headers: {Authorization: 'Bearer ' + taskbotToken_()}};
+  let url = 'https://slack.com/api/' + method;
+  if (get) url += '?' + Object.keys(payload).map(k => k + '=' + encodeURIComponent(payload[k])).join('&');
+  else { opt.contentType = 'application/json; charset=utf-8'; opt.payload = JSON.stringify(payload); }
+  try { return JSON.parse(UrlFetchApp.fetch(url, opt).getContentText() || '{}'); } catch (e) { return {ok: false, error: String(e)}; }
+}
+function slackEvent_(req) {
+  const vt = PropertiesService.getScriptProperties().getProperty('SLACK_VERIFICATION_TOKEN');
+  if (req.type === 'url_verification') {
+    if (vt && req.token !== vt) return {ok: false};
+    return {challenge: req.challenge};
+  }
+  if (!vt || req.token !== vt) return {ok: false, error: 'token'};
+  if (req.type !== 'event_callback') return {ok: true};
+  const ev = req.event || {};
+  const isDm = ev.type === 'message' && ev.channel_type === 'im' && !ev.subtype;
+  if (ev.bot_id || ev.subtype === 'bot_message' || !(ev.type === 'app_mention' || isDm)) return {ok: true};
+  const cache = CacheService.getScriptCache(), key = 'sev_' + (req.event_id || (ev.channel + ev.ts));
+  if (cache.get(key)) return {ok: true};
+  cache.put(key, '1', 21600);
+  const botId = ((req.authorizations || [])[0] || {}).user_id || '';
+  // Slackは3秒以内の応答を求めるので、ここでは受け付けだけして、登録は直後のトリガーで行う
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('sq_' + key.slice(4), JSON.stringify({ev: ev, botId: botId}));
+  try {
+    if (!ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'processSlackQueue'))
+      ScriptApp.newTrigger('processSlackQueue').timeBased().after(1000).create();
+  } catch (e) { processSlackQueue(); }
+  return {ok: true};
+}
+function processSlackQueue() {
+  const lock = LockService.getUserLock(); if (!lock.tryLock(25000)) return;
+  try {
+    ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'processSlackQueue') ScriptApp.deleteTrigger(t); });
+    const props = PropertiesService.getScriptProperties(), all = props.getProperties();
+    Object.keys(all).filter(k => k.indexOf('sq_') === 0).forEach(k => {
+      props.deleteProperty(k);
+      try { const q = JSON.parse(all[k]); slackTask_(q.ev, q.botId); } catch (e) { console.error('slackTask_ ' + e); }
+    });
+  } finally { lock.releaseLock(); }
+}
+function jpDue_(text, base) {
+  const d = new Date(base.getTime()), ymd = x => Utilities.formatDate(x, 'Asia/Tokyo', 'yyyy-MM-dd');
+  const add = n => { const x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; };
+  if (/明後日|あさって/.test(text)) return ymd(add(2));
+  if (/明日|あした/.test(text)) return ymd(add(1));
+  if (/今日中|本日中|今日|本日/.test(text)) return ymd(d);
+  if (/今週中/.test(text)) { const w = Number(Utilities.formatDate(d, 'Asia/Tokyo', 'u')); return ymd(add(Math.max(0, 5 - w))); }
+  const m = text.match(/(\d{1,2})[\/月](\d{1,2})日?/);
+  if (m) { let y = Number(Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy')); const cand = y + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2); return cand < ymd(add(-30)) ? (y + 1) + cand.slice(4) : cand; }
+  let n = add(1); while (['6', '7'].indexOf(Utilities.formatDate(n, 'Asia/Tokyo', 'u')) >= 0) n.setDate(n.getDate() + 1);
+  return ymd(n);
+}
+function slackTask_(ev, botId) {
+  const all = readAll_();
+  const members = ((all['config/roster'] || {}).members) || [];
+  const bySlack = {}; members.forEach(m => { if (m.slack) bySlack[m.slack] = m; });
+  let text = String(ev.text || '');
+  let ids = (text.match(/<@([A-Z0-9]+)(\|[^>]*)?>/g) || []).map(s => s.replace(/<@|(\|[^>]*)?>/g, '')).filter(id => id !== botId);
+  let body = text.replace(/<@[A-Z0-9]+(\|[^>]*)?>/g, ' ').replace(/<!(channel|here|everyone)>/g, ' ').replace(/\s+/g, ' ').trim();
+  let srcTs = ev.ts, parentText = '';
+  if (ev.thread_ts && ev.thread_ts !== ev.ts) {
+    const r = slackApi_('conversations.replies', {channel: ev.channel, ts: ev.thread_ts, limit: 1}, true);
+    parentText = (r.ok && r.messages && r.messages[0] && r.messages[0].text) || '';
+    if (body.length < 6 && parentText) { srcTs = ev.thread_ts; body = parentText.replace(/<@[A-Z0-9]+(\|[^>]*)?>/g, ' ').replace(/<!(channel|here|everyone)>/g, ' ').replace(/\s+/g, ' ').trim(); }
+  }
+  if (!body) return;
+  const poster = bySlack[ev.user];
+  let asg = ids.map(id => bySlack[id] && bySlack[id].key).filter(Boolean);
+  asg = asg.filter((k, i) => asg.indexOf(k) === i);
+  if (!asg.length && poster) asg = [poster.key];
+  if (!asg.length) asg = ['kitahara'];
+  const mode = asg.length < 2 ? 'single' : /各自|それぞれ|全員|皆さん|みなさん/.test(body) ? 'each' : 'claim';
+  const pl = slackApi_('chat.getPermalink', {channel: ev.channel, message_ts: srcTs}, true);
+  const link = pl.ok ? pl.permalink : '';
+  const now = new Date(), iso = now.toISOString();
+  const due = jpDue_(body, now);
+  const title = body.split(/[。\n]/)[0].replace(/^(お願い|おねがい)(します)?/, '').slice(0, 40) || 'Slackからの依頼';
+  const chInfo = slackApi_('conversations.info', {channel: ev.channel}, true);
+  const chName = chInfo.ok && chInfo.channel ? (chInfo.channel.is_im ? 'DM' : '#' + chInfo.channel.name) : ev.channel;
+  const base = {
+    title: title, memo: body.slice(0, 1500) + '\n\nSlack：' + link + '\n（' + chName + 'で ' + (ev.type === 'app_mention' ? 'ボットへのメンション' : 'ボットへのDM') + 'から自動登録）',
+    kind: '通常タスク', projectId: '', client: '', requester: poster ? poster.key : 'kitahara',
+    fromName: (poster ? poster.full : '') + 'さん（Slack ' + chName + '）', due: due,
+    priority: /至急|急ぎ|今日中|本日中|ASAP/i.test(body) ? 'high' : 'normal', status: 'todo', options: [], answer: '',
+    sourceKey: 'slack|' + ev.channel + '|' + srcTs, createdAt: iso, updatedAt: iso, createdBy: 'auto', doneAt: '',
+    history: [{at: iso, by: poster ? poster.key : 'kitahara', text: '自動登録（Slackのボットへのメンション）'}]
+  };
+  const stem = 'sb-' + String(ev.channel).slice(-6) + '-' + String(srcTs).replace('.', '').slice(-8);
+  const exists = p => all['tasks/' + p] || all['deleted/' + p];
+  const made = [];
+  if (mode === 'each') {
+    asg.forEach(k => { const id = stem + '-' + k; if (exists(id)) return; writeSys_('tasks/' + id, Object.assign({}, base, {assignees: [k]})); made.push(id); });
+  } else {
+    if (!exists(stem)) {
+      const doc = Object.assign({}, base, {assignees: asg});
+      if (mode === 'claim') { doc.candidates = asg.slice(); doc.claim = 'open'; }
+      writeSys_('tasks/' + stem, doc); made.push(stem);
+    }
+  }
+  if (!made.length) return;
+  const name = k => { const m = members.filter(x => x.key === k)[0]; return m ? (m.slack ? '<@' + m.slack + '>' : m.full) : k; };
+  const who = mode === 'claim' ? '誰か1人（' + asg.map(name).join('、') + '）※ボードで「担当します」を押した人が担当' : asg.map(name).join('、');
+  const dueTxt = Utilities.formatDate(new Date(due + 'T00:00:00+09:00'), 'Asia/Tokyo', 'M/d');
+  slackApi_('chat.postMessage', {channel: ev.channel, thread_ts: ev.thread_ts || ev.ts, text: 'タスクに登録しました（担当：' + who + '／期限：' + dueTxt + '）\n<' + BOARD_EXEC + '?t=' + made[0] + '|ボードで開く>'});
+  slackApi_('reactions.add', {channel: ev.channel, timestamp: ev.ts, name: 'white_check_mark'});
 }
