@@ -650,14 +650,14 @@ function upsellSection(d, a){
   '</tbody></table>';
   // 候補の会社
   const ok=c=>!/トラブル|スタートアップ前|準備中/.test(c.status||"") && !c.kaizen;
-  const cands=u.cl.filter(c=>c.fee<P).map(c=>{ const up=P-c.fee; const tags=[]; if(c.apos>0) tags.push("アポ実績 "+c.apos+"件"); if(c.months>=6) tags.push("継続 "+c.months+"か月"); if(c.fee<=u.med/2) tags.push("中央値の半分以下"); if(!ok(c)) tags.push(c.kaizen?"要改善フラグ":(c.status||"")); const score=(c.apos>0?3:0)+(c.months>=6?2:0)+(c.fee<=u.med/2?1:0)-(ok(c)?0:10); return {...c, up, tags, score}; })
+  const cands=u.cl.filter(c=>c.fee<P).map(c=>{ const up=P-c.fee; const tags=[]; if(c.apos>0) tags.push("アポ実績 "+c.apos+"件"); if(c.months>=6) tags.push("継続 "+c.months+"か月"); const jump=c.fee>0?P/c.fee:99; if(jump>2.5) tags.push("要確認：今の月額が少額（分割・旧契約かも）"); else if(c.fee<=u.med/2) tags.push("中央値の半分以下"); if(!ok(c)) tags.push(c.kaizen?"要改善フラグ":(c.status||"")); const score=(c.apos>0?3:0)+(c.months>=6?2:0)+(c.fee<=u.med/2&&jump<=2.5?1:0)-(jump>2.5?6:0)-(ok(c)?0:10); return {...c, up, tags, score}; })
     .sort((x,y)=>y.score-x.score || y.up-x.up);
   const byDc={}; cands.forEach(c=>{ const k=c.dc||"未設定"; (byDc[k]=byDc[k]||{n:0,up:0}); byDc[k].n++; byDc[k].up+=c.up; });
   h+='<h4 style="margin:14px 0 6px">月 '+man(P)+' に上げる候補（'+cands.length+'社・上乗せ 月 '+man(cands.reduce((s,c)=>s+c.up,0))+'）</h4>';
   h+='<div class="dcsum">'+Object.entries(byDc).sort((x,y)=>y[1].up-x[1].up).map(([k,v])=>'<span class="chip">'+esc(k)+'：'+v.n+'社 ＋'+man(v.up)+'</span>').join("")+'</div>';
   h+='<div class="hint">上から順に、上げやすそうな会社です（アポ実績あり・継続6か月以上・単価が低い を優先。トラブル中・要改善・開始前は後ろ）。案件マスタのアポ件数は入っていない会社が多いので、最後は担当の判断で選んでください。</div>';
   h+='<div class="tblwrap"><table class="tbl"><thead><tr><th>会社</th><th>担当</th><th>今の月額</th><th>提案</th><th>上乗せ</th><th>状況</th><th>根拠</th></tr></thead><tbody>'+
-    cands.map(c=>'<tr'+(ok(c)?'':' class="dim"')+'><td>'+esc(c.name||c.kana)+' <span class="sub">'+esc(c.sis)+'</span></td><td>'+esc(c.dc||"—")+'</td><td class="num">'+yen(c.fee)+'</td><td class="num">'+yen(P)+'</td><td class="num"><b>＋'+yen(c.up)+'</b></td><td>'+esc(c.status||"—")+'</td><td>'+c.tags.map(x=>'<span class="chip">'+esc(x)+'</span>').join(" ")+'</td></tr>').join("")+
+    cands.map(c=>'<tr'+(ok(c)&&c.fee&&P/c.fee<=2.5?'':' class="dim"')+'><td>'+esc(c.name||c.kana)+' <span class="sub">'+esc(c.sis)+'</span></td><td>'+esc(c.dc||"—")+'</td><td class="num">'+yen(c.fee)+'</td><td class="num">'+yen(P)+'</td><td class="num"><b>＋'+yen(c.up)+'</b></td><td>'+esc(c.status||"—")+'</td><td>'+c.tags.map(x=>'<span class="chip">'+esc(x)+'</span>').join(" ")+'</td></tr>').join("")+
   '</tbody></table></div>';
   h+='<div class="hint">月額は10月のkintone明細（チームPL試算_月額明細）でISと判定された分、会社の状況は案件マスタから。月額800円などの少額は、分割計上や旧契約の可能性があります。</div></section>';
   return h;
