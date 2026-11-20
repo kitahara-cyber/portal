@@ -83,6 +83,7 @@ function api(req) {
     case 'clients': return clients_(!!req.refresh);
     case 'attach': return attach_(email, req);
     case 'attachInit': return attachTicket_(email);
+    case 'csPL': return csPL_(email);
     case 'shareDomain': return shareDomain_(String(req.fileId || ''));
     default: throw new Error('unknown_op');
   }
@@ -762,4 +763,47 @@ function slackTask_(ev, botId) {
   const dueTxt = Utilities.formatDate(new Date(due + 'T00:00:00+09:00'), 'Asia/Tokyo', 'M/d');
   slackApi_('chat.postMessage', {channel: ev.channel, thread_ts: ev.thread_ts || ev.ts, text: 'タスクに登録しました（担当：' + who + '／期限：' + dueTxt + '）\n<' + BOARD_EXEC + '?t=' + made[0] + '|ボードで開く>'});
   slackApi_('reactions.add', {channel: ev.channel, timestamp: ev.ts, name: 'white_check_mark'});
+}
+
+/* ---------- CSの現在地（インサイトセールスのチームPL）：管理職だけが読める ----------
+ * 取得元：チームPL管理表（佐藤さん管理）の「チームPL試算_PL」「チームPL試算_対応表」「チームPL2026」。読むだけで書き込まない。 */
+const TEAMPL_ID = '1Qu-JOrmhuHV4TBkRwIwNDyPWSTizH1uTBTMNxjG0_l0';
+function num_(v) { const s = String(v == null ? '' : v).replace(/[,\s円]/g, '').replace(/^▲/, '-').replace(/^\((.*)\)$/, '-$1'); const n = Number(s); return isNaN(n) ? 0 : n; }
+function csPL_(email) {
+  if (LEADS.indexOf(memberKey_(email)) < 0) throw new Error('管理職だけが見られるページです');
+  const ss = SpreadsheetApp.openById(TEAMPL_ID);
+  const pl = ss.getSheetByName('チームPL試算_PL').getRange('A1:L20').getDisplayValues();
+  const head = pl[3] || [];
+  const col = head.indexOf('インサイトセールス'); if (col < 0) throw new Error('PLにインサイトセールスの列が見つかりません');
+  const row = name => { const r = pl.filter(x => x[0] === name)[0]; return r ? num_(r[col]) : null; };
+  const notes = pl.map(r => r[0]).join('\n');
+  const monthM = String(pl[1][0] || '').match(/対象月\s*(\d{4})-(\d{2})/);
+  const out = {
+    month: monthM ? monthM[1] + '-' + monthM[2] : '', source: String(pl[1][0] || ''), state: String(pl[2][0] || ''),
+    sales: row('売上'), cost: row('原価'), gross: row('粗利'), sga: row('販管費'), profit: row('チーム貢献利益'), heads: row('人数'),
+    monthlyCount: Number((notes.match(/月額IS(\d+)件/) || [])[1] || 0), initialCount: Number((notes.match(/初期費用IS(\d+)件/) || [])[1] || 0),
+    items: [], budget: null, url: 'https://docs.google.com/spreadsheets/d/' + TEAMPL_ID + '/edit'
+  };
+  const map = ss.getSheetByName('チームPL試算_対応表');
+  const mv = map.getRange(4, 1, Math.max(1, map.getLastRow() - 3), 20).getDisplayValues();
+  const mh = mv[0], ci = mh.indexOf('インサイトセールス');
+  mv.slice(1).forEach(r => {
+    const v = num_(r[ci]); if (!v) return;
+    out.items.push({pl: r[4], item: r[5], key: r[6], state: r[7], amount: v, note: String(r[8] || '').slice(0, 160)});
+  });
+  // 予算（チームPL2026 の該当月ブロックの「新規」列）
+  try {
+    if (out.month) {
+      const bs = ss.getSheetByName('チームPL2026'), bv = bs.getRange(1, 1, Math.min(bs.getLastRow(), 80), Math.min(bs.getLastColumn(), 130)).getDisplayValues();
+      const label = Number(out.month.slice(0, 4)) + '年' + Number(out.month.slice(5)) + '月';
+      const c = bv[0].indexOf(label);
+      if (c >= 0) {
+        const pick = (sec, sub) => { let inSec = false; for (let i = 3; i < bv.length; i++) { if (bv[i][0]) inSec = bv[i][0] === sec; if (inSec && bv[i][1] === sub) return num_(bv[i][c]); } return null; };
+        const pickA = a => { for (let i = 3; i < bv.length; i++) if (bv[i][0] === a) return num_(bv[i][c]); return null; };
+        out.budget = {sales: pick('売上', '合計'), gross: pickA('粗利'), sga: pick('経費', '合計'), profit: pickA('営利'),
+          initial: pick('売上', 'インサイトセールス') , heads: num_(bv[3][c])};
+      }
+    }
+  } catch (e) { out.budgetErr = String(e); }
+  return out;
 }
