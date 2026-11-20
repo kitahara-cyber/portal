@@ -585,7 +585,7 @@ function shareDomain_(fileId) {
 /* ---------- 共有の添付フォルダ（北原さんのドライブ）へのアップロード ----------
  * メンバーは自分のドライブの許可なしで添付できる。ボード（本人として実行）が短時間有効の受付票を発行し、
  * 「自分として実行」で別にデプロイしたアップロード用URL（doPost）が受付票を確かめて保存・削除する。 */
-const UPLOAD_URL = '';   // アップロード用デプロイ（実行：自分／アクセス：全員）の /exec URL
+const UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbyVg-wS2J_tQ1tHCPEUPgX0EFGIh3MploY1GC2nqAvoOU-3OtA7ZiwD1xCnhWspwuln/exec';   // アップロード用デプロイ（実行：自分／アクセス：全員）の /exec URL
 function attachSecret_() {
   const p = PropertiesService.getScriptProperties();
   let s = p.getProperty('ATTACH_SECRET');
