@@ -791,6 +791,28 @@ function csPL_(email) {
     const v = num_(r[ci]); if (!v) return;
     out.items.push({pl: r[4], item: r[5], key: r[6], state: r[7], amount: v, note: String(r[8] || '').slice(0, 160)});
   });
+  // 会社ごとの月額（ISと判定された明細）＋案件マスタの状況
+  try {
+    const ms = ss.getSheetByName('チームPL試算_月額明細');
+    const mv2 = ms.getRange(5, 1, Math.max(1, ms.getLastRow() - 4), 18).getDisplayValues();
+    const by = {};
+    mv2.forEach(r => {
+      if (String(r[17] || r[14]) !== 'IS') return;
+      const sis = String(r[3] || '').trim(); if (!sis) return;
+      const o = by[sis] || (by[sis] = {sis: sis, kana: r[5], fee: 0, dc: ''});
+      o.fee += num_(r[7]);
+      const dc = String(r[11] || '').split('/').map(x => x.trim()).filter(Boolean).pop(); if (dc) o.dc = dc.replace('髙', '高');
+    });
+    const cm = SpreadsheetApp.openById(CLIENT_MASTER).getSheetByName('01_案件マスタ');
+    const cv = cm.getRange(3, 2, Math.max(1, cm.getLastRow() - 2), 35).getDisplayValues();
+    const master = {}; cv.forEach(r => { const sis = String(r[1] || '').trim(); if (sis) master[sis] = r; });
+    out.clients = Object.keys(by).map(k => {
+      const o = by[k], r = master[k];
+      if (r) { o.name = String(r[0] || '').replace(/^\d+_/, ''); o.status = r[2]; o.kind = r[3]; o.start = r[6]; o.months = num_(r[7]); o.calls = num_(r[12]); o.leads = num_(r[15]); o.apos = num_(r[16]); o.dc = String(r[23] || o.dc || '').replace('髙', '高'); o.kakudo = r[28]; o.kaizen = String(r[34]).toUpperCase() === 'TRUE'; }
+      else o.name = o.kana;
+      return o;
+    });
+  } catch (e) { out.clientsErr = String(e); }
   // 予算（チームPL2026 の該当月ブロックの「新規」列）
   try {
     if (out.month) {
