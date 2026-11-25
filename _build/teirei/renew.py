@@ -57,7 +57,7 @@ CSS += '''.hk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 24px
 @media (max-width:640px){.hk{grid-template-columns:minmax(0,1fr)}}
 .es{margin-top:4px}.es-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px}.es-c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}.es-c span{font-size:12.5px;color:var(--mute)}.es-c b{font-size:26px;font-weight:900;line-height:1.25}.es-c small{font-size:12px;color:var(--mute)}
 .es-c:nth-child(2) b{color:var(--accent-ink)}
-.cta{margin-top:16px;border:2px solid var(--accent);border-radius:16px;padding:16px 20px;background:var(--accent-soft)}.cta div{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}.cta b{font-size:16px}.cta span{font-size:14px;font-weight:700;color:var(--accent-ink)}.cta p{margin:6px 0 0;font-size:13.5px}
+.cta{margin-top:16px;border:2px solid var(--accent);border-radius:16px;padding:16px 20px;background:var(--accent-soft)}.cta{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}.cta b{font-size:16px}.cta span{font-size:14px;font-weight:700;color:var(--accent-ink)}.cta p{margin:6px 0 0;font-size:13.5px}
 .pk{background:var(--ink);color:var(--bg);border-radius:18px;padding:22px 24px;margin:4px 0 18px}
 .pk-k{margin:0 0 12px;font-size:13px;font-weight:700;opacity:.75}
 .pk-row{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}.pk-t{flex:1 1 220px;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
@@ -218,17 +218,17 @@ if pick not in COMBO:
     elif win_rate is not None and meet_n >= 5 and win_rate < .13: pick = 'quality'   # 商談はあるが受注につながりにくい
     elif months_left < 4: pick = 'new'                   # リストの残りが少ない
     else: pick = 'team'
-why_pick = S.get('options_why') or {'dormant': '一度お話しして資料をお送りした相手なので、ゼロから探すより早く商談になります。分かりやすい提案資料を一緒に作り、追いかけの電話でそのまま商談につなげます。',
-    'quality': '新しくアポを増やさなくても、資料と商談の進め方を整えるだけで、いまの商談がそのまま受注に近づきます。',
-    'new': '交流会でプロが名刺を集め、その場の日程調整からフォローの電話まで行います。商談もお任せいただけるので、社内の手間はほとんどかかりません。',
-    'team': 'アポは安定して取れています。売れる話し方を台本にし、商談の録画で直し、商談後のメールを自動にすると、受注までの流れが社内に残ります。'}[pick]
+why_pick = S.get('options_why') or {'dormant': '一度資料をお送りした相手なので、ゼロから探すより早く商談になります。',
+    'quality': 'アポを増やさなくても、資料と商談を整えれば受注が増えます。',
+    'new': 'プロが名刺を集め、商談までお任せいただけます。',
+    'team': '売れる話し方を、社内の仕組みとして残します。'}[pick]
 OPTD = {o[0]: o for o in OPT}
 ct, cks = COMBO[pick]
 # 「もったいない」→ 解決策の対応（資料1ページ目）
 MAPR = [('新しい人脈を広げる時間がない', ['①']), ('過去の名刺や資料送付先を放置している', ['②']), ('資料が分かりにくく、商談にならない', ['③']),
         ('商談後の追いかけがなく、失注している', ['④']), ('商談の「どこが悪かったか」が分からない', ['⑤']), ('話すのが苦手な人がいる・人手が足りない', ['⑥', '⑦'])]
 omap = ''.join(f'<li class="{"on" if set(ks) & set(cks) else ""}"><span class="om-p">{E(pb)}</span><span class="om-a" aria-hidden="true"></span><span class="om-s">{"／".join(f"<b>{k}</b>{E(OPTD[k][1])}" for k in ks)}</span></li>' for pb, ks in MAPR)
-pkg = '<i class="pk-plus" aria-hidden="true">＋</i>'.join(f'<div class="pk-t"><span class="pk-n">{k}</span><b>{E(OPTD[k][1])}</b><p>{E(OPTD[k][2])}</p><span class="pk-y">{E(OPTD[k][3])}</span></div>' for k in cks)
+pkg = '<i class="pk-plus" aria-hidden="true">＋</i>'.join(f'<div class="pk-t"><span class="pk-n">{k}</span><b>{E(OPTD[k][1])}</b><span class="pk-y">{E(OPTD[k][3])}</span></div>' for k in cks)
 alltbl = '<div class="ol">' + ''.join(f'<details class="ol-r{" on" if o[0] in cks else ""}"><summary><span class="ol-n">{o[0]}</span><b>{E(o[1])}</b><span class="ol-y">{E(o[3])}</span></summary><div class="ol-b"><p>{E(o[2])}</p>{ul([E(x) for x in o[4]])}</div></details>' for o in OPT) + '</div>'
 # 売る構成：①御社に残っている「もったいない」（数字）→ ②解決の組み合わせ → ③やった場合の試算 → ④始め方
 a2t = apo / talk if talk else 0                         # 御社の「会話→アポ」の率
@@ -237,33 +237,35 @@ HOOK = {'dormant': (f'{lead:,}件', '資料送付などで止まったままの�
         'quality': (pct(win_rate, 0) if win_rate is not None else '—', f'商談{meet_n}件のうち、受注になった割合', 'いまのアポのまま、<em class="hl">受注を増やせます</em>'),
         'new': (f'約{L["left"] / cpm if cpm else 0:.0f}か月分', f'まだ電話していない会社（{L["left"]:,}社）の残り', 'リストが尽きる前に、<em class="hl">新しい見込み先</em>を'),
         'team': (f'{apo:,}件', '今期のアポ', 'アポを受注に変える力を、<em class="hl">社内に</em>')}[pick]
-est = []
+est = []; est_note = ''
 if pick == 'dormant' and lead and a2t:
     n_call = -(-lead // 100) * 100; c_opt = n_call // 100 * 5 + 10; e_apo = lead * a2t
-    est = [('費用の目安', f'約{c_opt}万円', f'追いかけ{n_call:,}コール＋提案資料（梅）'),
-           ('見込めるアポ', f'約{e_apo:.0f}件', f'御社の「会話→アポ」の率 {pct(a2t, 1)}で試算')]
+    est = [('費用', f'約{c_opt}万円', ''),
+           ('見込めるアポ', f'約{e_apo:.0f}件', '')]
     if cpa_now and e_apo >= 1: est.append(('1アポあたり', f'約{c_opt * 1e4 / e_apo / 1e4:.1f}万円', f'今期は約{cpa_now / 1e4:.1f}万円'))
+    est_note = f'追いかけ{n_call:,}コール＋提案資料（梅）。アポは御社の「会話→アポ」の率 {pct(a2t, 1)}で試算した目安です。'
 elif pick == 'quality' and meet_n and win_rate is not None:
     tgt = max(.13, win_rate * 1.5); add = meet_n * (tgt - win_rate)
-    est = [('今期の商談', f'{meet_n}件', '商談アポ管理表の記録'), ('受注率', f'{pct(win_rate, 0)} → {pct(tgt, 0)}', '資料と商談の質を上げた場合'), ('増える受注', f'+{add:.1f}件', '同じ商談数のままで')]
-    if price: est.append(('売上の目安', f'+{yen(add * price)}', f'単価{yen(price)}で試算'))
+    est = [('受注率', f'{pct(win_rate, 0)} → {pct(tgt, 0)}', ''), ('増える受注', f'+{add:.1f}件', '')]
+    est_note = f'今期の商談{meet_n}件のまま、受注率が上がった場合の目安です。'
+    if price: est.append(('売上', f'+{yen(add * price)}', ''))
 PKY = {'dormant': '追いかけフォロー 5万円／100コール ＋ 提案資料 10万円〜', 'quality': '提案資料 10万円〜 ＋ 商談台本30万円・商談代行 1件3万円',
        'new': '交流会参加代行 10万円／1回 ＋ 商談代行 1件3万円（台本30万円）', 'team': '商談台本 30万円 ＋ 動画アドバイス ＋ 自動フォローメール 初期15万円・月3万円'}[pick]
 sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or HOOK[2],
     f'<p class="hk-w">{E(why_pick)}</p>' +
-    f'<div class="pk"><p class="pk-k">御社へのおすすめ</p><div class="pk-row">{pkg}</div></div>' +
-    (f'<div class="es"><h3 class="h3s">やった場合の試算</h3><div class="es-row">' + ''.join(f'<div class="es-c"><span>{E(k)}</span><b>{v}</b><small>{E(n)}</small></div>' for k, v, n in est) + '</div><p class="tip">試算は今期の御社の数字から出した目安で、結果を約束するものではありません。</p></div>' if est else '') +
-    f'<div class="cta"><div><b>この組み合わせで始める場合</b><span>{E(PKY)}（税抜）</span></div><p>次期のご契約と一緒に、1か月単位でお試しいただけます。定例で{E(a.director or "担当")}にお声がけください。</p></div>' +
+    f'<div class="pk"><div class="pk-row">{pkg}</div></div>' +
+    (f'<div class="es"><div class="es-row">' + ''.join(f'<div class="es-c"><span>{E(k)}</span><b>{v}</b>{f"<small>{E(n)}</small>" if n else ""}</div>' for k, v, n in est) + f'</div><p class="tip">{E(est_note)}</p></div>' if est else '') +
+    f'<div class="cta"><b>1か月からお試しいただけます</b><span>定例で{E(a.director or "担当")}にお声がけください</span></div>' +
     f'<details class="more" style="margin-top:16px"><summary>ほかのオプションも見る（全7つ）</summary><div class="om" style="margin-top:12px"><div class="om-h"><span>営業現場の「もったいない」</span><span>ライトアップの解決策</span></div><ol>{omap}</ol></div>' + alltbl + '</details>'))
 # 続け方を選べるプラン（同資料 10〜11ページ）
 FLEX = S.get('flex_note') or ''
-STEPS = [('テレアポ500コール＋フォーム1,000件', 'いまの形で続ける', 25), ('テレアポのみ500コール', 'フォーム営業をやめる', 20), ('テレアポのみ250コール', '稼働を減らす', 10), ('テレアポのみ100コール', '稼働を減らす', 5), ('稼働を止め、リストとノウハウを保管', '休止する', 0)]
-steps = ''.join(f'<li><span class="fs-l"><b>{E(t)}</b><small>{E(d)}</small></span><span class="fs-bar"><i style="width:{max(v / 25 * 100, 0):.0f}%"></i></span><span class="fs-y">{f"月額{v}万円" if v else "いつでも再開"}</span></li>' for d, t, v in STEPS)
+STEPS = [('', 'テレアポ500＋フォーム1,000', 25), ('', 'テレアポ500', 20), ('', 'テレアポ250', 10), ('', 'テレアポ100', 5), ('', '休止（リストは保管）', 0)]
+steps = ''.join(f'<li><span class="fs-l"><b>{E(t)}</b></span><span class="fs-bar"><i style="width:{max(v / 25 * 100, 0):.0f}%"></i></span><span class="fs-y">{f"月額{v}万円" if v else "いつでも再開"}</span></li>' for d, t, v in STEPS)
 sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '状況に合わせて、<em class="hl">続け方は月ごとに選べます</em>',
-    f'<div class="fx"><div class="fx-main"><h3 class="h3s">費用を抑えて続ける</h3><ol class="fs">{steps}</ol></div>' +
-    '<div class="fx-side"><div class="fx-c"><h3 class="h3s">閑散期だけ動かす（スポット）</h3><dl class="fx-dl"><dt>テレアポ＋フォーム営業</dt><dd>月額25万円</dd><dt>テレアポ500コールのみ</dt><dd>月額20万円</dd><dt>フォーム営業1,000件</dt><dd>月額5万円</dd><dt>FAX営業1,000件</dt><dd>月額5万円</dd></dl></div>' +
-    '<div class="fx-c"><h3 class="h3s">アポの取れる率を上げる（DM＋追撃）</h3><p class="fx-eq"><span>DM 100通</span>＋<span>追いかけ 100コール</span>＝<b>月額25万円</b></p><p class="fx-s">DMを先に送り、送った先に絞って電話します。</p></div></div></div>' +
-    '<div class="fx-band"><b>最短翌月解約・1か月ごとの更新</b><span>長期契約の縛りはありません。市況や営業の体制に合わせて、月単位でプランの変更や休止ができます。</span></div>' +
+    f'<div class="fx"><div class="fx-main"><h3 class="h3s">費用を抑えて続ける（月額）</h3><ol class="fs">{steps}</ol></div>' +
+    '<div class="fx-side"><div class="fx-c"><h3 class="h3s">閑散期だけ（スポット）</h3><dl class="fx-dl"><dt>テレアポ＋フォーム営業</dt><dd>月額25万円</dd><dt>テレアポ500コールのみ</dt><dd>月額20万円</dd><dt>フォーム営業1,000件</dt><dd>月額5万円</dd><dt>FAX営業1,000件</dt><dd>月額5万円</dd></dl></div>' +
+    '<div class="fx-c"><h3 class="h3s">DM＋追撃</h3><p class="fx-eq"><span>DM 100通</span>＋<span>追いかけ 100コール</span>＝<b>月額25万円</b></p></div></div></div>' +
+    '<div class="fx-band"><b>最短翌月解約・1か月ごとの更新</b><span>長期の縛りはありません</span></div>' +
     (f'<p style="margin-top:12px">{E(FLEX)}</p>' if FLEX else '') + '<p class="tip">金額は税抜です。</p>'))
 # 次期スケジュール（切れ目なく）
 nxt = end + datetime.timedelta(days=1)
