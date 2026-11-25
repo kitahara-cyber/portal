@@ -1437,10 +1437,10 @@ function viewReports(){
   h+='<section class="cs-sec"><div class="bar"><h3 style="margin:0">'+esc(fmtDate(cur.date))+' の報告</h3><span class="sub">登録：'+esc(nm(cur.by))+'（'+esc(fmtTime(cur.at))+'）</span><span class="spacer"></span><select id="wrSelSel" aria-label="週">'+list.map(r=>'<option value="'+esc(r.id)+'"'+(r.id===cur.id?' selected':'')+'>'+esc(fmtDate(r.date))+'</option>').join("")+'</select>'+(S.readOnly?'':'<button class="btn small" type="button" data-act="wrEdit">データを直す</button><button class="btn small danger" type="button" data-act="wrDel">削除</button>')+'</div>';
   h+='<div class="wr">'+wrSlides(wrSafe(cur.slides||[]))+'</div></section>';
   h+='</div>';
-  setTimeout(wrFit,0);
+  setTimeout(wrFit,0); setTimeout(wrFit,250); setTimeout(wrFit,1000);
   return h;
 }
-function wrFit(){ document.querySelectorAll(".wrslide").forEach(w=>{ const sc=Math.min(1,(w.parentElement.clientWidth||1000)/1280); const inner=w.firstElementChild; if(inner){ inner.style.transform="scale("+sc+")"; w.style.height=(720*sc)+"px"; } }); }
+function wrFit(){ document.querySelectorAll(".wrslide").forEach(w=>{ const sc=Math.min(1,(w.getBoundingClientRect().width||1000)/1280); const inner=w.firstElementChild; if(inner){ inner.style.transform="scale("+sc+")"; w.style.height=(720*sc)+"px"; } }); }
 window.addEventListener("resize", ()=>{ if(S.view==="reports") wrFit(); });
 function openWrForm(r){
   S.wrForm={id:r?r.id:"", date:r?r.date:mondayOf(todayStr()), text:r?JSON.stringify(r.slides,null,1):"", err:""};
