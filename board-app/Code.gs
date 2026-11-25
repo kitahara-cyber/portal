@@ -209,7 +209,9 @@ function request_(email, r) {
   if (!sh) throw new Error('sheet_not_found');
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
-    const last = sh.getRange('A:A').getValues().filter(v => v[0] !== '').length;
+    // 途中に空行があっても上書きしないよう、A列で最後に値がある行の次に書く
+    const colA = sh.getRange(1, 1, Math.max(1, sh.getLastRow()), 1).getValues();
+    let last = colA.length; while (last > 1 && String(colA[last - 1][0]) === '') last--;
     const rng = sh.getRange(last + 1, 1, 1, row.length);
     rng.setNumberFormat('@').setValues([row]);
   } finally { lock.releaseLock(); }
