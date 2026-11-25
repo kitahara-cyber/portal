@@ -53,7 +53,34 @@ fee = F.get('fee') or 0; cost_next = fee * NEXT_M
 SRC = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.py')).read()
 CSS = re.search(r"CSS = r'''(.*?)'''", SRC, re.S).group(1)
 JS = re.search(r"JS = r'''(.*?)'''", SRC, re.S).group(1)
-CSS += '''.opt-pick{border:2px solid var(--accent);background:var(--accent-soft);margin-bottom:14px}.opt-pick p{margin:6px 0 0}details.card.opt-on{border:2px solid var(--accent)}details.card.opt-on h3::after{content:"おすすめ";margin-left:8px;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 8px;vertical-align:middle}
+CSS += '''.hk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 24px;align-items:center;margin:0 0 16px}.hk-n b{display:block;font-size:clamp(40px,6vw,64px);font-weight:900;line-height:1.05;color:var(--accent-ink)}.hk-n span{font-size:13px;color:var(--mute)}.hk-w{margin:0 0 18px;font-size:15.5px;line-height:1.9;max-width:44em}
+@media (max-width:640px){.hk{grid-template-columns:minmax(0,1fr)}}
+.es{margin-top:4px}.es-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px}.es-c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}.es-c span{font-size:12.5px;color:var(--mute)}.es-c b{font-size:26px;font-weight:900;line-height:1.25}.es-c small{font-size:12px;color:var(--mute)}
+.es-c:nth-child(2) b{color:var(--accent-ink)}
+.cta{margin-top:16px;border:2px solid var(--accent);border-radius:16px;padding:16px 20px;background:var(--accent-soft)}.cta div{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}.cta b{font-size:16px}.cta span{font-size:14px;font-weight:700;color:var(--accent-ink)}.cta p{margin:6px 0 0;font-size:13.5px}
+.pk{background:var(--ink);color:var(--bg);border-radius:18px;padding:22px 24px;margin:4px 0 18px}
+.pk-k{margin:0 0 12px;font-size:13px;font-weight:700;opacity:.75}
+.pk-row{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}.pk-t{flex:1 1 220px;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.pk-n{font-size:28px;font-weight:900;line-height:1;color:var(--accent-soft)}.pk-t b{font-size:18px;line-height:1.4}.pk-t p{margin:0;font-size:13px;line-height:1.7;opacity:.85}.pk-y{margin-top:auto;padding-top:8px;font-size:15px;font-weight:900;color:var(--accent-soft)}
+.pk-plus{font-style:normal;align-self:center;font-size:22px;font-weight:900;opacity:.6}.pk-why{margin:14px 0 0;font-size:14px;line-height:1.8;border-top:1px solid rgba(255,255,255,.18);padding-top:12px}
+.om{border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}.om-h{display:grid;grid-template-columns:1fr 1fr;font-size:12.5px;font-weight:700;color:var(--mute);padding:10px 16px;border-bottom:1px solid var(--line)}
+.om ol{list-style:none;margin:0;padding:0}.om li{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:center;padding:10px 16px;border-bottom:1px solid var(--line2);font-size:14px;color:var(--mute)}.om li:last-child{border-bottom:0}
+.om-a{height:2px;background:var(--line);position:relative}.om-a::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left-color:var(--line)}
+.om-s b{margin-right:4px}.om li.on{background:var(--accent-soft);color:var(--ink);font-weight:700}.om li.on .om-a{background:var(--accent)}.om li.on .om-a::after{border-left-color:var(--accent)}
+@media (max-width:640px){.om-h{display:none}.om li{grid-template-columns:minmax(0,1fr);gap:4px}.om-a{display:none}.om-s::before{content:"→ "}}
+.ol{border-top:1px solid var(--line)}.ol-r{border-bottom:1px solid var(--line)}.ol-r>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:12px 4px}.ol-r>summary::-webkit-details-marker{display:none}
+.ol-n{font-weight:900;color:var(--mute)}.ol-r b{font-size:15px}.ol-y{font-size:13.5px;font-weight:700;color:var(--ink);text-align:right}.ol-r.on .ol-n{color:var(--accent-ink)}.ol-r.on b::after{content:"おすすめ";margin-left:8px;font-size:11px;color:#fff;background:var(--accent);border-radius:999px;padding:1px 8px;vertical-align:2px}
+.ol-b{padding:0 4px 14px 42px;font-size:13.5px}.ol-b p{margin:0 0 6px}
+@media (max-width:640px){.ol-r>summary{grid-template-columns:24px minmax(0,1fr)}.ol-y{grid-column:2;text-align:left;color:var(--mute)}.ol-b{padding-left:34px}}
+.fx{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}@media (max-width:860px){.fx{grid-template-columns:minmax(0,1fr)}}
+.fx-main,.fx-c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}.fx-side{display:grid;gap:14px}
+.fs{list-style:none;margin:0;padding:0;display:grid;gap:12px}.fs li{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 92px;gap:12px;align-items:center}
+.fs-l b{display:block;font-size:14px}.fs-l small{font-size:12px;color:var(--mute)}.fs-bar{height:12px;border-radius:6px;background:var(--line2);overflow:hidden}.fs-bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.fs li:first-child .fs-bar i{background:var(--ink)}.fs-y{font-weight:900;font-size:15px;text-align:right;white-space:nowrap}
+@media (max-width:640px){.fs li{grid-template-columns:minmax(0,1fr) auto}.fs-bar{grid-column:1/-1;grid-row:2}}
+.fx-dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:0;font-size:13.5px}.fx-dl dd{margin:0;font-weight:900}
+.fx-eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;font-weight:700}.fx-eq span{background:var(--line2);border-radius:8px;padding:4px 10px;font-size:13px}.fx-eq b{font-size:17px}.fx-s{margin:8px 0 0;font-size:13px;color:var(--mute)}
+.fx-band{margin-top:14px;border-radius:14px;background:var(--ink);color:var(--bg);padding:16px 20px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}.fx-band b{font-size:16px}.fx-band span{font-size:13.5px;opacity:.85}
 '''
 CSS += '''.todo{display:inline-block;background:#fff3c4;color:#7a5600;border:1px dashed #c9a227;border-radius:6px;padding:1px 8px;font-weight:700;font-size:.92em}
 .draft{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;background:#7a5600;color:#fff;font-weight:700;font-size:12.5px;border-radius:999px;padding:4px 14px}
@@ -191,30 +218,53 @@ if pick not in COMBO:
     elif win_rate is not None and meet_n >= 5 and win_rate < .13: pick = 'quality'   # 商談はあるが受注につながりにくい
     elif months_left < 4: pick = 'new'                   # リストの残りが少ない
     else: pick = 'team'
-why_pick = S.get('options_why') or {'dormant': f'今期、資料送付などで止まった見込み先が{lead:,}件あります。ここを追いかけて、提案資料で商談につなげるのが近道です。',
-    'quality': f'商談は{meet_n}件ありますが、受注率は{pct(win_rate, 0) if win_rate is not None else "—"}です。資料と商談の質を上げると、今のアポがそのまま受注に近づきます。',
-    'new': f'まだ電話していない会社は{L["left"]:,}社で、今のペースだと約{L["left"] / cpm if cpm else 0:.0f}か月分です。交流会で新しい見込み先を集め、商談までお任せいただけます。',
-    'team': 'アポは安定して取れています。次は社内で商談を受ける力を仕組みにすると、受注までの流れがさらに太くなります。'}[pick]
+why_pick = S.get('options_why') or {'dormant': '一度お話しして資料をお送りした相手なので、ゼロから探すより早く商談になります。分かりやすい提案資料を一緒に作り、追いかけの電話でそのまま商談につなげます。',
+    'quality': '新しくアポを増やさなくても、資料と商談の進め方を整えるだけで、いまの商談がそのまま受注に近づきます。',
+    'new': '交流会でプロが名刺を集め、その場の日程調整からフォローの電話まで行います。商談もお任せいただけるので、社内の手間はほとんどかかりません。',
+    'team': 'アポは安定して取れています。売れる話し方を台本にし、商談の録画で直し、商談後のメールを自動にすると、受注までの流れが社内に残ります。'}[pick]
 OPTD = {o[0]: o for o in OPT}
-optcard = lambda o, on: f'<details class="panel card{" opt-on" if on else ""}"><summary><h3>{o[0]} {E(o[1])}</h3><span class="num">{E(o[3])}</span></summary><div class="body"><p>{E(o[2])}</p>{ul([E(x) for x in o[4]])}</div></details>'
 ct, cks = COMBO[pick]
-sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or f'アポを受注につなげるために、<em class="hl">{"＋".join(cks)}</em>の組み合わせをおすすめします',
-    f'<div class="panel opt-pick"><h3 class="h3s">御社へのおすすめ：{E(ct)}</h3><p><b>{" ＋ ".join(f"{k} {E(OPTD[k][1])}" for k in cks)}</b></p><p>{E(why_pick)}</p></div>' +
-    '<p class="tip">アポ獲得から受注までを一気通貫で強化する7つのオプションです。カードを押すと内容が開きます（金額は税抜）。</p>' +
-    '<div class="cards">' + ''.join(optcard(o, o[0] in cks) for o in OPT) + '</div>' +
-    card('組み合わせの選び方', '', tbl([dict(t=v[0], c=' ＋ '.join(f'{k} {OPTD[k][1]}' for k in v[1])) for v in COMBO.values()], [('こんな課題・目的なら', lambda r: E(r['t']), 0), ('おすすめの組み合わせ', lambda r: E(r['c']), 0)]))))
+# 「もったいない」→ 解決策の対応（資料1ページ目）
+MAPR = [('新しい人脈を広げる時間がない', ['①']), ('過去の名刺や資料送付先を放置している', ['②']), ('資料が分かりにくく、商談にならない', ['③']),
+        ('商談後の追いかけがなく、失注している', ['④']), ('商談の「どこが悪かったか」が分からない', ['⑤']), ('話すのが苦手な人がいる・人手が足りない', ['⑥', '⑦'])]
+omap = ''.join(f'<li class="{"on" if set(ks) & set(cks) else ""}"><span class="om-p">{E(pb)}</span><span class="om-a" aria-hidden="true"></span><span class="om-s">{"／".join(f"<b>{k}</b>{E(OPTD[k][1])}" for k in ks)}</span></li>' for pb, ks in MAPR)
+pkg = '<i class="pk-plus" aria-hidden="true">＋</i>'.join(f'<div class="pk-t"><span class="pk-n">{k}</span><b>{E(OPTD[k][1])}</b><p>{E(OPTD[k][2])}</p><span class="pk-y">{E(OPTD[k][3])}</span></div>' for k in cks)
+alltbl = '<div class="ol">' + ''.join(f'<details class="ol-r{" on" if o[0] in cks else ""}"><summary><span class="ol-n">{o[0]}</span><b>{E(o[1])}</b><span class="ol-y">{E(o[3])}</span></summary><div class="ol-b"><p>{E(o[2])}</p>{ul([E(x) for x in o[4]])}</div></details>' for o in OPT) + '</div>'
+# 売る構成：①御社に残っている「もったいない」（数字）→ ②解決の組み合わせ → ③やった場合の試算 → ④始め方
+a2t = apo / talk if talk else 0                         # 御社の「会話→アポ」の率
+cpa_now = fee * len(MA) / apo if fee and apo else 0      # 今期の1アポあたりの費用
+HOOK = {'dormant': (f'{lead:,}件', '資料送付などで止まったままの見込み先', f'眠っている見込み先 <em class="hl">{lead:,}件</em>を、商談に変えませんか'),
+        'quality': (pct(win_rate, 0) if win_rate is not None else '—', f'商談{meet_n}件のうち、受注になった割合', 'いまのアポのまま、<em class="hl">受注を増やせます</em>'),
+        'new': (f'約{L["left"] / cpm if cpm else 0:.0f}か月分', f'まだ電話していない会社（{L["left"]:,}社）の残り', 'リストが尽きる前に、<em class="hl">新しい見込み先</em>を'),
+        'team': (f'{apo:,}件', '今期のアポ', 'アポを受注に変える力を、<em class="hl">社内に</em>')}[pick]
+est = []
+if pick == 'dormant' and lead and a2t:
+    n_call = -(-lead // 100) * 100; c_opt = n_call // 100 * 5 + 10; e_apo = lead * a2t
+    est = [('費用の目安', f'約{c_opt}万円', f'追いかけ{n_call:,}コール＋提案資料（梅）'),
+           ('見込めるアポ', f'約{e_apo:.0f}件', f'御社の「会話→アポ」の率 {pct(a2t, 1)}で試算')]
+    if cpa_now and e_apo >= 1: est.append(('1アポあたり', f'約{c_opt * 1e4 / e_apo / 1e4:.1f}万円', f'今期は約{cpa_now / 1e4:.1f}万円'))
+elif pick == 'quality' and meet_n and win_rate is not None:
+    tgt = max(.13, win_rate * 1.5); add = meet_n * (tgt - win_rate)
+    est = [('今期の商談', f'{meet_n}件', '商談アポ管理表の記録'), ('受注率', f'{pct(win_rate, 0)} → {pct(tgt, 0)}', '資料と商談の質を上げた場合'), ('増える受注', f'+{add:.1f}件', '同じ商談数のままで')]
+    if price: est.append(('売上の目安', f'+{yen(add * price)}', f'単価{yen(price)}で試算'))
+PKY = {'dormant': '追いかけフォロー 5万円／100コール ＋ 提案資料 10万円〜', 'quality': '提案資料 10万円〜 ＋ 商談台本30万円・商談代行 1件3万円',
+       'new': '交流会参加代行 10万円／1回 ＋ 商談代行 1件3万円（台本30万円）', 'team': '商談台本 30万円 ＋ 動画アドバイス ＋ 自動フォローメール 初期15万円・月3万円'}[pick]
+sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or HOOK[2],
+    f'<p class="hk-w">{E(why_pick)}</p>' +
+    f'<div class="pk"><p class="pk-k">御社へのおすすめ</p><div class="pk-row">{pkg}</div></div>' +
+    (f'<div class="es"><h3 class="h3s">やった場合の試算</h3><div class="es-row">' + ''.join(f'<div class="es-c"><span>{E(k)}</span><b>{v}</b><small>{E(n)}</small></div>' for k, v, n in est) + '</div><p class="tip">試算は今期の御社の数字から出した目安で、結果を約束するものではありません。</p></div>' if est else '') +
+    f'<div class="cta"><div><b>この組み合わせで始める場合</b><span>{E(PKY)}（税抜）</span></div><p>次期のご契約と一緒に、1か月単位でお試しいただけます。定例で{E(a.director or "担当")}にお声がけください。</p></div>' +
+    f'<details class="more" style="margin-top:16px"><summary>ほかのオプションも見る（全7つ）</summary><div class="om" style="margin-top:12px"><div class="om-h"><span>営業現場の「もったいない」</span><span>ライトアップの解決策</span></div><ol>{omap}</ol></div>' + alltbl + '</details>'))
 # 続け方を選べるプラン（同資料 10〜11ページ）
 FLEX = S.get('flex_note') or ''
-sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '状況に合わせて、続け方を選べます',
-    '<div class="cards">' +
-    card('休止プラン', '', '<p>稼働を一旦止めながら、いつでも再開できる状態を保ちます。これまでに蓄積した有望リストや営業ノウハウは、そのまま残ります。</p>') +
-    card('フォーム営業の中止', '月額20万円', '<p>フォーム営業を止めてテレアポだけに集中し、費用を抑えながら支援を続けます。</p><p>テレアポのみ 月500コール：月額20万円</p>') +
-    card('稼働数の縮小', '月額5万円〜', '<p>テレアポ・フォーム営業の稼働数を段階的に抑え、月額を小さくします。</p>' + tbl([dict(p='テレアポ500コール＋フォーム1,000件', y='月額25万円'), dict(p='テレアポのみ250コール', y='月額10万円'), dict(p='テレアポのみ100コール', y='月額5万円')], [('内容', lambda r: r['p'], 0), ('料金', lambda r: r['y'], 1)])) +
-    card('スポットプラン', '月額5万円〜', '<p>営業リソースが空く閑散期などに限って、単発でのご依頼ができます。</p>' + tbl([dict(p='テレアポ＋フォーム営業', y='月額25万円'), dict(p='テレアポ500コールのみ', y='月額20万円'), dict(p='フォーム営業1,000件', y='月額5万円'), dict(p='FAX営業1,000件', y='月額5万円')], [('内容', lambda r: r['p'], 0), ('料金', lambda r: r['y'], 1)])) +
-    card('DM＋追撃', '月額25万円', '<p>100通のDM送付＋送付先への追いかけ100コール。月額は据え置きでDMを先に送り、送付先に絞って電話することで、アポの取れる率を上げます。</p>') +
-    '</div>' +
-    '<div class="panel opt-pick"><h3 class="h3s">最短翌月解約が可能・1か月ごとの更新</h3><p>すべてのプランは1か月ごとの更新です。長期契約の縛りはなく、最短で翌月から解約できます。市況や営業リソースに合わせて、月単位でプランの変更や休止ができます。</p></div>' +
-    (f'<p>{E(FLEX)}</p>' if FLEX else '') + '<p class="tip">金額は税抜です。</p>'))
+STEPS = [('テレアポ500コール＋フォーム1,000件', 'いまの形で続ける', 25), ('テレアポのみ500コール', 'フォーム営業をやめる', 20), ('テレアポのみ250コール', '稼働を減らす', 10), ('テレアポのみ100コール', '稼働を減らす', 5), ('稼働を止め、リストとノウハウを保管', '休止する', 0)]
+steps = ''.join(f'<li><span class="fs-l"><b>{E(t)}</b><small>{E(d)}</small></span><span class="fs-bar"><i style="width:{max(v / 25 * 100, 0):.0f}%"></i></span><span class="fs-y">{f"月額{v}万円" if v else "いつでも再開"}</span></li>' for d, t, v in STEPS)
+sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '状況に合わせて、<em class="hl">続け方は月ごとに選べます</em>',
+    f'<div class="fx"><div class="fx-main"><h3 class="h3s">費用を抑えて続ける</h3><ol class="fs">{steps}</ol></div>' +
+    '<div class="fx-side"><div class="fx-c"><h3 class="h3s">閑散期だけ動かす（スポット）</h3><dl class="fx-dl"><dt>テレアポ＋フォーム営業</dt><dd>月額25万円</dd><dt>テレアポ500コールのみ</dt><dd>月額20万円</dd><dt>フォーム営業1,000件</dt><dd>月額5万円</dd><dt>FAX営業1,000件</dt><dd>月額5万円</dd></dl></div>' +
+    '<div class="fx-c"><h3 class="h3s">アポの取れる率を上げる（DM＋追撃）</h3><p class="fx-eq"><span>DM 100通</span>＋<span>追いかけ 100コール</span>＝<b>月額25万円</b></p><p class="fx-s">DMを先に送り、送った先に絞って電話します。</p></div></div></div>' +
+    '<div class="fx-band"><b>最短翌月解約・1か月ごとの更新</b><span>長期契約の縛りはありません。市況や営業の体制に合わせて、月単位でプランの変更や休止ができます。</span></div>' +
+    (f'<p style="margin-top:12px">{E(FLEX)}</p>' if FLEX else '') + '<p class="tip">金額は税抜です。</p>'))
 # 次期スケジュール（切れ目なく）
 nxt = end + datetime.timedelta(days=1)
 def add_m(d, n): y, m = divmod(d.month - 1 + n, 12); y += d.year; return datetime.date(y, m + 1, min(d.day, calendar.monthrange(y, m + 1)[1]))
@@ -233,7 +283,7 @@ sl.append(sec('price', '10', '料金・契約条件', '次期のプランと料�
 HIDE = set(S.get('hide') or [])  # 変更指示で「この章を外す」と言われた章（data-title）
 sl = [x for x in sl if not any(f'data-title="{h}"' in x for h in HIDE)]
 NAVI = {'review': '今期の結果を1枚にまとめました。', 'numbers': '月ごとと3か月ごとで、どこで伸びたかが分かります。', 'voices': 'お断りの理由が分かると、次期に直すところが決まります。',
-        'learn': 'うまくいかなかった点と、そこから変えたことです。', 'target': '目標は今期の実績から逆算しています。', 'proposal': '次の1年で変えることを4つに分けました。', 'options': '数字から、御社に合うオプションの組み合わせを選びました。', 'flex': '休止や縮小、スポットなど、続け方は選べます。',
+        'learn': 'うまくいかなかった点と、そこから変えたことです。', 'target': '目標は今期の実績から逆算しています。', 'proposal': '次の1年で変えることを4つに分けました。', 'options': '御社の数字で、いちばん効くところを選びました。試算もご覧ください。', 'flex': '休止や縮小、スポットなど、続け方は選べます。',
         'schedule': '架電を止めずに次期に入るための段取りです。', 'price': '次期のプランと料金です。'}
 NAVI.update(S.get('navi') or {})
 SAY = {k: [v, []] for k, v in NAVI.items()}
