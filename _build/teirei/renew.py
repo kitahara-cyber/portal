@@ -54,34 +54,31 @@ SRC = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.py')).
 CSS = re.search(r"CSS = r'''(.*?)'''", SRC, re.S).group(1)
 JS = re.search(r"JS = r'''(.*?)'''", SRC, re.S).group(1)
 CSS += '''
-.slide.dk{background:#0e1a30;color:#eef1f7;--line:rgba(255,255,255,.14);--line2:rgba(255,255,255,.08);--card:rgba(255,255,255,.04);--mute:#a9b3c7;--ink:#eef1f7}
-.slide.dk .sh .no{color:#d8b46a}.slide.dk h2{color:#fff;font-size:clamp(30px,4.4vw,52px);line-height:1.25;letter-spacing:-.01em}.slide.dk h2 em{font-style:normal;color:#d8b46a}
-.nx-why{margin:4px 0 28px;font-size:16px;color:#c9d1e1;max-width:40em}
+.nx-why{margin:4px 0 24px;font-size:16px;color:var(--mute);max-width:40em}
 .nx-flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);align-items:center;gap:18px}
-.nx-nd{border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:20px 22px;background:rgba(255,255,255,.03)}.nx-nd span{display:block;font-size:13px;color:#a9b3c7}
-.nx-nd b{display:block;font-size:clamp(46px,6.4vw,84px);font-weight:900;line-height:1.05;letter-spacing:-.02em;color:#fff}.nx-nd b small{font-size:.32em;font-weight:700;margin-left:4px;letter-spacing:0}
-.nx-nd.g{border-color:#d8b46a;background:linear-gradient(160deg,rgba(216,180,106,.18),rgba(216,180,106,.04))}.nx-nd.g b{color:#e9c97e}
-.nx-ar{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.nx-op{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}.nx-op span{font-size:13.5px;font-weight:700;background:#fff;color:#0e1a30;border-radius:999px;padding:6px 14px}.nx-op em{font-style:normal;color:#a8822f;margin-right:4px}
-.nx-ln{display:block;width:100%;height:2px;background:linear-gradient(90deg,rgba(216,180,106,.2),#d8b46a);position:relative}.nx-ln::after{content:"";position:absolute;right:-2px;top:-6px;border:7px solid transparent;border-left-color:#d8b46a;border-right:0}
-.nx-ar>b{font-size:18px;color:#e9c97e}
-@media (max-width:760px){.nx-flow{grid-template-columns:minmax(0,1fr)}.nx-ln{width:2px;height:28px;background:linear-gradient(180deg,rgba(216,180,106,.2),#d8b46a)}.nx-ln::after{right:-6px;top:auto;bottom:-6px;border:7px solid transparent;border-top-color:#d8b46a;border-bottom:0}}
-.nx-cmp{margin-top:26px;max-width:560px}.nx-cmp p{margin:0 0 8px;font-size:13px;color:#a9b3c7}.nx-cr{display:grid;grid-template-columns:80px minmax(0,1fr) 92px;gap:12px;align-items:center;margin:6px 0;font-size:14px}
-.nx-cr i{height:10px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}.nx-cr s{display:block;height:100%;background:#6f7d99;border-radius:5px}.nx-cr.g s{background:#d8b46a}.nx-cr b{text-align:right}.nx-cr.g b{color:#e9c97e}
-.nx-note{margin:14px 0 0;font-size:12px;color:#8793aa}
-.nx-cta{margin-top:26px;display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;background:#d8b46a;color:#0e1a30;border-radius:999px;padding:12px 24px}.nx-cta b{font-size:16px}.nx-cta span{font-size:13.5px;font-weight:700}
-.nx-more{margin-top:22px}.nx-more>summary{cursor:pointer;font-size:13.5px;color:#c9d1e1;list-style:none}.nx-more>summary::-webkit-details-marker{display:none}.nx-more>summary::before{content:"＋ "}.nx-more[open]>summary::before{content:"− "}.nx-more .om{margin-top:12px}
-.slide.dk .om li.on{background:rgba(216,180,106,.16);color:#fff}.slide.dk .om li.on .om-a{background:#d8b46a}.slide.dk .om li.on .om-a::after{border-left-color:#d8b46a}.slide.dk .ol-y{color:#eef1f7}
+.nx-nd{border:1px solid var(--line);border-radius:18px;padding:20px 22px;background:var(--card)}.nx-nd span{display:block;font-size:13px;color:var(--mute)}
+.nx-nd b{display:block;font-size:clamp(46px,6.4vw,84px);font-weight:900;line-height:1.05;letter-spacing:-.02em;color:var(--ink)}.nx-nd b small{font-size:.32em;font-weight:700;margin-left:4px;letter-spacing:0}
+.nx-nd.g{border:2px solid var(--accent);background:var(--accent-soft)}.nx-nd.g b{color:var(--accent-ink)}
+.nx-ar{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.nx-op{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}.nx-op span{font-size:13.5px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:999px;padding:6px 14px}.nx-op em{font-style:normal;margin-right:4px}
+.nx-ln{display:block;width:100%;height:2px;background:var(--accent);position:relative}.nx-ln::after{content:"";position:absolute;right:-2px;top:-6px;border:7px solid transparent;border-left-color:var(--accent);border-right:0}
+.nx-ar>b{font-size:18px;color:var(--accent-ink)}
+@media (max-width:760px){.nx-flow{grid-template-columns:minmax(0,1fr)}.nx-ln{width:2px;height:28px}.nx-ln::after{right:-6px;top:auto;bottom:-6px;border:7px solid transparent;border-top-color:var(--accent);border-bottom:0}}
+.nx-cmp{margin-top:24px;max-width:560px}.nx-cmp p{margin:0 0 8px;font-size:13px;color:var(--mute)}.nx-cr{display:grid;grid-template-columns:80px minmax(0,1fr) 92px;gap:12px;align-items:center;margin:6px 0;font-size:14px}
+.nx-cr i{height:10px;border-radius:5px;background:var(--line2);overflow:hidden}.nx-cr s{display:block;height:100%;background:var(--mute);border-radius:5px}.nx-cr.g s{background:var(--accent)}.nx-cr b{text-align:right}.nx-cr.g b{color:var(--accent-ink)}
+.nx-note{margin:14px 0 0;font-size:12px;color:var(--mute)}
+.nx-cta{margin-top:24px;display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;background:var(--accent);color:#fff;border-radius:999px;padding:12px 24px}.nx-cta b{font-size:16px}.nx-cta span{font-size:13.5px;font-weight:700}
+.nx-more{margin-top:22px}.nx-more>summary{cursor:pointer;font-size:13.5px;color:var(--mute);list-style:none}.nx-more>summary::-webkit-details-marker{display:none}.nx-more>summary::before{content:"＋ "}.nx-more[open]>summary::before{content:"− "}.nx-more .om{margin-top:12px}
 .fx{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}@media (max-width:860px){.fx{grid-template-columns:minmax(0,1fr)}}
 .fx-main,.fx-c{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;min-width:0}.fx-side{display:grid;gap:14px}.fx-k{margin:0 0 14px;font-size:13px;font-weight:700;color:var(--mute)}
 .fc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:end;height:230px}
 .fc li{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:8px;min-width:0}.fc b{font-size:22px;font-weight:900;line-height:1}.fc b small{font-size:11px;margin-left:1px}
-.fc i{display:block;width:100%;max-width:64px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#e2c27c,#c49a45)}.fc li:first-child i{background:#0e1a30}
-#flex h2 em.hl{color:#a8822f;background:linear-gradient(transparent 62%,#f3e6c4 0)}#flex .fx-main,#flex .fx-c{border-radius:18px}.fc li:last-child i{background:var(--line)}
+.fc i{display:block;width:100%;max-width:64px;border-radius:10px 10px 4px 4px;background:var(--accent)}.fc li:first-child i{background:var(--ink)}
+#flex .fx-main,#flex .fx-c{border-radius:18px}.fc li:last-child i{background:var(--line)}
 .fc span{font-size:12px;color:var(--mute);text-align:center;line-height:1.4;min-height:2.8em}
 .fx-s{margin:12px 0 0;font-size:13px;color:var(--mute)}
 .fx-dl{display:grid;grid-template-columns:1fr auto;gap:8px 12px;margin:0;font-size:14px}.fx-dl dd{margin:0;font-weight:900}
 .fx-eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}.fx-eq span{background:var(--line2);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700}.fx-eq i{font-style:normal;font-weight:900}.fx-big{margin:10px 0 0;font-size:26px;font-weight:900}
-.fx-band{margin-top:14px;border-radius:18px;background:#0e1a30;color:#eef1f7;padding:18px 22px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}.fx-band b{font-size:20px;color:#e9c97e}.fx-band span{font-size:14px;opacity:.85}
+.fx-band{margin-top:14px;border-radius:18px;background:var(--ink);color:var(--bg);padding:18px 22px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}.fx-band b{font-size:20px}.fx-band span{font-size:14px;opacity:.85}
 '''
 CSS += '''.hk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 24px;align-items:center;margin:0 0 16px}.hk-n b{display:block;font-size:clamp(40px,6vw,64px);font-weight:900;line-height:1.05;color:var(--accent-ink)}.hk-n span{font-size:13px;color:var(--mute)}.hk-w{margin:0 0 18px;font-size:15.5px;line-height:1.9;max-width:44em}
 @media (max-width:640px){.hk{grid-template-columns:minmax(0,1fr)}}
@@ -260,20 +257,20 @@ cmp_ = None; note = ''
 if pick == 'dormant' and lead and a2t:
     n_call = -(-lead // 100) * 100; c_opt = n_call // 100 * 5 + 10; e_apo = lead * a2t
     flow = (('いま眠っている見込み先', f'{lead:,}', '件'), f'{c_opt}万円', ('見込めるアポ', f'{e_apo:.0f}', '件'))
-    head = '眠っている見込み先を、<em>商談に。</em>'
+    head = '眠っている見込み先を、<em class="hl">商談に。</em>'
     if cpa_now and e_apo >= 1: cmp_ = ('1アポあたりの費用', ('今期', cpa_now / 1e4), ('このプラン', c_opt / e_apo))
     note = f'追いかけ{n_call:,}コール＋提案資料（梅）。アポは御社の「会話→アポ」の率 {pct(a2t, 1)}で試算した目安です。'
 elif pick == 'quality' and meet_n and win_rate is not None:
     tgt = max(.13, win_rate * 1.5); add = meet_n * (tgt - win_rate)
     flow = (('いまの受注率', f'{win_rate * 100:.0f}', '%'), '資料と商談を整える', ('目指す受注率', f'{tgt * 100:.0f}', '%'))
-    head = 'いまのアポのまま、<em>受注を増やす。</em>'
+    head = 'いまのアポのまま、<em class="hl">受注を増やす。</em>'
     note = f'今期の商談{meet_n}件のまま受注率が上がると、受注は+{add:.1f}件の目安です。'
 elif pick == 'new':
     flow = (('リストの残り', f'{L["left"] / cpm if cpm else 0:.0f}', 'か月分'), '10万円／1回〜', ('新しい見込み先', '交流会', 'から'))
-    head = 'リストが尽きる前に、<em>新しい見込み先を。</em>'
+    head = 'リストが尽きる前に、<em class="hl">新しい見込み先を。</em>'
 else:
     flow = (('今期のアポ', f'{apo:,}', '件'), '台本30万円〜', ('受注までの流れ', '社内', 'に残る'))
-    head = 'アポを受注に変える力を、<em>社内に。</em>'
+    head = 'アポを受注に変える力を、<em class="hl">社内に。</em>'
 (l1, v1, u1), mid, (l2, v2, u2) = flow
 cmpbar = ''
 if cmp_:
@@ -287,7 +284,6 @@ sl.append(sec('options', '07', '受注率向上オプション', S.get('options_
     cmpbar + (f'<p class="nx-note">{E(note)}</p>' if note else '') +
     f'<div class="nx-cta"><b>1か月からお試しいただけます</b><span>定例で{E(a.director or "担当")}にお声がけください</span></div>' +
     f'<details class="nx-more"><summary>ほかのオプションも見る（全7つ）</summary><div class="om"><div class="om-h"><span>営業現場の「もったいない」</span><span>ライトアップの解決策</span></div><ol>{omap}</ol></div>' + alltbl + '</details>'))
-sl[-1] = sl[-1].replace('<section class="slide" id="options"', '<section class="slide dk" id="options"', 1)
 # 続け方を選べるプラン（同資料 10〜11ページ）
 FLEX = S.get('flex_note') or ''
 STEPS = [('テレアポ500<br>＋フォーム1,000', 25), ('テレアポ500', 20), ('テレアポ250', 10), ('テレアポ100', 5), ('休止', 0)]
