@@ -1277,6 +1277,11 @@ function openForm(t){
   drawForm();
 }
 function drawForm(){
+  const _b=document.querySelector('#layer [data-drawer="form"] .body'), _st=_b?_b.scrollTop:0;
+  drawFormInner();
+  const _b2=document.querySelector('#layer [data-drawer="form"] .body'); if(_b2&&_st) _b2.scrollTop=_st;
+}
+function drawFormInner(){
   const today=todayStr();
   const quick=[["今日",today],["明日",addDays(1)],["今週中",endOfWeek()],["なし",""]];
   $("#layer").innerHTML='<div class="scrim" data-scrim="1"><div class="drawer" role="dialog" aria-modal="true" aria-label="タスクの作成" data-drawer="form">'+
