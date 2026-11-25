@@ -53,6 +53,8 @@ fee = F.get('fee') or 0; cost_next = fee * NEXT_M
 SRC = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.py')).read()
 CSS = re.search(r"CSS = r'''(.*?)'''", SRC, re.S).group(1)
 JS = re.search(r"JS = r'''(.*?)'''", SRC, re.S).group(1)
+CSS += '''.opt-pick{border:2px solid var(--accent);background:var(--accent-soft);margin-bottom:14px}.opt-pick p{margin:6px 0 0}details.card.opt-on{border:2px solid var(--accent)}details.card.opt-on h3::after{content:"おすすめ";margin-left:8px;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 8px;vertical-align:middle}
+'''
 CSS += '''.todo{display:inline-block;background:#fff3c4;color:#7a5600;border:1px dashed #c9a227;border-radius:6px;padding:1px 8px;font-weight:700;font-size:.92em}
 .draft{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;background:#7a5600;color:#fff;font-weight:700;font-size:12.5px;border-radius:999px;padding:4px 14px}
 .ld3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}.tl{list-style:none;margin:0;padding:0;display:grid;gap:10px}.tl li{display:grid;grid-template-columns:7.5em 1fr;gap:12px;align-items:baseline}.tl b{font-family:var(--mono,monospace)}
@@ -171,17 +173,59 @@ sl.append(sec('target', '05', '次期の目標', S.get('target_title') or f'次�
 PR = [('target', 'ターゲットの拡大・見直し', '新しい層・まだ電話していない層・失注先への再アプローチ'), ('talk', 'トーク・訴求のアップデート', '刺さった一言を軸に、冒頭と切り返しを直す'), ('combo', 'ほかの施策との組み合わせ', 'メール・ウェビナー・インサイドセールスの内製化支援など'), ('team', '体制のご提案', '稼働量・担当・報告の頻度')]
 sl.append(sec('proposal', '06', '次期の施策', S.get('proposal_title') or '次の1年で、変えること',
     '<div class="cards">' + ''.join(card(E(t), '', ul([E(x) for x in P.get(k) or []]) + f'<p class="tip">{E(h)}</p>') for k, t, h in PR) + '</div>'))
+# 受注率向上・営業強化オプション（セールスコンサルティング局の資料「【決定版】受注率向上・営業強化オプション」11/13版）
+OPT = [('①', '交流会参加代行', '貴社商材と相性の良い交流会へプロが代行参加し、確度の高い名刺（リード）を獲得します。', '100,000円／1回', ['交流会への代行参加・名刺獲得', '可能な案件はその場で日程調整', '獲得名刺のデータリスト化', '獲得リストへのフォロー架電（アポ獲得込み・追加費用なし）']),
+       ('②', '追いかけフォローテレアポ', '休眠顧客や過去の資料送付先・名刺・ハウスリストへアプローチし、埋もれていた商談を掘り起こします。', '5万円（100コール）', ['過去に獲得した名刺の無料データリスト化', '資料送付済み・過去のアポ先へのフォロー架電', '貴社のハウスリストへの掘り起こしテレアポ']),
+       ('③', '提案資料作成', 'ヒアリング内容をもとに貴社の強みと顧客課題を結びつけ、アポ獲得後の商談化率・受注率を上げます。', '梅10万円／竹20万円／松50万円', ['梅：提案資料作成（10〜15ページ）', '竹：事例取材・競合比較調査・提案資料作成（15〜25ページ）', '松：顧客取材・実績データ分析・提案資料作成（30ページ以上）']),
+       ('④', '自動フォローメール実装', '商談後の「ほったらかし」を防ぐ、お礼・追客メールの自動化。うっかり連絡を忘れて失注するリスクをなくします。', '初期15万円＋月額3万円', ['フォーム営業の補完（アプローチの拡大）', 'ナーチャリング（関心を育てる）', '継続アプローチによる商談創出']),
+       ('⑤', '商談動画の分析・アドバイス', '実際の商談動画をプロが分析し、「どこを直せば売れるか」を具体的にお伝えします。', '担当よりご案内します', ['第三者のプロ目線での課題の発見', '売れるトークの可視化', 'ノウハウの共有でチーム全体のスキルを底上げ']),
+       ('⑥', '商談台本作成', 'トップ営業の話し方をマニュアル化し、誰が話しても売れる「話し方の台本」を作ります。', '30万円', ['現状の商談トークのヒアリングと台本化', '「購買心理7大原則」に沿った構成作成', '顧客メリットの提示・懸念点の払拭を組み込み']),
+       ('⑦', '商談代行', '人手が足りない時や確実に売りたい時に、営業のプロが貴社の一員として商談を行います。', '商談台本作成30万円＋1件3万円', ['同席して商材と顧客の反応を把握', '専用台本を作り、テスト商談', 'プロが初回商談を担当し、2回目（クロージング）を貴社へ'])]
+COMBO = {'new': ('見込み顧客を一から集めて、すぐ商談にしたい', ['①', '⑦']), 'dormant': ('過去の名刺や資料送付先を眠らせている', ['②', '③']),
+         'quality': ('商談の数も質も、両方底上げしたい', ['③', '⑦']), 'team': ('社内の営業組織を育てて、仕組みにしたい', ['⑥', '⑤', '④'])}
+# 数字からおすすめを選ぶ（story の options_pick で上書きできる）
+pick = S.get('options_pick')
+if pick not in COMBO:
+    months_left = L['left'] / cpm if cpm else 99
+    if lead >= max(10, apo): pick = 'dormant'            # 資料送付などの見込み先がアポ以上に残っている
+    elif win_rate is not None and meet_n >= 5 and win_rate < .13: pick = 'quality'   # 商談はあるが受注につながりにくい
+    elif months_left < 4: pick = 'new'                   # リストの残りが少ない
+    else: pick = 'team'
+why_pick = S.get('options_why') or {'dormant': f'今期、資料送付などで止まった見込み先が{lead:,}件あります。ここを追いかけて、提案資料で商談につなげるのが近道です。',
+    'quality': f'商談は{meet_n}件ありますが、受注率は{pct(win_rate, 0) if win_rate is not None else "—"}です。資料と商談の質を上げると、今のアポがそのまま受注に近づきます。',
+    'new': f'まだ電話していない会社は{L["left"]:,}社で、今のペースだと約{L["left"] / cpm if cpm else 0:.0f}か月分です。交流会で新しい見込み先を集め、商談までお任せいただけます。',
+    'team': 'アポは安定して取れています。次は社内で商談を受ける力を仕組みにすると、受注までの流れがさらに太くなります。'}[pick]
+OPTD = {o[0]: o for o in OPT}
+optcard = lambda o, on: f'<details class="panel card{" opt-on" if on else ""}"><summary><h3>{o[0]} {E(o[1])}</h3><span class="num">{E(o[3])}</span></summary><div class="body"><p>{E(o[2])}</p>{ul([E(x) for x in o[4]])}</div></details>'
+ct, cks = COMBO[pick]
+sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or f'アポを受注につなげるために、<em class="hl">{"＋".join(cks)}</em>の組み合わせをおすすめします',
+    f'<div class="panel opt-pick"><h3 class="h3s">御社へのおすすめ：{E(ct)}</h3><p><b>{" ＋ ".join(f"{k} {E(OPTD[k][1])}" for k in cks)}</b></p><p>{E(why_pick)}</p></div>' +
+    '<p class="tip">アポ獲得から受注までを一気通貫で強化する7つのオプションです。カードを押すと内容が開きます（金額は税抜）。</p>' +
+    '<div class="cards">' + ''.join(optcard(o, o[0] in cks) for o in OPT) + '</div>' +
+    card('組み合わせの選び方', '', tbl([dict(t=v[0], c=' ＋ '.join(f'{k} {OPTD[k][1]}' for k in v[1])) for v in COMBO.values()], [('こんな課題・目的なら', lambda r: E(r['t']), 0), ('おすすめの組み合わせ', lambda r: E(r['c']), 0)]))))
+# 続け方を選べるプラン（同資料 10〜11ページ）
+FLEX = S.get('flex_note') or ''
+sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '状況に合わせて、続け方を選べます',
+    '<div class="cards">' +
+    card('休止プラン', '', '<p>稼働を一旦止めながら、いつでも再開できる状態を保ちます。これまでに蓄積した有望リストや営業ノウハウは、そのまま残ります。</p>') +
+    card('フォーム営業の中止', '月額20万円', '<p>フォーム営業を止めてテレアポだけに集中し、費用を抑えながら支援を続けます。</p><p>テレアポのみ 月500コール：月額20万円</p>') +
+    card('稼働数の縮小', '月額5万円〜', '<p>テレアポ・フォーム営業の稼働数を段階的に抑え、月額を小さくします。</p>' + tbl([dict(p='テレアポ500コール＋フォーム1,000件', y='月額25万円'), dict(p='テレアポのみ250コール', y='月額10万円'), dict(p='テレアポのみ100コール', y='月額5万円')], [('内容', lambda r: r['p'], 0), ('料金', lambda r: r['y'], 1)])) +
+    card('スポットプラン', '月額5万円〜', '<p>営業リソースが空く閑散期などに限って、単発でのご依頼ができます。</p>' + tbl([dict(p='テレアポ＋フォーム営業', y='月額25万円'), dict(p='テレアポ500コールのみ', y='月額20万円'), dict(p='フォーム営業1,000件', y='月額5万円'), dict(p='FAX営業1,000件', y='月額5万円')], [('内容', lambda r: r['p'], 0), ('料金', lambda r: r['y'], 1)])) +
+    card('DM＋追撃', '月額25万円', '<p>100通のDM送付＋送付先への追いかけ100コール。月額は据え置きでDMを先に送り、送付先に絞って電話することで、アポの取れる率を上げます。</p>') +
+    '</div>' +
+    '<div class="panel opt-pick"><h3 class="h3s">最短翌月解約が可能・1か月ごとの更新</h3><p>すべてのプランは1か月ごとの更新です。長期契約の縛りはなく、最短で翌月から解約できます。市況や営業リソースに合わせて、月単位でプランの変更や休止ができます。</p></div>' +
+    (f'<p>{E(FLEX)}</p>' if FLEX else '') + '<p class="tip">金額は税抜です。</p>'))
 # 次期スケジュール（切れ目なく）
 nxt = end + datetime.timedelta(days=1)
 def add_m(d, n): y, m = divmod(d.month - 1 + n, 12); y += d.year; return datetime.date(y, m + 1, min(d.day, calendar.monthrange(y, m + 1)[1]))
 sch = S.get('schedule') or [[f'{meet.month}月{meet.day}日', '本日：今期の振り返りと次期のご提案'], [f'{end.month}月上旬', '次期の内容（リスト・トーク・体制・料金）のご判断'], [f'{end.month}月中旬', 'ご契約の更新手続き'], [f'{end.month}月下旬', '次期のリストとトークを準備（架電を止めずに切り替え）'],
        [f'{nxt.month}月{nxt.day}日', '次期スタート'], [f'{add_m(nxt, 1).month}月', '最初の定例：新しいリストの反応を確認'], [f'{add_m(nxt, 3).month}月', '3か月目の振り返り：目標に対する進み具合']]
 O = S.get('ops') or {}
-sl.append(sec('schedule', '07', '運用とスケジュール', '切れ目なく、次期に入るための段取り',
+sl.append(sec('schedule', '09', '運用とスケジュール', '切れ目なく、次期に入るための段取り',
     '<div class="two"><div class="panel"><h3 class="h3s">次期までの流れ</h3><ul class="tl">' + ''.join(f'<li><b>{E(d)}</b><span>{E(t)}</span></li>' for d, t in sch) + '</ul></div>' +
     f'<div class="panel"><h3 class="h3s">運用の進め方</h3><ul><li><b>定例</b>{E(O.get("meeting") or "月1回。このポータルの着地プランを一緒に開き、次の打ち手を決めます")}</li><li><b>報告</b>{E(O.get("report") or "毎週の数字はポータルで自動更新。定例資料は前日にポータルへ")}</li><li><b>担当</b>{E(O.get("team") or (a.director + "（担当ディレクター）" if a.director else ""))}</li></ul></div></div>'))
 rows8 = ''.join(f'<li><b>{lb}</b>{E(PL[k])}</li>' for k, lb in [('name', 'プラン'), ('price', '料金'), ('discount', '継続割引・長期特典'), ('term', '契約期間'), ('renew', '更新の条件')] if PL.get(k))
-sl.append(sec('price', '08', '料金・契約条件', '次期のプランと料金',
+sl.append(sec('price', '10', '料金・契約条件', '次期のプランと料金',
     '<div class="two"><div class="panel"><h3 class="h3s">今期のご契約</h3><ul>' + (f'<li><b>月額</b>{yen(fee)}（税抜）</li>' if fee else '') + f'<li><b>契約期間</b>{ym(str(start))}〜{end.year}年{end.month}月{end.day}日</li></ul></div>' +
     f'<div class="panel"><h3 class="h3s">次期のご提案</h3>' + (f'<ul>{rows8}</ul>' if rows8 else '<p>次期のプランと料金は、担当よりご案内します。</p>') + '</div></div>' +
     '<p style="margin-top:18px"><button type="button" class="more-all" id="openall">すべての詳細を開く</button> <a class="back" id="toPortal" href="#">戻る</a></p>' +
@@ -189,7 +233,7 @@ sl.append(sec('price', '08', '料金・契約条件', '次期のプランと料�
 HIDE = set(S.get('hide') or [])  # 変更指示で「この章を外す」と言われた章（data-title）
 sl = [x for x in sl if not any(f'data-title="{h}"' in x for h in HIDE)]
 NAVI = {'review': '今期の結果を1枚にまとめました。', 'numbers': '月ごとと3か月ごとで、どこで伸びたかが分かります。', 'voices': 'お断りの理由が分かると、次期に直すところが決まります。',
-        'learn': 'うまくいかなかった点と、そこから変えたことです。', 'target': '目標は今期の実績から逆算しています。', 'proposal': '次の1年で変えることを4つに分けました。',
+        'learn': 'うまくいかなかった点と、そこから変えたことです。', 'target': '目標は今期の実績から逆算しています。', 'proposal': '次の1年で変えることを4つに分けました。', 'options': '数字から、御社に合うオプションの組み合わせを選びました。', 'flex': '休止や縮小、スポットなど、続け方は選べます。',
         'schedule': '架電を止めずに次期に入るための段取りです。', 'price': '次期のプランと料金です。'}
 NAVI.update(S.get('navi') or {})
 SAY = {k: [v, []] for k, v in NAVI.items()}
