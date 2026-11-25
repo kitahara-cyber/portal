@@ -1440,7 +1440,7 @@ function viewReports(){
   setTimeout(wrFit,0); setTimeout(wrFit,250); setTimeout(wrFit,1000);
   return h;
 }
-function wrFit(){ document.querySelectorAll(".wrslide").forEach(w=>{ const sc=Math.min(1,(w.getBoundingClientRect().width||1000)/1280); const inner=w.firstElementChild; if(inner){ inner.style.transform="scale("+sc+")"; w.style.height=(720*sc)+"px"; } }); }
+function wrFit(){ document.querySelectorAll(".wrslide").forEach(w=>{ const sc=(w.clientWidth||1000)/1280; const inner=w.firstElementChild; if(inner){ inner.style.transform="scale("+sc+")"; w.style.height=(720*sc)+"px"; } }); }
 window.addEventListener("resize", ()=>{ if(S.view==="reports") wrFit(); });
 function openWrForm(r){
   S.wrForm={id:r?r.id:"", date:r?r.date:mondayOf(todayStr()), text:r?JSON.stringify(r.slides,null,1):"", err:""};
