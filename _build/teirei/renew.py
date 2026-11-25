@@ -53,6 +53,36 @@ fee = F.get('fee') or 0; cost_next = fee * NEXT_M
 SRC = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.py')).read()
 CSS = re.search(r"CSS = r'''(.*?)'''", SRC, re.S).group(1)
 JS = re.search(r"JS = r'''(.*?)'''", SRC, re.S).group(1)
+CSS += '''
+.slide.dk{background:#0e1a30;color:#eef1f7;--line:rgba(255,255,255,.14);--line2:rgba(255,255,255,.08);--card:rgba(255,255,255,.04);--mute:#a9b3c7;--ink:#eef1f7}
+.slide.dk .sh .no{color:#d8b46a}.slide.dk h2{color:#fff;font-size:clamp(30px,4.4vw,52px);line-height:1.25;letter-spacing:-.01em}.slide.dk h2 em{font-style:normal;color:#d8b46a}
+.nx-why{margin:4px 0 28px;font-size:16px;color:#c9d1e1;max-width:40em}
+.nx-flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);align-items:center;gap:18px}
+.nx-nd{border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:20px 22px;background:rgba(255,255,255,.03)}.nx-nd span{display:block;font-size:13px;color:#a9b3c7}
+.nx-nd b{display:block;font-size:clamp(46px,6.4vw,84px);font-weight:900;line-height:1.05;letter-spacing:-.02em;color:#fff}.nx-nd b small{font-size:.32em;font-weight:700;margin-left:4px;letter-spacing:0}
+.nx-nd.g{border-color:#d8b46a;background:linear-gradient(160deg,rgba(216,180,106,.18),rgba(216,180,106,.04))}.nx-nd.g b{color:#e9c97e}
+.nx-ar{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.nx-op{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}.nx-op span{font-size:13.5px;font-weight:700;background:#fff;color:#0e1a30;border-radius:999px;padding:6px 14px}.nx-op em{font-style:normal;color:#a8822f;margin-right:4px}
+.nx-ln{display:block;width:100%;height:2px;background:linear-gradient(90deg,rgba(216,180,106,.2),#d8b46a);position:relative}.nx-ln::after{content:"";position:absolute;right:-2px;top:-6px;border:7px solid transparent;border-left-color:#d8b46a;border-right:0}
+.nx-ar>b{font-size:18px;color:#e9c97e}
+@media (max-width:760px){.nx-flow{grid-template-columns:minmax(0,1fr)}.nx-ln{width:2px;height:28px;background:linear-gradient(180deg,rgba(216,180,106,.2),#d8b46a)}.nx-ln::after{right:-6px;top:auto;bottom:-6px;border:7px solid transparent;border-top-color:#d8b46a;border-bottom:0}}
+.nx-cmp{margin-top:26px;max-width:560px}.nx-cmp p{margin:0 0 8px;font-size:13px;color:#a9b3c7}.nx-cr{display:grid;grid-template-columns:80px minmax(0,1fr) 92px;gap:12px;align-items:center;margin:6px 0;font-size:14px}
+.nx-cr i{height:10px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}.nx-cr s{display:block;height:100%;background:#6f7d99;border-radius:5px}.nx-cr.g s{background:#d8b46a}.nx-cr b{text-align:right}.nx-cr.g b{color:#e9c97e}
+.nx-note{margin:14px 0 0;font-size:12px;color:#8793aa}
+.nx-cta{margin-top:26px;display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;background:#d8b46a;color:#0e1a30;border-radius:999px;padding:12px 24px}.nx-cta b{font-size:16px}.nx-cta span{font-size:13.5px;font-weight:700}
+.nx-more{margin-top:22px}.nx-more>summary{cursor:pointer;font-size:13.5px;color:#c9d1e1;list-style:none}.nx-more>summary::-webkit-details-marker{display:none}.nx-more>summary::before{content:"＋ "}.nx-more[open]>summary::before{content:"− "}.nx-more .om{margin-top:12px}
+.slide.dk .om li.on{background:rgba(216,180,106,.16);color:#fff}.slide.dk .om li.on .om-a{background:#d8b46a}.slide.dk .om li.on .om-a::after{border-left-color:#d8b46a}.slide.dk .ol-y{color:#eef1f7}
+.fx{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}@media (max-width:860px){.fx{grid-template-columns:minmax(0,1fr)}}
+.fx-main,.fx-c{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;min-width:0}.fx-side{display:grid;gap:14px}.fx-k{margin:0 0 14px;font-size:13px;font-weight:700;color:var(--mute)}
+.fc{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:end;height:230px}
+.fc li{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:8px;min-width:0}.fc b{font-size:22px;font-weight:900;line-height:1}.fc b small{font-size:11px;margin-left:1px}
+.fc i{display:block;width:100%;max-width:64px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#e2c27c,#c49a45)}.fc li:first-child i{background:#0e1a30}
+#flex h2 em.hl{color:#a8822f;background:linear-gradient(transparent 62%,#f3e6c4 0)}#flex .fx-main,#flex .fx-c{border-radius:18px}.fc li:last-child i{background:var(--line)}
+.fc span{font-size:12px;color:var(--mute);text-align:center;line-height:1.4;min-height:2.8em}
+.fx-s{margin:12px 0 0;font-size:13px;color:var(--mute)}
+.fx-dl{display:grid;grid-template-columns:1fr auto;gap:8px 12px;margin:0;font-size:14px}.fx-dl dd{margin:0;font-weight:900}
+.fx-eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}.fx-eq span{background:var(--line2);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700}.fx-eq i{font-style:normal;font-weight:900}.fx-big{margin:10px 0 0;font-size:26px;font-weight:900}
+.fx-band{margin-top:14px;border-radius:18px;background:#0e1a30;color:#eef1f7;padding:18px 22px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}.fx-band b{font-size:20px;color:#e9c97e}.fx-band span{font-size:14px;opacity:.85}
+'''
 CSS += '''.hk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 24px;align-items:center;margin:0 0 16px}.hk-n b{display:block;font-size:clamp(40px,6vw,64px);font-weight:900;line-height:1.05;color:var(--accent-ink)}.hk-n span{font-size:13px;color:var(--mute)}.hk-w{margin:0 0 18px;font-size:15.5px;line-height:1.9;max-width:44em}
 @media (max-width:640px){.hk{grid-template-columns:minmax(0,1fr)}}
 .es{margin-top:4px}.es-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px}.es-c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}.es-c span{font-size:12.5px;color:var(--mute)}.es-c b{font-size:26px;font-weight:900;line-height:1.25}.es-c small{font-size:12px;color:var(--mute)}
@@ -72,15 +102,6 @@ CSS += '''.hk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 24px
 .ol-n{font-weight:900;color:var(--mute)}.ol-r b{font-size:15px}.ol-y{font-size:13.5px;font-weight:700;color:var(--ink);text-align:right}.ol-r.on .ol-n{color:var(--accent-ink)}.ol-r.on b::after{content:"おすすめ";margin-left:8px;font-size:11px;color:#fff;background:var(--accent);border-radius:999px;padding:1px 8px;vertical-align:2px}
 .ol-b{padding:0 4px 14px 42px;font-size:13.5px}.ol-b p{margin:0 0 6px}
 @media (max-width:640px){.ol-r>summary{grid-template-columns:24px minmax(0,1fr)}.ol-y{grid-column:2;text-align:left;color:var(--mute)}.ol-b{padding-left:34px}}
-.fx{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}@media (max-width:860px){.fx{grid-template-columns:minmax(0,1fr)}}
-.fx-main,.fx-c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}.fx-side{display:grid;gap:14px}
-.fs{list-style:none;margin:0;padding:0;display:grid;gap:12px}.fs li{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 92px;gap:12px;align-items:center}
-.fs-l b{display:block;font-size:14px}.fs-l small{font-size:12px;color:var(--mute)}.fs-bar{height:12px;border-radius:6px;background:var(--line2);overflow:hidden}.fs-bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
-.fs li:first-child .fs-bar i{background:var(--ink)}.fs-y{font-weight:900;font-size:15px;text-align:right;white-space:nowrap}
-@media (max-width:640px){.fs li{grid-template-columns:minmax(0,1fr) auto}.fs-bar{grid-column:1/-1;grid-row:2}}
-.fx-dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:0;font-size:13.5px}.fx-dl dd{margin:0;font-weight:900}
-.fx-eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;font-weight:700}.fx-eq span{background:var(--line2);border-radius:8px;padding:4px 10px;font-size:13px}.fx-eq b{font-size:17px}.fx-s{margin:8px 0 0;font-size:13px;color:var(--mute)}
-.fx-band{margin-top:14px;border-radius:14px;background:var(--ink);color:var(--bg);padding:16px 20px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline}.fx-band b{font-size:16px}.fx-band span{font-size:13.5px;opacity:.85}
 '''
 CSS += '''.todo{display:inline-block;background:#fff3c4;color:#7a5600;border:1px dashed #c9a227;border-radius:6px;padding:1px 8px;font-weight:700;font-size:.92em}
 .draft{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;background:#7a5600;color:#fff;font-weight:700;font-size:12.5px;border-radius:999px;padding:4px 14px}
@@ -233,39 +254,49 @@ alltbl = '<div class="ol">' + ''.join(f'<details class="ol-r{" on" if o[0] in ck
 # 売る構成：①御社に残っている「もったいない」（数字）→ ②解決の組み合わせ → ③やった場合の試算 → ④始め方
 a2t = apo / talk if talk else 0                         # 御社の「会話→アポ」の率
 cpa_now = fee * len(MA) / apo if fee and apo else 0      # 今期の1アポあたりの費用
-HOOK = {'dormant': (f'{lead:,}件', '資料送付などで止まったままの見込み先', f'眠っている見込み先 <em class="hl">{lead:,}件</em>を、商談に変えませんか'),
-        'quality': (pct(win_rate, 0) if win_rate is not None else '—', f'商談{meet_n}件のうち、受注になった割合', 'いまのアポのまま、<em class="hl">受注を増やせます</em>'),
-        'new': (f'約{L["left"] / cpm if cpm else 0:.0f}か月分', f'まだ電話していない会社（{L["left"]:,}社）の残り', 'リストが尽きる前に、<em class="hl">新しい見込み先</em>を'),
-        'team': (f'{apo:,}件', '今期のアポ', 'アポを受注に変える力を、<em class="hl">社内に</em>')}[pick]
-est = []; est_note = ''
+# 「いま → このオプション → こうなる」を1本の流れで見せる（数字があるときは御社の数字で）
+names = '＋'.join(OPTD[k][1] for k in cks)
+cmp_ = None; note = ''
 if pick == 'dormant' and lead and a2t:
     n_call = -(-lead // 100) * 100; c_opt = n_call // 100 * 5 + 10; e_apo = lead * a2t
-    est = [('費用', f'約{c_opt}万円', ''),
-           ('見込めるアポ', f'約{e_apo:.0f}件', '')]
-    if cpa_now and e_apo >= 1: est.append(('1アポあたり', f'約{c_opt * 1e4 / e_apo / 1e4:.1f}万円', f'今期は約{cpa_now / 1e4:.1f}万円'))
-    est_note = f'追いかけ{n_call:,}コール＋提案資料（梅）。アポは御社の「会話→アポ」の率 {pct(a2t, 1)}で試算した目安です。'
+    flow = (('いま眠っている見込み先', f'{lead:,}', '件'), f'{c_opt}万円', ('見込めるアポ', f'{e_apo:.0f}', '件'))
+    head = '眠っている見込み先を、<em>商談に。</em>'
+    if cpa_now and e_apo >= 1: cmp_ = ('1アポあたりの費用', ('今期', cpa_now / 1e4), ('このプラン', c_opt / e_apo))
+    note = f'追いかけ{n_call:,}コール＋提案資料（梅）。アポは御社の「会話→アポ」の率 {pct(a2t, 1)}で試算した目安です。'
 elif pick == 'quality' and meet_n and win_rate is not None:
     tgt = max(.13, win_rate * 1.5); add = meet_n * (tgt - win_rate)
-    est = [('受注率', f'{pct(win_rate, 0)} → {pct(tgt, 0)}', ''), ('増える受注', f'+{add:.1f}件', '')]
-    est_note = f'今期の商談{meet_n}件のまま、受注率が上がった場合の目安です。'
-    if price: est.append(('売上', f'+{yen(add * price)}', ''))
-PKY = {'dormant': '追いかけフォロー 5万円／100コール ＋ 提案資料 10万円〜', 'quality': '提案資料 10万円〜 ＋ 商談台本30万円・商談代行 1件3万円',
-       'new': '交流会参加代行 10万円／1回 ＋ 商談代行 1件3万円（台本30万円）', 'team': '商談台本 30万円 ＋ 動画アドバイス ＋ 自動フォローメール 初期15万円・月3万円'}[pick]
-sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or HOOK[2],
-    f'<p class="hk-w">{E(why_pick)}</p>' +
-    f'<div class="pk"><div class="pk-row">{pkg}</div></div>' +
-    (f'<div class="es"><div class="es-row">' + ''.join(f'<div class="es-c"><span>{E(k)}</span><b>{v}</b>{f"<small>{E(n)}</small>" if n else ""}</div>' for k, v, n in est) + f'</div><p class="tip">{E(est_note)}</p></div>' if est else '') +
-    f'<div class="cta"><b>1か月からお試しいただけます</b><span>定例で{E(a.director or "担当")}にお声がけください</span></div>' +
-    f'<details class="more" style="margin-top:16px"><summary>ほかのオプションも見る（全7つ）</summary><div class="om" style="margin-top:12px"><div class="om-h"><span>営業現場の「もったいない」</span><span>ライトアップの解決策</span></div><ol>{omap}</ol></div>' + alltbl + '</details>'))
+    flow = (('いまの受注率', f'{win_rate * 100:.0f}', '%'), '資料と商談を整える', ('目指す受注率', f'{tgt * 100:.0f}', '%'))
+    head = 'いまのアポのまま、<em>受注を増やす。</em>'
+    note = f'今期の商談{meet_n}件のまま受注率が上がると、受注は+{add:.1f}件の目安です。'
+elif pick == 'new':
+    flow = (('リストの残り', f'{L["left"] / cpm if cpm else 0:.0f}', 'か月分'), '10万円／1回〜', ('新しい見込み先', '交流会', 'から'))
+    head = 'リストが尽きる前に、<em>新しい見込み先を。</em>'
+else:
+    flow = (('今期のアポ', f'{apo:,}', '件'), '台本30万円〜', ('受注までの流れ', '社内', 'に残る'))
+    head = 'アポを受注に変える力を、<em>社内に。</em>'
+(l1, v1, u1), mid, (l2, v2, u2) = flow
+cmpbar = ''
+if cmp_:
+    mx = max(cmp_[1][1], cmp_[2][1])
+    cmpbar = f'<div class="nx-cmp"><p>{cmp_[0]}</p>' + ''.join(f'<div class="nx-cr{" g" if k == 2 else ""}"><span>{n}</span><i><s style="width:{v / mx * 100:.0f}%"></s></i><b>約{v:.1f}万円</b></div>' for k, (n, v) in ((1, cmp_[1]), (2, cmp_[2]))) + '</div>'
+sl.append(sec('options', '07', '受注率向上オプション', S.get('options_title') or head,
+    f'<p class="nx-why">{E(why_pick)}</p>' +
+    f'<div class="nx-flow"><div class="nx-nd"><span>{E(l1)}</span><b>{v1}<small>{u1}</small></b></div>' +
+    f'<div class="nx-ar"><div class="nx-op">{"".join(f"<span><em>{k}</em>{E(OPTD[k][1])}</span>" for k in cks)}</div><i class="nx-ln" aria-hidden="true"></i><b>{E(mid)}</b></div>' +
+    f'<div class="nx-nd g"><span>{E(l2)}</span><b>{v2}<small>{u2}</small></b></div></div>' +
+    cmpbar + (f'<p class="nx-note">{E(note)}</p>' if note else '') +
+    f'<div class="nx-cta"><b>1か月からお試しいただけます</b><span>定例で{E(a.director or "担当")}にお声がけください</span></div>' +
+    f'<details class="nx-more"><summary>ほかのオプションも見る（全7つ）</summary><div class="om"><div class="om-h"><span>営業現場の「もったいない」</span><span>ライトアップの解決策</span></div><ol>{omap}</ol></div>' + alltbl + '</details>'))
+sl[-1] = sl[-1].replace('<section class="slide" id="options"', '<section class="slide dk" id="options"', 1)
 # 続け方を選べるプラン（同資料 10〜11ページ）
 FLEX = S.get('flex_note') or ''
-STEPS = [('', 'テレアポ500＋フォーム1,000', 25), ('', 'テレアポ500', 20), ('', 'テレアポ250', 10), ('', 'テレアポ100', 5), ('', '休止（リストは保管）', 0)]
-steps = ''.join(f'<li><span class="fs-l"><b>{E(t)}</b></span><span class="fs-bar"><i style="width:{max(v / 25 * 100, 0):.0f}%"></i></span><span class="fs-y">{f"月額{v}万円" if v else "いつでも再開"}</span></li>' for d, t, v in STEPS)
-sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '状況に合わせて、<em class="hl">続け方は月ごとに選べます</em>',
-    f'<div class="fx"><div class="fx-main"><h3 class="h3s">費用を抑えて続ける（月額）</h3><ol class="fs">{steps}</ol></div>' +
-    '<div class="fx-side"><div class="fx-c"><h3 class="h3s">閑散期だけ（スポット）</h3><dl class="fx-dl"><dt>テレアポ＋フォーム営業</dt><dd>月額25万円</dd><dt>テレアポ500コールのみ</dt><dd>月額20万円</dd><dt>フォーム営業1,000件</dt><dd>月額5万円</dd><dt>FAX営業1,000件</dt><dd>月額5万円</dd></dl></div>' +
-    '<div class="fx-c"><h3 class="h3s">DM＋追撃</h3><p class="fx-eq"><span>DM 100通</span>＋<span>追いかけ 100コール</span>＝<b>月額25万円</b></p></div></div></div>' +
-    '<div class="fx-band"><b>最短翌月解約・1か月ごとの更新</b><span>長期の縛りはありません</span></div>' +
+STEPS = [('テレアポ500<br>＋フォーム1,000', 25), ('テレアポ500', 20), ('テレアポ250', 10), ('テレアポ100', 5), ('休止', 0)]
+cols = ''.join(f'<li><b>{f"{v}<small>万円</small>" if v else "—"}</b><i style="height:{max(v / 25 * 100, 3):.0f}%"></i><span>{t}</span></li>' for t, v in STEPS)
+sl.append(sec('flex', '08', '柔軟なプラン', S.get('flex_title') or '続け方は、<em class="hl">月ごとに選べます</em>',
+    f'<div class="fx"><div class="fx-main"><p class="fx-k">費用を抑えて続ける（月額）</p><ol class="fc">{cols}</ol><p class="fx-s">休止中も、リストと営業ノウハウはそのまま残ります。</p></div>' +
+    '<div class="fx-side"><div class="fx-c"><p class="fx-k">閑散期だけ（スポット）</p><dl class="fx-dl"><dt>テレアポ＋フォーム営業</dt><dd>25万円</dd><dt>テレアポ500コール</dt><dd>20万円</dd><dt>フォーム営業1,000件</dt><dd>5万円</dd><dt>FAX営業1,000件</dt><dd>5万円</dd></dl></div>' +
+    '<div class="fx-c"><p class="fx-k">DM＋追撃</p><p class="fx-eq"><span>DM 100通</span><i>＋</i><span>追いかけ100コール</span></p><p class="fx-big">月額25万円</p></div></div></div>' +
+    '<div class="fx-band"><b>最短翌月解約</b><span>すべて1か月ごとの更新。長期の縛りはありません。</span></div>' +
     (f'<p style="margin-top:12px">{E(FLEX)}</p>' if FLEX else '') + '<p class="tip">金額は税抜です。</p>'))
 # 次期スケジュール（切れ目なく）
 nxt = end + datetime.timedelta(days=1)
