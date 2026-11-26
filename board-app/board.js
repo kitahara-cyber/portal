@@ -1077,7 +1077,7 @@ function writeFail(e){
   const c=e&&e.code;
   if(c==="invalid_argument"){ toast("保存できませんでした。このページへの書き込み権限がない可能性があります。"); }
   else if(c==="quota_exceeded") toast("保存容量の上限に達しました。古いタスクを整理してください。");
-  else toast("保存できませんでした（"+(c||"不明")+"）。もう一度お試しください。");
+  else { const m=String((e&&e.message)||"").slice(0,80); toast("保存できませんでした（"+(c||m||"不明")+"）。ページを再読み込み（F5）してから、もう一度お試しください。"); try{ console.error("[board] write failed", e); }catch(_){} }
 }
 function linkLine(id){ return PAGE_URL.startsWith("http")?"\n["+"ボードで開く"+"]("+taskUrl(id)+")":""; }
 
