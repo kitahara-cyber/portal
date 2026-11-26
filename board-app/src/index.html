@@ -379,6 +379,15 @@ details summary{cursor:pointer;font-size:12px;color:var(--mute)}
 .lr-row{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center}
 .lr-row input,.lr-box>input{width:100%}
 @media (max-width:640px){.lr-row{grid-template-columns:1fr}}
+.rmnote{margin:4px 0 12px;padding:8px 12px;border:1px dashed var(--line);border-radius:8px;color:var(--mute);font-size:12.5px;background:var(--sunken)}
+.rmnote button{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0;font-size:inherit}
+.rmsec{margin:14px 0}.rmsec h3{font-size:14px;margin:0 0 8px}.rmpast summary{cursor:pointer;font-weight:700;font-size:14px;margin-bottom:8px}
+.rmrow{display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:6px;border-radius:8px;background:var(--sunken);border-left:3px solid color-mix(in srgb,var(--mute) 45%,transparent)}
+.rmic{font-size:16px;opacity:.85}.rmbody{flex:1;min-width:0}
+.rmtitle{display:block;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.rmtitle:hover{text-decoration:underline}.rmmeta{color:var(--mute);font-size:11.5px;margin-top:2px}
+.rmrow .btn.small{background:transparent}.rmall{margin:10px 0 4px}
+@media (max-width:700px){.rmrow{flex-wrap:wrap}.rmbody{flex-basis:100%}}
 </style>
 </head>
 <body>
@@ -437,7 +446,7 @@ const PCOLORS = ["#1e5aa6","#1d7448","#b8332a","#8f5c00","#5546ad","#0f7b85","#a
 /* ============ 状態 ============ */
 const S = {
   db:null, user:null, mcp:null, uid:null, me:null, roster:DEFAULT_ROSTER,
-  tasks:[], projects:[], loaded:{tasks:false, projects:false}, loadErr:"", slow:false,
+  tasks:[], allTasks:[], reminds:[], rmScope:"mine", projects:[], loaded:{tasks:false, projects:false}, loadErr:"", slow:false,
   view:"tasks", scope:"mine", person:"", group:"status", layout:(function(){ try{ const v=window.localStorage.getItem("cs.layout"); return ["tabs","board","list","days","people"].includes(v)?v:"tabs"; }catch(e){ return "tabs"; } })(), colTab:"", q:"", showDone:false, project:"",
   canWrite:null, readOnly:false,
   forms:{state:"idle", list:[], task:[], err:"", at:0},
@@ -465,6 +474,23 @@ function names(keys){ return (keys||[]).map(nm).join("・") || "未設定"; }
 function isLead(key){ const r=member(key).role; return r==="管理職"||r==="開発者"; }
 function proj(id){ return S.projects.find(p=>p.id===id); }
 function isOpen(t){ return OPEN.includes(t.status); }
+/* リマインド＝Slackにも届く自動のお知らせ（定例資料の確認・商談結果の記入・まとめ記入・よりそいアンケート・全体連絡など）。タスクの一覧には出さず「リマインド」に分ける */
+function isRemind(t){
+  if(t.remind===true) return true; if(t.remind===false) return false;
+  const id=String(t.id||"");
+  if(/^auto-(mtg|tr|sum|yor)-/.test(id) || /^dc-(fb|yor)-/.test(id)) return true;
+  return /^【全体連絡】/.test(String(t.title||""));
+}
+function rmKind(t){
+  const id=String(t.id||"");
+  if(/^auto-tr-/.test(id)) return {icon:"📄",label:"定例資料の確認"};
+  if(/^auto-mtg-/.test(id)) return {icon:"📊",label:"商談結果の記入"};
+  if(/^auto-sum-/.test(id)) return {icon:"📝",label:"定例のまとめ記入"};
+  if(/^(auto|dc)-yor-/.test(id)) return {icon:"💌",label:"よりそいアンケート"};
+  if(/^dc-fb-/.test(id)) return {icon:"💬",label:"定例資料の感想"};
+  if(/^【全体連絡】/.test(String(t.title||""))) return {icon:"📣",label:"全体連絡"};
+  return {icon:"🔔",label:"リマインド"};
+}
 function isOverdue(t){ const d=dayDiff(t.due); return isOpen(t) && t.status!=="review" && d!==null && d<0; }
 function needsReview(t){ return t.needReview===true || t.status==="review"; }
 function toast(msg, ms=3800){ const el=document.createElement("div"); el.className="toast"; el.setAttribute("role","status"); el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(), ms); }
@@ -502,11 +528,12 @@ async function boot(){
   await resolveMe();
   const timer=setTimeout(()=>{ if(!S.loaded.tasks){ S.slow=true; render(); } },10000);
   db.collection("tasks").onSnapshot(snap=>{
-    S.tasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    S.allTasks=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    S.reminds=S.allTasks.filter(isRemind); S.tasks=S.allTasks.filter(t=>!isRemind(t));
     if(!snap.metadata.fromCache){ S.loaded.tasks=true; S.slow=false; clearTimeout(timer); if(!S.autoStarted){ S.autoStarted=true; setTimeout(()=>loadForms(false,true),1500); setTimeout(loadClients,800); setTimeout(applySlackClaims,2500); setTimeout(autoProject,4000); setInterval(()=>{ if(!document.hidden) autoProject(); },3*60*1000); setInterval(()=>{ if(!document.hidden) loadForms(true,true); },5*60*1000); } }
     else if(!S.loaded.tasks && S.tasks.length) S.loaded.tasks=true;
-    render(); refreshDrawer();
-    if(S.pendingOpen && S.tasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
+    render(); renderSide(); refreshDrawer();
+    if(S.pendingOpen && S.allTasks.some(t=>t.id===S.pendingOpen)){ const id=S.pendingOpen; S.pendingOpen=null; openTask(id); }
   }, e=>{ clearTimeout(timer); S.loadErr=dbErrText(e); render(); });
   db.collection("slackclaim").onSnapshot(snap=>{ S.slackClaims=snap.docs.map(d=>({id:d.id, ...(d.data()||{})})); applySlackClaims(); }, ()=>{});
   db.collection("deleted").onSnapshot(snap=>{ const ids=new Set(), keys=new Set(); snap.docs.forEach(d=>{ const x=d.data()||{}; ids.add(d.id); if(x.sourceKey) keys.add(x.sourceKey); }); S.deleted={ids,keys}; }, ()=>{});
@@ -549,7 +576,7 @@ async function setMe(key){
 /* ============ ルーティング ============ */
 function routeFromHash(){
   const h=(location.hash||"").slice(1);
-  if(["tasks","team","projects","forms","kouryu","calendar","mail","cspl","reports"].includes(h)) S.view=h;
+  if(["tasks","remind","team","projects","forms","kouryu","calendar","mail","cspl","reports"].includes(h)) S.view=h;
   else if(h.startsWith("t-")){ S.view="tasks"; const id=h.slice(2); setTimeout(()=>openTask(id),0); }
 }
 function go(view){ S.view=view; try{ history.replaceState(null,"","#"+view); }catch(e){} closeSideMobile(); render(); renderSide(); if(view==="forms" && S.forms.state==="idle") loadForms(false); if(view==="kouryu" && S.kr.state==="idle") loadKouryu(false); if(view==="mail" && S.mail.state==="idle") loadMail(false); }
@@ -557,7 +584,8 @@ function go(view){ S.view=view; try{ history.replaceState(null,"","#"+view); }ca
 /* ============ サイドバー ============ */
 function renderSide(){
   const me=S.me?member(S.me):null;
-  const nav=[["tasks","タスク","依頼・対応・確認"],["team","メンバー状況","全員の状況を一覧で"],["projects","プロジェクト","案件・施策ごとのまとまり"],["forms","フォームからの依頼","リスト・タスク依頼フォーム"],["kouryu","交流会","参加状況とフォロー"],["calendar","カレンダー","1日ごと・週ごとの予定"],["reports","週次報告","週初MTGの数字の推移"]].concat(window.__GAS?[["mail","未返信メール","自分のGmailから"+(S.mail.items.length?"（"+S.mail.items.length+"件）":"")]]:[]).concat(window.__GAS&&isLead(S.me)?[["cspl","CSの現在地","収支と黒字化の道筋（管理職）"]]:[]);
+  const rmN=S.reminds.filter(t=>isOpen(t)&&(t.assignees||[]).includes(S.me)).length;
+  const nav=[["tasks","タスク","依頼・対応・確認"],["remind","リマインド","Slackにも届くお知らせ"+(rmN?"（"+rmN+"件）":"")],["team","メンバー状況","全員の状況を一覧で"],["projects","プロジェクト","案件・施策ごとのまとまり"],["forms","フォームからの依頼","リスト・タスク依頼フォーム"],["kouryu","交流会","参加状況とフォロー"],["calendar","カレンダー","1日ごと・週ごとの予定"],["reports","週次報告","週初MTGの数字の推移"]].concat(window.__GAS?[["mail","未返信メール","自分のGmailから"+(S.mail.items.length?"（"+S.mail.items.length+"件）":"")]]:[]).concat(window.__GAS&&isLead(S.me)?[["cspl","CSの現在地","収支と黒字化の道筋（管理職）"]]:[]);
   $("#side").innerHTML =
     '<div class="brand"><div class="logo">CS</div><div><b>CSタスクボード</b><small>ライトアップ CSチーム</small></div></div>'+
     '<nav class="nav" aria-label="メイン">'+nav.map(n=>'<button type="button" data-go="'+n[0]+'"'+(S.view===n[0]?' aria-current="page"':'')+'><b>'+n[1]+'</b><span>'+n[2]+'</span></button>').join("")+'</nav>'+
@@ -677,6 +705,7 @@ function render(){
   else if(S.view==="projects") html=viewProjects();
   else if(S.view==="cspl") html=viewCsPL();
   else if(S.view==="reports") html=viewReports();
+  else if(S.view==="remind") html=viewRemind();
   else if(S.view==="forms") html=viewForms();
   else if(S.view==="kouryu") html=viewKouryu();
   else if(S.view==="calendar") html=viewCalendar();
@@ -718,6 +747,8 @@ function viewTasks(){
     tile("期限切れ（自分が関わる）", overdue.length, "alert", "overdue")+
     (isLead(me)?tile("振り分け待ち", S.tasks.filter(t=>t.status==="draft").length, "waiting", "drafts"):"")+
   '</div>';
+  const rmMine=S.reminds.filter(t=>isOpen(t)&&(t.assignees||[]).includes(me)).length;
+  if(rmMine) h+='<div class="rmnote">🔔 定例資料の確認・商談結果の記入などのリマインド <b>'+rmMine+'件</b> は、タスクとは分けて <button type="button" data-go="remind">リマインド</button> に表示しています（Slackにも届いています）。</div>';
   h+='<div class="bar">'+
     '<div class="seg" role="group" aria-label="範囲">'+
       segBtn("scope","mine","自分がやる",cnt.mine)+segBtn("scope","asked","人に頼んだ",cnt.asked)+segBtn("scope","all","全員",cnt.all)+
@@ -1121,7 +1152,7 @@ function mcpErrText(e, server){
   if(c==="server_unavailable") return server+"に一時的につながりません。少し待ってから再度お試しください。";
   return server+"との連携に失敗しました（"+(c||"不明")+"）。";
 }
-function boardRowTask(r){ const m=String((r.site||"")+" "+(r.mark||"")); if(m.indexOf(BOARD_MARK)<0) return null; const id=(m.match(/CSタスクボードから（([A-Za-z0-9_\-]+)）/)||[])[1]; return S.tasks.find(t=>t.id===id) || {id:id||""}; }
+function boardRowTask(r){ const m=String((r.site||"")+" "+(r.mark||"")); if(m.indexOf(BOARD_MARK)<0) return null; const id=(m.match(/CSタスクボードから（([A-Za-z0-9_\-]+)）/)||[])[1]; return S.allTasks.find(t=>t.id===id) || {id:id||""}; }
 /* 依頼フォーム・営業戦略ルームから入った新しい行は、ボードに自動で載せる（AUTO_FROM 以降の依頼だけ） */
 const AUTO_FROM="2026-11-17";
 const LIST_OWNER="kitami";   // リスト作成はすべて北見さん担当
@@ -1151,7 +1182,7 @@ async function autoIntake(){
   for(const r of (S.formsAll||[])){
     const st=SHEET_ST[r.status]; if(!st) continue;
     const bt=boardRowTask(r);
-    const t=S.tasks.find(x=>x.sourceKey===r.key) || (bt&&bt.id&&S.tasks.find(x=>x.id===bt.id));
+    const t=S.tasks.find(x=>x.sourceKey===r.key) || (bt&&bt.id&&S.allTasks.find(x=>x.id===bt.id));
     if(!t || t.status===st || !isOpen(t)) continue;
     if(st==="doing" && t.status!=="todo") continue;
     const patch={status:st, updatedAt:nowIso(), history:hist(t, "スプシのステータスが「"+r.status+"」になったため、"+(STATUS[st]?STATUS[st].label:st)+"に変更")};
@@ -1165,7 +1196,7 @@ async function autoIntake(){
   let n=0;
   for(const r of rows){
     const id="form-"+hashKey(r.key);
-    if(S.tasks.some(t=>t.id===id)) continue;
+    if(S.allTasks.some(t=>t.id===id)) continue;
     const t=formToTask(r);
     const asg=t.assignees.length;
     const doc={...t, status: asg?t.status:"draft", suggest: asg?[]:["kitahara"], sourceLabel:srcLabel(r), options:[], answer:"", createdAt:nowIso(), updatedAt:nowIso(), createdBy:"auto", doneAt:"", history:[{at:nowIso(), by:S.me, text:"自動で取り込み（"+srcLabel(r)+"）"}]};
@@ -1218,7 +1249,7 @@ async function h100Sync(){
     }
     if(done || tsDay(x.ts)<H100_FROM || del.keys.has(x.key) || del.ids.has("h100-"+hashKey(x.key))) continue;
     const id="h100-"+hashKey(x.key);
-    if(S.tasks.some(y=>y.id===id) || S.h100Busy) continue;
+    if(S.allTasks.some(y=>y.id===id) || S.h100Busy) continue;
     const asg=matchMember(x.owner)||LIST_OWNER;
     const doc={title:"100件リスト作成："+x.company+"様", memo:h100Memo(x), kind:"リスト作成", projectId:"", client:x.company,
       requester:matchMember(x.sales)||"kitahara", assignees:[asg], due:addDaysTo(tsDay(x.ts),7), dueRule:"7d", priority:"normal", status:"todo", sourceKey:x.key,
@@ -1314,7 +1345,7 @@ async function applySlackClaims(){
   S.claimBusy=true;
   try{
     for(const c of (S.slackClaims||[])){
-      const t=S.tasks.find(x=>x.id===c.task); if(!t || !c.key) continue;
+      const t=S.allTasks.find(x=>x.id===c.task); if(!t || !c.key) continue;
       if(c.kind==="claim" && isClaimOpen(t)) await claimTask(t, c.key, "Slackのスレッド（「"+String(c.text||"").slice(0,30)+"」）");
       else if(c.kind==="done" && isOpen(t) && !(t.history||[]).some(h=>/Slackのスレッドで完了/.test(h.text||""))){
         const pt={status:"done", doneAt:c.at||nowIso(), updatedAt:nowIso(), history:hist(t, "Slackのスレッドで完了の返信があったため完了（"+nm(c.key)+"）")};
@@ -1372,7 +1403,7 @@ async function notify(keys, message){
 
 /* ============ ドロワー：タスク詳細 ============ */
 function openTask(id){
-  const t=S.tasks.find(x=>x.id===id);
+  const t=S.allTasks.find(x=>x.id===id);
   if(!t){ if(S.loaded.tasks) toast("タスクが見つかりませんでした"); else S.pendingOpen=id; return; }
   S.openId=id;
   if(S.unsubComments) S.unsubComments();
@@ -1385,7 +1416,7 @@ function openTask(id){
 }
 function refreshDrawer(force){
   if(!S.openId) return;
-  const t=S.tasks.find(x=>x.id===S.openId); if(!t) return;
+  const t=S.allTasks.find(x=>x.id===S.openId); if(!t) return;
   const layer=$("#layer");
   if(!force && !layer.querySelector("[data-drawer='task']")) return;
   const draft=$("#cmText")?.value||"";
@@ -1482,7 +1513,7 @@ function drawerTask(t){
 }
 /* カードをドラッグして別の列へ動かす（ステータス・プロジェクト・期限） */
 async function moveCard(id, key){
-  const t=S.tasks.find(x=>x.id===id); if(!t || !key) return;
+  const t=S.allTasks.find(x=>x.id===id); if(!t || !key) return;
   const [kind, val]=[key.slice(0,key.indexOf(":")), key.slice(key.indexOf(":")+1)];
   if(kind==="st"){
     if(val===t.status) return;
@@ -1616,7 +1647,7 @@ async function saveTask(){
   if(F.cal && !F.due){ toast("カレンダーに入れるには期限を入れてください"); return; }
   const btn=$('[data-act="saveTask"]'); if(btn) btn.disabled=true;
   if(F.id){
-    const t=S.tasks.find(x=>x.id===F.id);
+    const t=S.allTasks.find(x=>x.id===F.id);
     const draft=t.status==="draft";
     const added=draft?F.assignees.slice():F.assignees.filter(k=>!(t.assignees||[]).includes(k));
     const patch=draft?{...data, status:"todo", requester:t.requester||S.me}:data;
@@ -1800,6 +1831,33 @@ async function wrDelete(){
   try{ await S.db.doc("reports/"+cur.id).delete(); S.wrSel=null; toast("削除しました"); render(); }catch(e){ writeFail(e); }
 }
 
+/* ============ リマインド ============ */
+function viewRemind(){
+  const me=S.me, today=todayStr();
+  const mineOf=t=>(t.assignees||[]).includes(me);
+  const open=S.reminds.filter(isOpen);
+  const base=open.filter(t=>S.rmScope==="all"||mineOf(t));
+  const by=(a,b)=>String(a.due||"9").localeCompare(String(b.due||"9"));
+  const upcoming=base.filter(t=>!t.due||t.due>=today).sort(by), past=base.filter(t=>t.due&&t.due<today).sort(by).reverse();
+  let h=topBar("リマインド","定例資料の確認・商談結果の記入・アンケートなど、自動で届くお知らせです。Slackにも届いているので、タスクの一覧には出していません。");
+  h+='<div class="content">'+banners();
+  h+='<div class="bar"><div class="seg" role="group" aria-label="範囲">'+segBtn("rmScope","mine","自分あて",open.filter(mineOf).length)+segBtn("rmScope","all","全員",open.length)+'</div><span class="spacer"></span><span class="sub">対応したら「確認した」で消えます。やることとして残したいものは「タスクにする」。</span></div>';
+  h+='<section class="rmsec"><h3>今日・これから <span class="sub">'+upcoming.length+'件</span></h3>'+(upcoming.length?upcoming.map(rmRow).join(""):'<div class="empty" style="padding:12px">なし</div>')+'</section>';
+  if(past.length) h+='<details class="rmsec rmpast"><summary>日付が過ぎたもの <span class="sub">'+past.length+'件</span></summary>'+past.map(rmRow).join("")+(!S.readOnly&&S.rmScope==="mine"?'<div class="rmall"><button class="btn small" type="button" data-act="rmDonePast">過ぎたものをまとめて「確認した」にする</button></div>':'')+'</details>';
+  return h+'</div>';
+}
+function rmRow(t){
+  const k=rmKind(t);
+  return '<div class="rmrow"><span class="rmic" aria-hidden="true">'+k.icon+'</span><div class="rmbody"><button type="button" class="rmtitle" data-open="'+esc(t.id)+'" title="'+esc(t.title)+'">'+esc(t.title)+'</button><div class="rmmeta">'+esc(k.label)+(t.due?' ・ '+esc(fmtDate(t.due)):'')+' ・ '+esc(names(t.assignees))+'</div></div>'+(S.readOnly?'':'<button class="btn small" type="button" data-act="rmDone" data-id="'+esc(t.id)+'">確認した</button><button class="btn small" type="button" data-act="rmTask" data-id="'+esc(t.id)+'">タスクにする</button>')+'</div>';
+}
+async function rmDone(id){ const t=S.allTasks.find(x=>x.id===id); if(!t) return; if(await updateTask(t,{status:"done",doneAt:nowIso()},"リマインドを確認した")) toast("確認済みにしました"); }
+async function rmTask(id){ const t=S.allTasks.find(x=>x.id===id); if(!t) return; if(await updateTask(t,{remind:false},"リマインドからタスクに移した")) toast("タスクの一覧に移しました"); }
+async function rmDonePast(){
+  const today=todayStr(), list=S.reminds.filter(t=>isOpen(t)&&(t.assignees||[]).includes(S.me)&&t.due&&t.due<today);
+  if(!list.length) return; toast(list.length+"件を確認済みにしています…",4000);
+  let ok=0; for(const t of list){ if(await updateTask(t,{status:"done",doneAt:nowIso()},"リマインドを確認した（まとめて）")) ok++; }
+  toast(ok+"件を確認済みにしました"+(ok<list.length?"（"+(list.length-ok)+"件は失敗）":""));
+}
 /* ============ プロジェクト ============ */
 let P=null;
 function openProject(p){
@@ -2237,7 +2295,7 @@ async function attachFiles(t, files){
     }catch(e){ toast("アップロードできませんでした："+name+"（"+(e&&e.message||e)+"）",9000); if(/受付票/.test(String(e&&e.message))) S.attTicket=null; }
   }
   S.attachBusy=null; S.attachProg="";
-  if(added.length){ const cur=S.tasks.find(x=>x.id===t.id)||t; await updateTask(cur, {attachments:[...(cur.attachments||[]), ...added]}, "添付："+added.map(a=>a.name).join("、")); toast(added.length+"件を添付しました"); }
+  if(added.length){ const cur=S.allTasks.find(x=>x.id===t.id)||t; await updateTask(cur, {attachments:[...(cur.attachments||[]), ...added]}, "添付："+added.map(a=>a.name).join("、")); toast(added.length+"件を添付しました"); }
   refreshDrawer(true);
 }
 async function deleteAttachment(t, i){
@@ -2245,7 +2303,7 @@ async function deleteAttachment(t, i){
   let note="";
   if(a.central && a.fileId){ try{ await uploadPost({op:"trash", fileId:a.fileId}); note="（ドライブのファイルもゴミ箱へ移動しました）"; }catch(e){ note="（ドライブのファイルは消せませんでした："+(e&&e.message||e)+"）"; } }
   else if(!a.link && a.fileId) note="（ファイル本体は、アップロードした人のドライブに残っています）";
-  const cur=S.tasks.find(x=>x.id===t.id)||t;
+  const cur=S.allTasks.find(x=>x.id===t.id)||t;
   const next=(cur.attachments||[]).filter(x=>!(x.url===a.url && x.at===a.at));
   await updateTask(cur,{attachments:next},"添付を削除："+(a.name||a.url));
   toast("削除しました"+note,6000);
@@ -2291,7 +2349,7 @@ async function aiAsk(id, force){
   S.aiBusy=id; refreshDrawer(true);
   try{
     const r=await S.mcp.callTool("Board","explain",{id, force:!!force});
-    const a=r&&r.payload; const t=S.tasks.find(x=>x.id===id); if(t && a) t.ai=a;
+    const a=r&&r.payload; const t=S.allTasks.find(x=>x.id===id); if(t && a) t.ai=a;
   }catch(e){ toast("背景を聞けませんでした："+((e&&e.message)||"エラー"),6000); }
   S.aiBusy=null; if(S.openId===id) refreshDrawer(true);
 }
@@ -2323,7 +2381,7 @@ function lrRead(){
   return {segs, thread:($("#lrThread")?.value||"").trim()};
 }
 async function lrSubmit(post){
-  const t=S.tasks.find(x=>x.id===S.openId); if(!t) return;
+  const t=S.allTasks.find(x=>x.id===S.openId); if(!t) return;
   const v=lrRead(); const segs=v.segs.filter(x=>x.name||x.url);
   if(post){
     if(!segs.length){ toast("セグメント名か行のリンクを入れてください"); return; }
@@ -2407,7 +2465,7 @@ document.addEventListener("click", async e=>{
     if(kind==="kind" && v==="リスト作成" && !F.id) F.assignees=[LIST_OWNER];
     drawForm(); return;
   }
-  const t=S.openId?S.tasks.find(x=>x.id===S.openId):null;
+  const t=S.openId?S.allTasks.find(x=>x.id===S.openId):null;
   if(el.dataset.layout){ setLayout(el.dataset.layout); return; }
   if(el.dataset.upp){ S.upP=+el.dataset.upp; render(); return; }
   if(el.dataset.wrsel){ S.wrSel=el.dataset.wrsel; render(); return; }
@@ -2474,6 +2532,9 @@ document.addEventListener("click", async e=>{
     case "wrEdit": { const l=(S.reports||[]).slice().sort((x,y)=>String(y.date).localeCompare(String(x.date))); openWrForm(l.find(r=>r.id===S.wrSel)||l[0]); break; }
     case "wrSave": wrSave(); break;
     case "wrDel": wrDelete(); break;
+    case "rmDone": rmDone(el.dataset.id); break;
+    case "rmTask": rmTask(el.dataset.id); break;
+    case "rmDonePast": rmDonePast(); break;
     case "archiveProject": confirmBox("このプロジェクトをアーカイブしますか？（タスクは残ります）","アーカイブ", ()=>saveProject(true)); break;
     case "reloadForms": loadForms(true); break;
     case "reloadKr": loadKouryu(true); break;
@@ -2501,8 +2562,8 @@ document.addEventListener("keydown", e=>{
 document.addEventListener("click", e=>{ if(e.target.closest && e.target.closest("[data-stsel]")) e.stopPropagation(); }, true);
 document.addEventListener("change", e=>{
   const ss=e.target.closest&&e.target.closest("[data-stsel]");
-  if(ss){ const t=S.tasks.find(x=>x.id===ss.dataset.stsel); if(t && ss.value!==t.status && QUICK_ST.some(q=>q[0]===ss.value)) setStatus(t, ss.value).then(()=>toast("「"+(STATUS[ss.value]||{}).label+"」にしました")); return; }
-  if(e.target && e.target.id==="attFile"){ const t=S.openId&&S.tasks.find(x=>x.id===S.openId); if(t) attachFiles(t, e.target.files); }
+  if(ss){ const t=S.allTasks.find(x=>x.id===ss.dataset.stsel); if(t && ss.value!==t.status && QUICK_ST.some(q=>q[0]===ss.value)) setStatus(t, ss.value).then(()=>toast("「"+(STATUS[ss.value]||{}).label+"」にしました")); return; }
+  if(e.target && e.target.id==="attFile"){ const t=S.openId&&S.allTasks.find(x=>x.id===S.openId); if(t) attachFiles(t, e.target.files); }
 });
 document.addEventListener("paste", e=>{
   if(!S.openId || !window.__GAS || S.readOnly || !$("[data-drop]")) return;
@@ -2510,7 +2571,7 @@ document.addEventListener("paste", e=>{
   if(!items.length) return;
   const files=items.map(x=>x.getAsFile()).filter(Boolean); if(!files.length) return;
   e.preventDefault();
-  const t=S.tasks.find(x=>x.id===S.openId); if(t) attachFiles(t, files);
+  const t=S.allTasks.find(x=>x.id===S.openId); if(t) attachFiles(t, files);
 });
 document.addEventListener("keydown", e=>{ if((e.key==="Enter"||e.key===" ") && e.target.classList && e.target.classList.contains("dropzone")){ e.preventDefault(); const i=$("#attFile"); if(i) i.click(); } });
 document.addEventListener("dragstart", e=>{ const c=e.target.closest&&e.target.closest("[data-drag]"); if(!c) return; S.dragId=c.dataset.drag; try{ e.dataTransfer.setData("text/x-task", c.dataset.drag); e.dataTransfer.effectAllowed="move"; }catch(_){} c.classList.add("dragging"); document.body.classList.add("is-dragging"); });
@@ -2519,7 +2580,7 @@ document.addEventListener("dragover", e=>{ if(!S.dragId) return; const c=e.targe
 document.addEventListener("drop", e=>{ if(!S.dragId) return; const c=e.target.closest&&e.target.closest("[data-dropcol]"); const id=S.dragId; S.dragId=null; document.querySelectorAll(".dragging,.dropover").forEach(x=>x.classList.remove("dragging","dropover")); document.body.classList.remove("is-dragging"); if(!c) return; e.preventDefault(); e.stopPropagation(); moveCard(id, c.dataset.dropcol); }, true);
 document.addEventListener("dragover", e=>{ const z=e.target.closest&&e.target.closest("[data-drop]"); if(z){ e.preventDefault(); z.classList.add("over"); } });
 document.addEventListener("dragleave", e=>{ const z=e.target.closest&&e.target.closest("[data-drop]"); if(z) z.classList.remove("over"); });
-document.addEventListener("drop", e=>{ const z=e.target.closest&&e.target.closest("[data-drop]"); if(!z) return; e.preventDefault(); z.classList.remove("over"); if(!window.__GAS){ toast("この画面ではアップロードできません"); return; } const t=S.tasks.find(x=>x.id===z.dataset.drop); if(t && e.dataTransfer && e.dataTransfer.files.length) attachFiles(t, e.dataTransfer.files); });
+document.addEventListener("drop", e=>{ const z=e.target.closest&&e.target.closest("[data-drop]"); if(!z) return; e.preventDefault(); z.classList.remove("over"); if(!window.__GAS){ toast("この画面ではアップロードできません"); return; } const t=S.allTasks.find(x=>x.id===z.dataset.drop); if(t && e.dataTransfer && e.dataTransfer.files.length) attachFiles(t, e.dataTransfer.files); });
 document.addEventListener("input", e=>{
   if(e.target.id==="q"){ S.q=e.target.value; render(); }
   if(e.target.id==="cmText"){ showMentionSug(); }
