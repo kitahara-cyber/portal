@@ -112,7 +112,15 @@ def card(t, num, body): return f'<details class="panel card"><summary><h3>{t}</h
 def tbl(rows, cols):
     return '<div class="tw"><table><thead><tr>' + ''.join(f'<th{" class=r" if r else ""}>{E(h)}</th>' for h, _, r in cols) + '</tr></thead><tbody>' + ''.join(
         '<tr>' + ''.join(f'<td{" class=r" if r else ""}>{f(x)}</td>' for _, f, r in cols) + '</tr>' for x in rows) + '</tbody></table></div>'
+HMAX = 32   # 見出しは1メッセージ・32字まで。長い文は最初の1文だけ見出しにし、残りは小さい文に回す
 def sec(id, no, lab, title, body, sub=''):
+    plain = lambda t: re.sub(r'<[^>]+>', '', t)
+    if len(plain(title)) > HMAX:
+        parts = [x for x in re.split(r'(?<=。)', title) if x.strip()]
+        first = parts[0].rstrip('。')
+        if len(plain(first)) <= HMAX: title, rest = first, ''.join(parts[1:])
+        else: title, rest = E(lab), ''.join(parts)
+        sub = (plain(rest) + (' ' + sub if sub else '')) if rest else sub
     return f'<section class="slide" id="{id}" data-title="{E(lab)}"><div class="inner"><div class="sh"><span class="no">{no} ／ {id.upper()}</span><h2>{title}</h2>{f"<p>{sub}</p>" if sub else ""}</div>{body}</div></section>'
 def ul(xs, empty=''): return '<ul>' + ''.join(f'<li>{x}</li>' for x in xs) + '</ul>' if xs else (f'<p class="tip">{empty}</p>' if empty else '')
 # ---------- 自動で埋める（story.json に無い欄を、データから作る。11/4） ----------
