@@ -1280,8 +1280,11 @@ function openForm(t){
 }
 function drawForm(){
   const _b=document.querySelector('#layer [data-drawer="form"] .body'), _st=_b?_b.scrollTop:0;
+  S.formRedraw=!!_b;   // すでに開いている入力画面を描き直すとき（「誰に」などを押したとき）は、カーソルをタイトルに戻さない
   drawFormInner();
-  const _b2=document.querySelector('#layer [data-drawer="form"] .body'); if(_b2&&_st) _b2.scrollTop=_st;
+  S.formRedraw=false;
+  const back=()=>{ const b2=document.querySelector('#layer [data-drawer="form"] .body'); if(b2 && _st && b2.scrollTop!==_st) b2.scrollTop=_st; };
+  back(); requestAnimationFrame(back); setTimeout(back,60);
 }
 function drawFormInner(){
   const today=todayStr();
@@ -1316,7 +1319,7 @@ function drawFormInner(){
   '</div>'+
   '<footer><button class="btn" type="button" data-act="close">キャンセル</button><button class="btn primary" type="button" data-act="saveTask">'+(F.id?(F.fromDraft?"登録して通知する":"保存する"):"作成する")+'</button></footer>'+
   '</div></div>';
-  $("#fTitle").focus();
+  if(!S.formRedraw){ const ft=$("#fTitle"); if(ft) ft.focus({preventScroll:true}); }
 }
 function readForm(){
   F.title=$("#fTitle").value.trim(); F.memo=$("#fMemo").value; F.client=$("#fClient").value.trim(); F.projectId=$("#fProject").value; F.due=$("#fDue").value;
