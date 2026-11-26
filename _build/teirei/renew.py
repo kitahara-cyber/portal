@@ -338,6 +338,35 @@ document.getElementById("edgo").onclick=async()=>{{if(!tx.value.trim()){{tx.focu
  document.getElementById("edgo").textContent=ok?"コピーしました（シートに貼り付けてください）":"下の文字を選んでコピーしてください";window.open("{EDIT_URL}","_blank","noopener")}};
 addEventListener("keydown",e=>{{if(e.key==="Escape")p.hidden=true}},true);
 }})()</script>"""
+CSS += """.ctl .lkb{width:auto;border-radius:999px;padding:0 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.lkm{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:46;width:230px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.22);display:grid;gap:6px}
+.lkm>b{font-size:13px;padding:2px 4px}.lkm button{font:inherit;text-align:left;border:1px solid var(--line);background:transparent;color:inherit;border-radius:10px;padding:8px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.lkm button small{display:block;font-weight:400;font-size:11.5px;color:var(--mute)}.lkm button[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
+.lkm[hidden]{display:none}:fullscreen .lkm{display:none}@media print{.lkm,.lkb{display:none!important}}
+/* 見た目B：提案書（紺×金・明朝） */
+:root:root[data-look="b"]{--bg:#f6f3ea;--card:#fffdf7;--ink:#0e1a30;--mute:#5d6577;--line:#d9d2bd;--line2:#ebe5d3;--accent:#b08a3c;--accent-ink:#86651d;--accent-soft:#f2e8cb;--cover:#0e1a30;color-scheme:light}
+[data-look="b"] .sh h2,[data-look="b"] .cover h1{font-family:"Shippori Mincho B1","Hiragino Mincho ProN",serif;font-weight:800;letter-spacing:.01em}
+[data-look="b"] .sh h2{font-size:clamp(1.7rem,3.8vw,2.8rem);line-height:1.4}[data-look="b"] em.hl{background:none;border-bottom:3px solid var(--accent)}
+[data-look="b"] .sh{border-left:4px solid var(--accent);padding-left:18px;margin-bottom:22px}[data-look="b"] .sh .no{letter-spacing:.2em}
+[data-look="b"] .panel,[data-look="b"] .nx-nd,[data-look="b"] .fx-main,[data-look="b"] .fx-c,[data-look="b"] .om{border-radius:4px;border:0;border-top:3px solid var(--ink);box-shadow:0 1px 0 var(--line),0 10px 24px rgba(14,26,48,.06)}
+[data-look="b"] .nx-nd.g{border-top-color:var(--accent)}[data-look="b"] .nx-cta,[data-look="b"] .cover .start{border-radius:4px;background:var(--ink);color:#f6f3ea}[data-look="b"] .nx-cta b{color:#e3c888}
+[data-look="b"] .cover{background:linear-gradient(160deg,#0e1a30 60%,#1c2d50)}[data-look="b"] .cover .eyebrow{color:#e3c888}[data-look="b"] .cover .start{background:#b08a3c;color:#0e1a30}
+[data-look="b"] .fx-band{border-radius:4px}[data-look="b"] .fx-band b{color:#e3c888}[data-look="b"] .num,[data-look="b"] .nx-nd b{font-family:"Shippori Mincho B1",serif}
+/* 見た目C：数字が主役（白地・箱なし） */
+:root:root[data-look="c"]{--bg:#fff;--card:#fff;--ink:#0a0a0a;--mute:#6a6a6a;--line:#0a0a0a;--line2:#e6e6e6;--accent:#1437ff;--accent-ink:#1437ff;--accent-soft:#e8ecff;--cover:#0a0a0a;color-scheme:light}
+[data-look="c"] .sh h2{font-size:clamp(1.7rem,3.9vw,3rem);line-height:1.2;letter-spacing:-.03em}[data-look="c"] em.hl{background:none}
+[data-look="c"] .panel,[data-look="c"] .nx-nd,[data-look="c"] .fx-main,[data-look="c"] .fx-c,[data-look="c"] .om{border:0;border-top:2px solid var(--ink);border-radius:0;background:transparent;padding-left:0;padding-right:0}
+[data-look="c"] .nv.panel{border:1px solid var(--line2);border-radius:14px;background:#fff;padding:14px}
+[data-look="c"] .num{font-family:var(--font);font-size:clamp(2rem,4vw,3rem);font-weight:900;letter-spacing:-.03em;line-height:1.1}
+[data-look="c"] .nx-nd b{font-size:clamp(64px,9vw,128px);letter-spacing:-.05em}[data-look="c"] .nx-nd.g{background:transparent;border-top-color:var(--accent)}
+[data-look="c"] .slide{border-bottom:2px solid var(--ink)}[data-look="c"] .nx-cta,[data-look="c"] .cover .start,[data-look="c"] .fx-band{border-radius:0}
+[data-look="c"] .cover h1{font-size:clamp(2.6rem,8vw,5.6rem);letter-spacing:-.04em;line-height:1.1}[data-look="c"] .fc i{border-radius:0}[data-look="c"] .fc b{font-size:30px}
+/* 見た目D：ナイト（全体を暗く） */
+:root:root[data-look="d"]{--bg:#0f1218;--card:#181c24;--ink:#f1efe9;--mute:#9aa1ad;--line:#2c323d;--line2:#222730;--accent:#ff7a4d;--accent-ink:#ff9a76;--accent-soft:#3a2219;--cover:#07090c;color-scheme:dark}
+[data-look="d"] .sh h2{font-size:clamp(1.7rem,4vw,3rem);line-height:1.3}[data-look="d"] .panel,[data-look="d"] .nx-nd,[data-look="d"] .fx-main,[data-look="d"] .fx-c{border-radius:20px;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset}
+[data-look="d"] .nx-nd.g{box-shadow:0 0 40px rgba(255,122,77,.25)}[data-look="d"] .nx-op span,[data-look="d"] .ctl,[data-look="d"] .fx-band{background:#f1efe9;color:#0f1218}[data-look="d"] .fc li:first-child i{background:#f1efe9}
+[data-look="d"] .ctl button{color:#0f1218}[data-look="d"] .ctl .nx{color:#fff}
+"""
 CSS += """.edbtn{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;font:inherit;font-size:13px;font-weight:700;border:1px dashed var(--line);background:var(--card,#fff);color:var(--ink,#15171b);border-radius:999px;padding:8px 14px;cursor:pointer;opacity:.85}
 .edp{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px}.edp[hidden]{display:none}
 .edin{background:var(--card,#fff);color:var(--ink,#15171b);border-radius:14px;padding:18px;width:min(560px,100%);display:grid;gap:8px;max-height:90vh;overflow:auto}.edin p{margin:0;font-size:13px;opacity:.8}.edin label{font-size:12px;font-weight:700}
@@ -348,16 +377,24 @@ CSS += """.edbtn{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bot
 
 av = open(a.avatar).read().strip() if a.avatar else ''
 who = f'<img src="{av}" alt="" width="44" height="44">' if av else f'<span class="ini">{E((a.director or "担")[0])}</span>'
+LKJS = r"""<script>(function(){var R=document.documentElement,m=document.getElementById("lkm"),b=document.getElementById("lk"),K="renew-look";
+function set(v){if(v&&v!=="a")R.setAttribute("data-look",v);else R.removeAttribute("data-look");[].forEach.call(m.querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",x.dataset.look===(v||"a"))})}
+var v="a";try{v=localStorage.getItem(K)||"a"}catch(e){}set(v);
+b.onclick=function(){m.hidden=!m.hidden;b.setAttribute("aria-expanded",!m.hidden)};
+m.onclick=function(e){var t=e.target.closest("button");if(!t)return;set(t.dataset.look);try{localStorage.setItem(K,t.dataset.look)}catch(_){}m.hidden=true;b.setAttribute("aria-expanded","false")};
+document.addEventListener("click",function(e){if(!m.hidden&&!e.target.closest("#lkm,#lk")){m.hidden=true;b.setAttribute("aria-expanded","false")}})})();</script>"""
 page = f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
 <title>{E(short)}様 継続のご提案</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&family=Shippori+Mincho+B1:wght@600;800&display=swap">
 <style>{CSS}</style></head><body class="cover-on">
 {"".join(sl)}
 <nav class="dots" id="dots" aria-label="章"></nav>
-<div class="ctl"><button id="prev" aria-label="前の章へ">↑</button><span class="pg" id="pg">1/{len(sl)}</span><button id="next" class="nx" aria-label="次の章へ">↓</button><button id="fs" aria-label="全画面で表示">⛶</button></div>
+<div class="ctl"><button id="prev" aria-label="前の章へ">↑</button><span class="pg" id="pg">1/{len(sl)}</span><button id="next" class="nx" aria-label="次の章へ">↓</button><button id="fs" aria-label="全画面で表示">⛶</button><button id="lk" class="lkb" aria-haspopup="true" aria-expanded="false">見た目</button></div>
+<div class="lkm" id="lkm" hidden><b>見た目を変える</b><button data-look="a">標準<small>生成り×オレンジ</small></button><button data-look="b">提案書<small>紺×金・明朝の見出し</small></button><button data-look="c">数字が主役<small>白地・箱なし・大きな数字</small></button><button data-look="d">ナイト<small>全体を暗い色で</small></button></div>
 <aside class="navi"><div class="nv panel" id="nv"><div class="who">{who}<div><b>担当ディレクター {E(a.director or "")}</b><small>章に合わせてご説明します</small></div><button class="tg" id="tg" aria-label="ナビを開く">…</button></div><p class="bubble" id="say" aria-live="polite"></p></div></aside>
 <script>const SAY={json.dumps(SAY, ensure_ascii=False)};const say=document.getElementById("say");{JS}</script>
+{LKJS}
 {EDIT}
 <textarea id="renew-src" hidden>{SRC}</textarea>
 </body></html>'''
