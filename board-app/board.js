@@ -1066,7 +1066,9 @@ async function createTask(t, notifyOn){
 }
 async function updateTask(t, patch, logText, notifyKeys, notifyMsg){
   try{
-    await S.db.doc("tasks/"+t.id).update({...patch, updatedAt:nowIso(), history:hist(t, logText)});
+    const closedSt=x=>x==="done"||x==="cancel";
+    const reopen=closedSt(t.status) && patch.status && !closedSt(patch.status);
+    await S.db.doc("tasks/"+t.id).update({...patch, ...(reopen?{_reopen:true}:{}), updatedAt:nowIso(), history:hist(t, logText)});
     if(notifyKeys && notifyKeys.length) notify(notifyKeys, notifyMsg+"\n**"+t.title+"**"+linkLine(t.id));
     return true;
   }catch(e){ writeFail(e); return false; }

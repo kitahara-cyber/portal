@@ -103,7 +103,8 @@ function rows_() {
 }
 function readAll_() {
   const out = {};
-  rows_().forEach(r => { if (r[0]) { try { out[r[0]] = JSON.parse(r[1]); } catch (e) {} } });
+  // 同じ path の行が2つ以上あるときは、最初の行（ボードが書き換える行）を正とする。後から足された重複行で完了済みのタスクが戻らないように
+  rows_().forEach(r => { if (r[0] && !(r[0] in out)) { try { out[r[0]] = JSON.parse(r[1]); } catch (e) {} } });
   return out;
 }
 function newId_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 20); }
@@ -139,17 +140,30 @@ function write_(email, path, data, mode) {
       for (let i = rows.length - 1; i >= 0; i--) { if (String(rows[i][0]).indexOf(pre) === 0) sh.deleteRow(i + 2); }
       return {path: path, deleted: true};
     }
-    let obj = data || {};
+    let obj = Object.assign({}, data || {});
+    let cur = null; if (idx >= 0) { try { cur = JSON.parse(rows[idx][1] || '{}'); } catch (e) { cur = {}; } }
     if (mode === 'update') {
       if (idx < 0) throw new Error('not_found');
-      const cur = JSON.parse(rows[idx][1] || '{}');
-      Object.keys(obj).forEach(k => { cur[k] = obj[k]; });
-      obj = cur;
+      const merged = Object.assign({}, cur);
+      Object.keys(obj).forEach(k => { merged[k] = obj[k]; });
+      obj = merged;
+    }
+    // 完了・中止のタスクは、人が「戻す」操作をしたとき（_reopen）以外は未完了に戻さない
+    // （古い画面や自動処理が、前に読んだステータスを書き戻して復活させるのを防ぐ）
+    const reopen = obj._reopen === true; delete obj._reopen;
+    if (cur && /^tasks\/[^\/]+$/.test(path)) {
+      const closed = st => st === 'done' || st === 'cancel';
+      if (closed(cur.status) && !closed(obj.status) && !reopen) {
+        obj.status = cur.status; obj.doneAt = cur.doneAt || obj.doneAt || '';
+        if (cur.history && obj.history && obj.history.length < cur.history.length) obj.history = cur.history;
+      }
     }
     const json = JSON.stringify(obj);
     if (json.length > 45000) throw new Error('too_large');
     if (idx >= 0) sh.getRange(idx + 2, 2, 1, 3).setValues([[json, now, email]]);
     else sh.appendRow([path, json, now, email]);
+    // 同じ path の重複行（自動登録が足したものなど）は消して1行にそろえる
+    if (idx >= 0) { for (let i = rows.length - 1; i > idx; i--) { if (rows[i][0] === path) sh.deleteRow(i + 2); } }
     return {path: path, data: obj};
   } finally { lock.releaseLock(); }
 }
