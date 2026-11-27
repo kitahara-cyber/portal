@@ -1,5 +1,6 @@
 # 週次報告の KPI（架電・アポ・A/B/Cランク）を日次報告から計算する。
 # 使い方：python3 kpi.py <日次報告「集計」を get_values した保存ファイル> <今回のMTG日 YYYY-MM-DD> <前回のMTG日 YYYY-MM-DD>
+# （MTG前日の夜に作るときも、今回のMTG日＝翌日を渡す。範囲は MTG日の前日までで、日次報告に入っている最終日まで）
 # 出力：kpi-slide の JSON（標準出力）
 # 決まり（【CS週報】の高橋さんの数字と 11/13・11/16・11/20 で一致を確認済み）：
 #  - 集計の範囲は「その月の1日〜MTG日の前日」。種別はテレアポ・ウェビナーテレアポの両方を含む。
@@ -22,6 +23,8 @@ def calc(rows, I, mtg):
         day = str(r[I['日付']])
         if start <= day <= end:
             calls[r[I['SIS']]] += num(r[I['架電数']]); appts[r[I['SIS']]] += num(r[I['アポ獲得件数']])
+    last = max([str(r[I['日付']]) for r in rows if len(r) > I['日付'] and start <= str(r[I['日付']]) <= end] or [end])
+    end = last  # 日次報告にまだ入っていない日は数えない（表示の「〜まで」を実際の最終日にする）
     active = [s for s in calls if calls[s] > 0]
     tc, ta = sum(calls.values()), sum(appts.values())
     a = b = c = 0
