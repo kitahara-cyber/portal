@@ -313,13 +313,29 @@ function viewAdmin() {
           <div><div class="k">長期・ネタ</div><div class="v">${c(['長期', 'ネタ', '未設定'])}</div></div><div><div class="k">期限切れ</div><div class="v" style="color:var(--red)">${open.filter(d => dueState(d) === 'over').length}</div></div><div><div class="k">未記入</div><div class="v" style="color:var(--amber)">${open.filter(d => dueState(d) === 'blank').length}</div></div>
         </div></section>
       <section class="box"><h2>もう一方のチーム</h2><p class="na">別のボードとして独立。大元のスプシをもらったら、ここに同じ形で出します。</p><span class="tag">未接続</span></section>
-      <section class="box"><h2>CS</h2><p class="na">CS タスクボードの数字をここにまとめて出します。</p><span class="tag">接続予定</span></section>
+      ${csCard()}
     </div>
     <section class="sec"><div class="sec-h"><h2>止まっている案件（A・Bヨミで商談から14日以上）</h2></div>
       ${stalled.map(d => `<div class="row">${rk(d.rank, d.yomi)}<div class="grow"><button type="button" class="link" data-act="open" data-id="${d.id}">${esc(d.company)}</button><div class="na">${esc(d.na || '次回アクション未記入')}</div></div><span class="small">担当 ${esc(d.owner)} ・ 商談 ${md(d.date)}（${daysSince(d.date)}日前）</span></div>`).join('') || '<div class="empty">ありません</div>'}</section>
+    ${DATA.cs && DATA.cs.overdueList && DATA.cs.overdueList.length ? `<section class="sec"><div class="sec-h"><h2>CS：期限切れのタスク（古い順）</h2></div>${DATA.cs.overdueList.map(t => `<div class="row"><div class="grow"><b>${esc(t.title)}</b></div><span class="small">${esc(t.who || '担当なし')} ・ <span class="red">${md(t.due)}</span></span></div>`).join('')}</section>` : ''}
     ${Object.keys(DATA.fails).length ? `<section class="sec alert"><div class="sec-h"><h2>スプシのメール自動送信で失敗が出ています</h2><p>申込フォームの自動メールの欄に「送信失敗」が入っている件数です。</p></div>
       ${Object.entries(DATA.fails).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="row"><div class="grow"><b>${esc(k)}</b></div><span class="red">${n}件</span></div>`).join('')}</section>` : ''}
   </div>`;
+}
+
+function csCard() {
+  const c = DATA.cs;
+  if (!c) return '<section class="box"><h2>CS タスクボード</h2><p class="na">読み込めませんでした。</p></section>';
+  const open = `<a class="btn sm" href="${esc(c.url)}" target="_blank" rel="noopener">開く</a>`;
+  if (c.error) return `<section class="box"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2>CS タスクボード</h2>${open}</div><p class="na red">${esc(c.error)}</p></section>`;
+  const mem = Object.entries(c.byMember).sort((a, b) => b[1].overdue - a[1].overdue || b[1].open - a[1].open).slice(0, 6);
+  return `<section class="box"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2>CS タスクボード</h2>${open}</div>
+    <div class="mini">
+      <div><div class="k">未完了</div><div class="v">${c.open}</div></div><div><div class="k">期限切れ</div><div class="v" style="color:var(--red)">${c.overdue}</div></div><div><div class="k">今日が期限</div><div class="v" style="color:var(--amber)">${c.today}</div></div>
+      <div><div class="k">確認待ち</div><div class="v">${c.review}</div></div><div><div class="k">今週完了</div><div class="v" style="color:var(--green)">${c.doneWeek}</div></div><div><div class="k">リマインド</div><div class="v" style="color:var(--sub)">${c.remind}</div></div>
+    </div>
+    ${mem.length ? `<div style="border-top:1px solid #ECEEF2;margin-top:12px;padding-top:8px">${mem.map(([n, v]) => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span>${esc(n)}</span><span>${v.open}件${v.overdue ? ` ・ <span class="red">期限切れ ${v.overdue}</span>` : ''}</span></div>`).join('')}</div>` : ''}
+    <div class="small" style="margin-top:8px">${c.latestReport ? '最新の週次報告：' + md(c.latestReport) : '週次報告はまだありません'} ・ リマインドは件数から外しています</div></section>`;
 }
 
 function viewConnect() {

@@ -29,6 +29,9 @@ const SH     = { deals: '商談議事録', seminar: 'セミナー申込フォー
 const YOMI   = { 'Aヨミ': 'A', 'A': 'A', 'Bヨミ': 'B', 'B': 'B', 'Cヨミ': 'C', 'C': 'C', 'Ｃ': 'C', '長期ヨミ': '長期', 'ネタ': 'ネタ', '受注': '受注', '失注': '失注', '失注・対象顧客なし': '失注', '予算厳しい': '失注', '': '未設定' };
 const YOMI_WRITE = ['Aヨミ', 'Bヨミ', 'Cヨミ', '長期ヨミ', 'ネタ', '受注', '失注'];
 const RANK_DAYS = { A: 3, B: 7, C: 14, 長期: 30, ネタ: 30, 未設定: 7 };
+// CS タスクボード（管理ボードに数字を出す。読むだけ）。値はスクリプト プロパティ CS_SHEET_ID・CS_BOARD_URL で上書きできる
+const CS_SHEET_DEFAULT = '1GKcj5qfLoaUlhqxEMEicIxhPbCPCyLkUCJkELnK6wkg';   // タスク管理表（_board_db）
+const CS_URL_DEFAULT = 'https://script.google.com/a/macros/writeup.co.jp/s/AKfycbzZpVgr8E8UaEIqSPqhRcq4Z0fZAKDgvzmQwnvI4UHF0oV2eRukxqsBp-6pIt3BFRgr/exec';
 
 /* ---------- 画面 ---------- */
 function appCode_() {
@@ -247,11 +250,46 @@ function load_(email) {
     out.monthlyHead = mo[0].slice(1); out.monthly = {};
     mo.slice(1).forEach(r => { const m = String(r[0] || '').match(/(\d{4})\D+(\d{1,2})/); if (m) out.monthly[m[1] + '-' + ('0' + m[2]).slice(-2)] = r.slice(1); });   // 「2026/11/01」「2026年11月」どちらでも
   } catch (e) { out.monthlyHead = []; out.monthly = {}; }
+  // CS タスクボード（管理者・開発者だけ）
+  if (me.admin) { try { out.cs = csSummary_(today); } catch (e) { out.cs = { error: String(e.message || e), url: props_().getProperty('CS_BOARD_URL') || CS_URL_DEFAULT }; } }
   // 記録：AIの提案・アドレスエラー
   try { checkBounces_(email, logs); } catch (e) { console.warn('bounce ' + e); }
   const fresh = logs_();
   out.proposals = fresh.filter(l => l.type === 'proposal' && l.status === 'open').map(l => ({ id: l.id, dealId: l.row, company: l.company, text: l.text, due: l.due }));
   out.notices = fresh.filter(l => l.type === 'bounce' && l.status !== 'done' && l.by === email).map(l => ({ id: l.id, dealId: l.row, company: l.company, to: l.extra.to || '', subject: l.extra.subject || '' }));
+  return out;
+}
+
+/* ---------- CS タスクボードの集計（_board_db を読むだけ。書き込まない） ---------- */
+function csSummary_(today) {
+  const p = props_(), url = p.getProperty('CS_BOARD_URL') || CS_URL_DEFAULT;
+  const sh = SpreadsheetApp.openById(p.getProperty('CS_SHEET_ID') || CS_SHEET_DEFAULT).getSheetByName('_board_db');
+  if (!sh) throw new Error('タスク管理表に _board_db がありません');
+  const n = sh.getLastRow(), docs = {};
+  if (n >= 2) sh.getRange(2, 1, n - 1, 2).getValues().forEach(r => { if (r[0] && !(r[0] in docs)) { try { docs[r[0]] = JSON.parse(r[1]); } catch (e) {} } });
+  const roster = ((docs['config/roster'] || {}).members) || [];
+  const nameOf = k => { const m = roster.find(x => x.key === k); return m ? (m.name || m.full || k) : k; };
+  const OPEN = ['todo', 'reopen', 'doing', 'blocked', 'review'];
+  const isRemind = (id, t) => t.remind === true || (t.remind !== false && (/^auto-(mtg|tr|sum|yor)-/.test(id) || /^dc-(fb|yor)-/.test(id) || /^【全体連絡】/.test(String(t.title || ''))));
+  const weekAgo = addDays_(today, -7);
+  const out = { url: url, open: 0, overdue: 0, today: 0, review: 0, blocked: 0, remind: 0, doneWeek: 0, byMember: {}, latestReport: '', overdueList: [] };
+  Object.keys(docs).forEach(path => {
+    const m = path.match(/^tasks\/([^\/]+)$/); if (!m) return;
+    const id = m[1], t = docs[path] || {};
+    if (t.status === 'done' && String(t.doneAt || '').slice(0, 10) >= weekAgo) out.doneWeek++;
+    if (OPEN.indexOf(t.status) < 0) return;
+    if (isRemind(id, t)) { out.remind++; return; }
+    out.open++;
+    const due = String(t.due || '').slice(0, 10), over = !!due && due < today;
+    if (over) { out.overdue++; if (out.overdueList.length < 8) out.overdueList.push({ title: clip_(t.title, 50), due: due, who: (t.assignees || []).map(nameOf).join('・') }); }
+    if (due === today) out.today++;
+    if (t.status === 'review') out.review++;
+    if (t.status === 'blocked') out.blocked++;
+    (t.assignees && t.assignees.length ? t.assignees : ['（担当なし）']).forEach(k => { const nm = nameOf(k), b = out.byMember[nm] = out.byMember[nm] || { open: 0, overdue: 0 }; b.open++; if (over) b.overdue++; });
+  });
+  out.overdueList.sort((a, b) => a.due < b.due ? -1 : 1);
+  out.latestReport = Object.keys(docs).filter(k => /^reports\/\d{4}-\d{2}-\d{2}$/.test(k)).sort().pop() || '';
+  out.latestReport = out.latestReport.slice(8);
   return out;
 }
 
