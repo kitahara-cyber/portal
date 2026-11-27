@@ -122,7 +122,7 @@ const COLS = [
 const YOMI = [['Aヨミ', 'A'], ['Bヨミ', 'B'], ['Cヨミ', 'C'], ['長期ヨミ', '長期'], ['ネタ', 'ネタ'], ['受注', '受注'], ['失注', '失注']];
 let DATA = null, TODAY = '';
 const S = { view: (window.__GAS && window.__GAS.view) || 'today', prev: 'today', detail: null, ownerFilter: 'me', onlyOverdue: false, onlyBlank: false,
-  editDue: null, mail: null, copy: null, apoFor: null, semFilter: 'recent', busy: false, loading: true, error: '' };
+  editDue: null, mail: null, copy: null, apoFor: null, semFilter: 'recent', busy: false, loading: true, error: '', viewAs: null };
 
 // ───── サーバーとのやりとり ─────
 function api(req) {
@@ -159,6 +159,9 @@ const isOpen = d => !['受注', '失注'].includes(d.rank);
 const dueState = d => !d.na ? 'blank' : !d.due ? 'none' : d.due < TODAY ? 'over' : d.due === TODAY ? 'today' : 'later';
 const find = id => DATA.deals.find(x => x.id === id);
 const me = () => DATA.me;
+// 誰の画面として見るか。メンバーは自分。管理者・開発者は切り替えられ、空なら全員分
+const who = () => (me().admin && S.viewAs !== null) ? S.viewAs : me().name;
+const mineOf = d => who() ? d.owner === who() : true;
 const rk = (r, label) => `<span class="rk r${esc(r)}">${esc(label || r)}</span>`;
 const pct = (a, b) => b ? (a / b * 100).toFixed(1) + '%' : '—';
 const sum = a => a.reduce((x, y) => x + y, 0);
@@ -187,7 +190,9 @@ function nav() {
     ${item('seminar', 'セミナー（開催日別）')}
     <div class="navgroup">設定</div>
     ${item('connect', 'Google・AI連携')}
-    <div style="margin-top:auto;padding:16px 12px 0" class="small">${esc(me().name || '名前未設定')}<br>${esc(me().email)}</div>
+    ${me().admin ? `<label class="field" style="margin-top:auto;padding:16px 12px 0">表示する人（管理者・開発者）
+      <select data-chg="viewas"><option value="" ${who() === '' ? 'selected' : ''}>全員</option>${DATA.members.concat(DATA.deals.map(d => d.owner)).filter((x, i, a) => x && x !== '未設定' && a.indexOf(x) === i).map(n => `<option ${who() === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>` : ''}
+    <div style="${me().admin ? '' : 'margin-top:auto;'}padding:12px 12px 0" class="small">${esc(me().name || (me().admin ? '管理者・開発者' : '名前未設定'))}<br>${esc(me().email)}</div>
     <div style="padding:8px 12px 0"><button type="button" class="btn sm" data-act="reload">最新にする</button></div>
   </nav>`;
 }
@@ -208,10 +213,10 @@ function proposalSection(ids, inDetail) {
 }
 
 function viewToday() {
-  const mine = DATA.deals.filter(d => d.owner === me().name && isOpen(d));
+  const mine = DATA.deals.filter(d => mineOf(d) && isOpen(d));
   const due = mine.filter(d => d.na && d.due && d.due <= TODAY).sort((a, b) => a.due < b.due ? -1 : 1);
   const blank = mine.filter(d => !d.na);
-  const thanks = DATA.deals.filter(d => d.owner === me().name && d.thanks === 'draft');
+  const thanks = DATA.deals.filter(d => mineOf(d) && d.thanks === 'draft');
   const over = due.filter(d => d.due < TODAY).length;
   const dueRows = due.map(d => `<div class="row">${rk(d.rank, d.yomi)}
       <div class="grow"><button type="button" class="link" data-act="open" data-id="${d.id}">${esc(d.company)}</button><div class="na">${esc(d.na)}</div>${d.dueRaw ? `<div class="small">スプシの次回アクション日：${esc(d.dueRaw)}</div>` : ''}</div>
@@ -228,7 +233,7 @@ function viewToday() {
       <div class="small">${md(d.date)} の商談 ・ 議事録あり ・ 送信前</div></div>
       <button type="button" class="btn p" data-act="mail-new" data-kind="thanks" data-id="${d.id}">下書きを作って確認</button></div>`).join('') || '<div class="empty">送信前のお礼メールはありません。</div>';
   return `<div class="wrap">
-    <div class="head"><div><div class="eyebrow">${md(TODAY)}（${wd(TODAY)}） ・ ${esc(me().name)}</div><h1>今日やること</h1></div>
+    <div class="head"><div><div class="eyebrow">${md(TODAY)}（${wd(TODAY)}） ・ ${esc(who() || '全員')}</div><h1>今日やること</h1></div>
       <div class="tools"><button type="button" class="btn" data-act="nav" data-v="follow">架電 ${DATA.follow.length + DATA.maekaku.length}件</button><button type="button" class="btn p" data-act="nav" data-v="teiryo">今日の数字を入れる</button></div></div>
     ${noticeSection()}
     ${proposalSection(mine.map(d => d.id))}
@@ -246,10 +251,10 @@ function viewToday() {
 
 function viewBoard() {
   let ds = DATA.deals.filter(isOpen);
-  if (S.ownerFilter === 'me') ds = ds.filter(d => d.owner === me().name);
+  if (S.ownerFilter === 'me') ds = ds.filter(mineOf);
   if (S.onlyOverdue) ds = ds.filter(d => dueState(d) === 'over');
   if (S.onlyBlank) ds = ds.filter(d => dueState(d) === 'blank');
-  const scope = S.ownerFilter === 'me' ? DATA.deals.filter(d => d.owner === me().name) : DATA.deals;
+  const scope = S.ownerFilter === 'me' ? DATA.deals.filter(mineOf) : DATA.deals;
   const card = d => {
     const b = dueState(d) === 'blank';
     return `<button type="button" class="card ${b ? 'blank' : ''}" draggable="true" data-drag="${d.id}" data-act="open" data-id="${d.id}">
@@ -351,7 +356,7 @@ function viewTeiryo() {
   const people = Array.from(new Set([].concat(DATA.members, ...week.map(d => Object.keys(DATA.act[d] || {}))))).filter(Boolean);
   const prow = people.map(p => { const t = [0, 0, 0, 0]; week.forEach(d => ((DATA.act[d] || {})[p] || [0, 0, 0, 0]).forEach((x, i) => t[i] += x));
     return `<tr><td>${esc(p)}</td><td class="n">${t[0]}</td><td class="n">${t[1]}</td><td class="n">${pct(t[1], t[0])}</td><td class="n">${t[2]}</td><td class="n">${sum(week.map(d => (DATA.daily[d] || {})[p] || 0))}</td><td class="n">${sum(week.map(d => (DATA.apo[d] || {})[p] || 0))}</td></tr>`; }).join('');
-  const mine = (DATA.act[TODAY] || {})[me().name] || [0, 0, 0, 0];
+  const mine = (DATA.act[TODAY] || {})[who()] || [0, 0, 0, 0];
   return `<div class="wrap">
     <div class="head"><div><div class="eyebrow">チームで記入 ・ その日に何件取れたか</div><h1>定量（日別・チーム）</h1></div>
       <button type="button" class="btn p" data-act="report">日報用にコピー</button></div>
@@ -360,12 +365,12 @@ function viewTeiryo() {
       <div class="kpi"><div class="k">通電率</div><div class="v">${pct(wsum(1), wsum(0))}</div></div><div class="kpi"><div class="k">セミナー集客</div><div class="v">${sum(week.map(appsOn))}</div></div>
       <div class="kpi"><div class="k">セミナー参加</div><div class="v">${sum(week.map(attendOn))}</div></div><div class="kpi"><div class="k">商談アポ獲得</div><div class="v" style="color:var(--green)">${sum(week.map(apoOn))}</div></div>
     </div>
-    <section class="box"><h2>今日の数字（${esc(me().name)}）</h2>
+    ${who() ? `<section class="box"><h2>今日の数字（${esc(who())}）</h2>
       <div class="tools" style="align-items:flex-end">
         <label class="field">架電数<input type="number" min="0" id="t-call" value="${mine[0]}"></label><label class="field">通電数<input type="number" min="0" id="t-conn" value="${mine[1]}"></label>
         <label class="field">セミナー集客数<input type="number" min="0" id="t-shu" value="${mine[2]}"></label><label class="field">資料送付数<input type="number" min="0" id="t-doc" value="${mine[3]}"></label>
         <button type="button" class="btn p" data-act="t-save">保存</button>
-      </div><div class="small" style="margin-top:8px">スプシ「活動入力」の今日の自分の行に入ります。商談アポは架電の画面で「商談アポ獲得」を押すと自動で数えます。</div></section>
+      </div><div class="small" style="margin-top:8px">スプシ「活動入力」の今日の${esc(who())}さんの行に入ります。商談アポは架電の画面で「商談アポ獲得」を押すと自動で数えます。</div></section>` : '<p class="small" style="margin:0">今日の数字を入れるときは、左の「表示する人」でメンバーを選んでください。</p>'}
     <section class="sec" style="padding-bottom:6px"><div class="sec-h"><h2>日別（チーム合計）</h2><p>架電・通電は「活動入力」、セミナー集客は申込フォームの申込日、参加は開催日、商談アポ獲得は「アポ獲得日」、商談日は「商談獲得日」から数えています。</p></div>
       <div class="scroll"><table><thead><tr><th>日付</th><th class="n">架電</th><th class="n">通電</th><th class="n">通電率</th><th class="n">セミナー集客</th><th class="n">セミナー参加</th><th class="n">商談アポ獲得</th><th class="n">商談日</th></tr></thead><tbody>${rows}</tbody></table></div></section>
     <section class="sec" style="padding-bottom:6px"><div class="sec-h"><h2>担当者別（直近7日）</h2></div>
@@ -467,7 +472,8 @@ function render() {
   const app = $('app');
   if (S.loading && !DATA) { app.innerHTML = '<main style="padding:40px" class="na">スプシを読み込んでいます…</main>'; return; }
   if (S.error && !DATA) { app.innerHTML = `<main style="padding:40px"><h1>読み込めませんでした</h1><p class="na">${esc(S.error)}</p><button type="button" class="btn p" data-act="reload">もう一度</button></main>`; return; }
-  if (!me().name) { app.innerHTML = namePicker(); return; }
+  if (!me().name && !me().admin) { app.innerHTML = namePicker(); return; }
+  if (me().admin && S.viewAs === null && !me().name) { S.viewAs = ''; if (S.view === 'today' && !(window.__GAS && window.__GAS.view)) S.view = 'admin'; }
   if (S.view === 'admin' && !me().admin) S.view = 'today';
   const v = { today: viewToday, board: viewBoard, detail: viewDetail, follow: viewFollow, teiryo: viewTeiryo, seminar: viewSeminar, admin: viewAdmin, connect: viewConnect }[S.view] || viewToday;
   app.innerHTML = `<div class="layout">${nav()}<main>${v()}${S.error ? `<p class="red small">${esc(S.error)}</p>` : ''}</main></div>${mailModal()}${copyModal()}`;
@@ -527,7 +533,7 @@ document.addEventListener('click', e => {
     case 'apo-cancel': S.apoFor = null; break;
     case 'apo-save': { const date = $('apo-date').value; if (!date) { toast('商談日を入れてください'); return; } S.apoFor = null;
       act({ op: 'follow', row, company: fRow.company, result: 'アポ', date }, `商談アポを記録しました（取った日 ${md(TODAY)}・商談日 ${md(date)}）`); return; }
-    case 't-save': act({ op: 'activity', calls: $('t-call').value, conn: $('t-conn').value, shu: $('t-shu').value, docs: $('t-doc').value }, '保存しました。スプシ「活動入力」にも入りました'); return;
+    case 't-save': act({ op: 'activity', as: who(), calls: $('t-call').value, conn: $('t-conn').value, shu: $('t-shu').value, docs: $('t-doc').value }, '保存しました。スプシ「活動入力」にも入りました'); return;
     case 'report': { const x = actOn(TODAY);
       S.copy = `【${md(TODAY)}（${wd(TODAY)}） セルコン 日報の数字】\n架電：${x[0]}件\n通電：${x[1]}件（通電率 ${x[0] ? pct(x[1], x[0]) : '—'}）\nセミナー集客：${appsOn(TODAY)}件\nセミナー参加：${attendOn(TODAY)}名\n商談アポ獲得：${apoOn(TODAY)}件\n資料送付：${x[3]}件`; break; }
     case 'copy-bg': case 'copy-close': S.copy = null; break;
@@ -543,6 +549,7 @@ document.addEventListener('change', e => {
   if (!k) return;
   const d = t.dataset.id ? find(+t.dataset.id) : null;
   if (k === 'owner') { S.ownerFilter = t.value; render(); }
+  if (k === 'viewas') { S.viewAs = t.value; S.ownerFilter = 'me'; render(); }
   if (k === 'due') { S.editDue = null; act(dealReq(d, { due: t.value }), `期限を ${md(t.value)} にしました`); }
   if (k === 'rank' && t.value) act(dealReq(d, { yomi: t.value }), `ヨミを「${t.value}」にしました。スプシにも入りました`);
   if (k === 'auto') act({ op: 'auto', on: t.checked }, t.checked ? '自動採用をオンにしました' : '自動採用をオフにしました');

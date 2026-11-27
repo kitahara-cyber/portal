@@ -323,7 +323,9 @@ function follow_(email, req) {
 
 /* ---------- 書き込み：活動入力（今日・自分の行。数式の列には触らない） ---------- */
 function activity_(email, req) {
-  const me = me_(email); if (!me.name) throw new Error('名前が決まっていません');
+  const me = me_(email);
+  if (me.admin && req.as) me.name = staff_(req.as);   // 管理者・開発者は、選んだメンバーの行に入れられる
+  if (!me.name) throw new Error('誰の数字かが決まっていません');
   const today = today_();
   return lock_(() => {
     const t = table_(SH.act, '日付');
