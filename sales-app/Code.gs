@@ -241,7 +241,9 @@ function load_(email) {
   out.act = am;
   // 月次集計
   try {
-    const mo = sheet_(SH.monthly).getDataRange().getDisplayValues();
+    const all = sheet_(SH.monthly).getDataRange().getDisplayValues();
+    const h = Math.max(0, all.findIndex(r => String(r[0]).trim() === '期間開始'));   // 見出しの行を探す（上に余白の行があっても動く）
+    const mo = all.slice(h);
     out.monthlyHead = mo[0].slice(1); out.monthly = {};
     mo.slice(1).forEach(r => { const m = String(r[0] || '').match(/(\d{4})\D+(\d{1,2})/); if (m) out.monthly[m[1] + '-' + ('0' + m[2]).slice(-2)] = r.slice(1); });   // 「2026/11/01」「2026年11月」どちらでも
   } catch (e) { out.monthlyHead = []; out.monthly = {}; }
