@@ -243,7 +243,7 @@ function load_(email) {
   try {
     const mo = sheet_(SH.monthly).getDataRange().getDisplayValues();
     out.monthlyHead = mo[0].slice(1); out.monthly = {};
-    mo.slice(1).forEach(r => { if (r[0]) out.monthly[isoOf_(r[0]).slice(0, 7)] = r.slice(1); });
+    mo.slice(1).forEach(r => { const m = String(r[0] || '').match(/(\d{4})\D+(\d{1,2})/); if (m) out.monthly[m[1] + '-' + ('0' + m[2]).slice(-2)] = r.slice(1); });   // 「2026/11/01」「2026年11月」どちらでも
   } catch (e) { out.monthlyHead = []; out.monthly = {}; }
   // 記録：AIの提案・アドレスエラー
   try { checkBounces_(email, logs); } catch (e) { console.warn('bounce ' + e); }
